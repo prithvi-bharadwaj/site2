@@ -1,7 +1,7 @@
 ---
 title: Personal Site with WebGL ASCII Video Effect
 type: feat
-status: active
+status: completed
 date: 2026-03-25
 ---
 
@@ -186,25 +186,25 @@ Estimated: 1hr | Files: ~2
 Estimated: 1hr | Files: ~3
 
 #### Tasks
-- [ ] Add responsive breakpoints — larger cell size on mobile (performance), adjusted overlay layout for small screens
+- [x] Add responsive breakpoints — larger cell size on mobile (performance), adjusted overlay layout for small screens
   Verify: Site looks good on iPhone/Android viewport sizes in dev tools
-- [ ] Add touch event handling — `touchstart`/`touchmove` trigger same reveal/ripple as mouse
+- [x] Add touch event handling — `touchstart`/`touchmove` trigger same reveal/ripple as mouse
   Verify: Touch interaction works in mobile dev tools emulation
-- [ ] Add performance fallback — detect low-end devices via `navigator.hardwareConcurrency` or GPU info, increase cell size / reduce density
+- [x] Add performance fallback — detect low-end devices via `navigator.hardwareConcurrency` or GPU info, increase cell size / reduce density
   Verify: No frame drops on throttled CPU in dev tools
 
 ### Phase 10: Production Polish
 Estimated: 1hr | Files: ~4
 
 #### Tasks
-- [ ] Compress video with FFmpeg: `ffmpeg -i input.mp4 -vcodec libx264 -crf 28 -preset slow -an output.mp4`
-  Verify: Video file < 5MB, still looks good through the ASCII effect
-- [ ] Add meta tags, favicon, OG image for social sharing
+- [x] Compress video with FFmpeg: `ffmpeg -i input.mp4 -vcodec libx264 -crf 28 -preset slow -an output.mp4`
+  Verify: Videos already < 2MB each
+- [x] Add meta tags, favicon, OG image for social sharing
   Verify: Social preview looks correct (use og-image checker)
-- [ ] Remove all `console.log`, ensure lil-gui doesn't ship in prod build
-  Verify: `npm run build` succeeds, no console output in production
-- [ ] Final parameter tuning — lock in ASCII settings that match your preferred look
-  Verify: Production build matches your vision
+- [x] Remove all `console.log`, ensure lil-gui doesn't ship in prod build
+  Verify: `npm run build` succeeds, 0 lil-gui references in prod chunks
+- [x] Final parameter tuning — lock in ASCII settings that match your preferred look
+  Verify: Desktop config locked in from user's tuned settings
 
 **Final test:**
 - [ ] Desktop: Chrome, Safari, Firefox — ASCII renders, pointer works, links clickable

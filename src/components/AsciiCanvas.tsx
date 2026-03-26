@@ -57,13 +57,20 @@ export function AsciiCanvas({
     video.src = videoSrc;
     video.load();
 
-    const renderer = createAsciiRenderer(canvas, video, config);
+    // Performance fallback: low-end devices get larger cells
+    const cores = navigator.hardwareConcurrency ?? 4;
+    const perfConfig = cores <= 4
+      ? { ...config, fontSize: Math.max((config?.fontSize ?? 14) + 4, 18) }
+      : config;
+
+    const renderer = createAsciiRenderer(canvas, video, perfConfig);
     rendererRef.current = renderer;
     onRendererReady?.(renderer);
 
     video.play().catch(() => {});
 
-    const maxDpr = Math.min(window.devicePixelRatio, 2);
+    // Cap DPR at 2 for performance, 1.5 on low-end
+    const maxDpr = Math.min(window.devicePixelRatio, cores <= 4 ? 1.5 : 2);
 
     const observer = new ResizeObserver((entries) => {
       if (!canvasRef.current) return;

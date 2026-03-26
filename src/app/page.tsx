@@ -1,11 +1,14 @@
 "use client";
 
-import { useState } from "react";
+import { useState, lazy, Suspense } from "react";
 import { AsciiCanvas } from "@/components/AsciiCanvas";
 import { BioOverlay } from "@/components/BioOverlay";
-import { DevPanel } from "@/components/DevPanel";
 import { type AsciiRenderer } from "@/lib/ascii-renderer/renderer";
 import { DESKTOP_CONFIG, MOBILE_CONFIG } from "@/lib/ascii-renderer/config";
+
+const DevPanel = process.env.NODE_ENV === "development"
+  ? lazy(() => import("@/components/DevPanel").then((m) => ({ default: m.DevPanel })))
+  : () => null;
 
 export default function Home() {
   const [renderer, setRenderer] = useState<AsciiRenderer | null>(null);
@@ -20,7 +23,9 @@ export default function Home() {
         onRendererReady={setRenderer}
       />
       <BioOverlay />
-      <DevPanel renderer={renderer} />
+      <Suspense fallback={null}>
+        <DevPanel renderer={renderer} />
+      </Suspense>
     </main>
   );
 }
