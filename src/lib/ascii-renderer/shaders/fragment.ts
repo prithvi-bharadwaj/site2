@@ -5,10 +5,12 @@ varying vec2 vUV;
 
 uniform sampler2D uVideo;
 uniform sampler2D uAtlas;
+uniform sampler2D uDisplacement; // R=dx, G=dy (128=zero), B=magnitude
 uniform vec2 uResolution;
 uniform vec2 uVideoSize;
 uniform vec2 uVideoAnchor;
 uniform vec2 uCellSize;
+uniform vec2 uGridSize;         // cols, rows of the displacement grid
 uniform float uCharCount;
 uniform float uCharOpacity;
 uniform float uCoverage;
@@ -19,6 +21,7 @@ uniform float uInvert;
 uniform float uBgOpacity;
 uniform float uBgBlur;
 uniform float uBgMode;
+uniform float uDisplacementMax; // max displacement in pixels (must match JS)
 
 uniform float uEdgeEmphasis;
 
@@ -33,7 +36,7 @@ uniform vec2 uCometPos;
 uniform float uCometRadius;
 uniform float uCometGlow;
 uniform float uCometDensityBoost;
-uniform float uCometOpacity;  // fades when idle
+uniform float uCometOpacity;
 
 // Comet trail
 uniform vec2 uCometTrail[16];
@@ -102,40 +105,48 @@ vec3 blurSample(vec2 uv, float radius) {
   return sum / 13.0;
 }
 
-// Compute comet glow intensity at a point from cursor + trail
 float cometInfluence(vec2 uv, float aspect) {
   float influence = 0.0;
-
-  // Main cursor
   if (uCometOpacity > 0.01) {
     vec2 d = vec2((uv.x - uCometPos.x) * aspect, uv.y - uCometPos.y);
     float dist = length(d);
     float glow = smoothstep(uCometRadius, 0.0, dist) * uCometOpacity;
     influence = max(influence, glow);
   }
-
-  // Trail points — additive glow
   for (int i = 0; i < 16; i++) {
     if (i >= uCometTrailCount) break;
-    float alpha = uCometTrailAlpha[i];
-    if (alpha < 0.01) continue;
+    float a = uCometTrailAlpha[i];
+    if (a < 0.01) continue;
     vec2 d = vec2((uv.x - uCometTrail[i].x) * aspect, uv.y - uCometTrail[i].y);
     float dist = length(d);
-    float glow = smoothstep(uCometRadius * 0.8, 0.0, dist) * alpha * 0.7;
+    float glow = smoothstep(uCometRadius * 0.8, 0.0, dist) * a * 0.7;
     influence = max(influence, glow);
   }
-
   return clamp(influence, 0.0, 1.0);
 }
 
 void main() {
   float aspect = uResolution.x / uResolution.y;
-  vec2 videoUV = coverUV(vUV, uResolution, uVideoSize);
   vec2 pixelCoord = vUV * uResolution;
 
+  // Find which cell this pixel belongs to (before displacement)
   vec2 cell = floor(pixelCoord / uCellSize);
-  vec2 cellUV = fract(pixelCoord / uCellSize);
 
+  // Sample displacement texture for this cell
+  vec2 dispUV = (cell + 0.5) / uGridSize;
+  vec4 dispSample = texture2D(uDisplacement, dispUV);
+  // Decode: 128 = 0, range maps to ±maxPx
+  vec2 disp = (dispSample.rg - 0.5) * 2.0 * uDisplacementMax;
+  float dispMagnitude = dispSample.b; // 0-1, for glow
+
+  // Offset pixel position by displacement
+  vec2 displacedPixel = pixelCoord + disp;
+  vec2 displacedUV = displacedPixel / uResolution;
+
+  // Re-derive cell position from displaced coordinates
+  vec2 cellUV = fract(displacedPixel / uCellSize);
+
+  // Sample video at the ORIGINAL cell center (character identity stays the same)
   vec2 cellCenter = (cell + 0.5) * uCellSize / uResolution;
   vec2 cellCenterVideo = coverUV(cellCenter, uResolution, uVideoSize);
   vec4 videoColor = texture2D(uVideo, cellCenterVideo);
@@ -149,17 +160,20 @@ void main() {
 
   float mappedLum = mix(lum, 1.0 - lum, uInvert);
 
-  // Comet influence on this cell
+  // Comet influence
   float comet = cometInfluence(cellCenter, aspect);
 
-  // Boost coverage near comet
-  float effectiveCoverage = mix(uCoverage, 1.0, comet * uCometDensityBoost);
+  // Combine comet glow with displacement glow
+  float totalGlow = max(comet, dispMagnitude * 0.8);
+
+  // Boost coverage near comet / displaced cells
+  float effectiveCoverage = mix(uCoverage, 1.0, totalGlow * uCometDensityBoost);
   float coverageThreshold = 1.0 - effectiveCoverage;
   float densityBoost = mappedLum * (1.0 + uDensity * 2.0);
   float finalLum = clamp(densityBoost, 0.0, 1.0);
 
-  // Boost luminance near comet — push toward white
-  finalLum = mix(finalLum, 1.0, comet * uCometGlow * 0.4);
+  // Boost luminance
+  finalLum = mix(finalLum, 1.0, totalGlow * uCometGlow * 0.4);
 
   float showChar = step(coverageThreshold, finalLum);
 
@@ -195,6 +209,7 @@ void main() {
   // Background
   vec3 bgColor = vec3(0.0);
   float bgAlpha = 0.0;
+  vec2 videoUV = coverUV(vUV, uResolution, uVideoSize);
   if (uBgMode < 0.5) {
     bgColor = blurSample(videoUV, uBgBlur);
     bgAlpha = uBgOpacity;
@@ -205,15 +220,13 @@ void main() {
 
   // Composite
   vec3 charColor = videoColor.rgb;
-
-  // Comet brightness boost on character color — push toward white
-  charColor = mix(charColor, vec3(1.0), comet * uCometGlow * 0.6);
+  charColor = mix(charColor, vec3(1.0), totalGlow * uCometGlow * 0.6);
 
   float alpha = glyph * uCharOpacity;
   vec3 finalColor = mix(bgColor * bgAlpha, charColor, alpha);
 
-  // Additive comet bloom — soft glow halo
-  finalColor += vec3(comet * uCometGlow * 0.15);
+  // Additive bloom
+  finalColor += vec3(totalGlow * uCometGlow * 0.15);
 
   gl_FragColor = vec4(finalColor, 1.0);
 }

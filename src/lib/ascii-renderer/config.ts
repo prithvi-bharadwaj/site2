@@ -62,9 +62,27 @@ export interface AsciiConfig {
   trailLength: number;       // max trail points
 
   // Particle displacement
-  particleRepelForce: number;  // how hard cursor pushes particles
-  particleSpring: number;      // spring stiffness (higher = snappier return)
-  particleDamping: number;     // velocity damping (0-1, higher = less bouncy)
+  particleRepelForce: number;
+  particleSpring: number;
+  particleDamping: number;
+
+  // Aurora overlay
+  auroraEnabled: boolean;
+  auroraIntensity: number;
+  auroraSpeed: number;
+  auroraGlowCount: number;
+  auroraTwinkleCount: number;
+  auroraGlowSize: number;
+  auroraTwinkleSize: number;
+  auroraColorShift: number;
+  auroraCursorInfluence: number;
+  auroraCursorRadius: number;
+  auroraCurtainEnabled: boolean;
+  auroraCurtainOpacity: number;
+  auroraCurtainWaves: number;
+  auroraCurtainSpeed: number;
+  auroraLuminanceReactive: boolean;
+  auroraLuminanceBias: number;
 }
 
 export const CHAR_PRESETS: Record<string, string> = {
@@ -115,16 +133,33 @@ export const DESKTOP_CONFIG: AsciiConfig = {
   colorOpacity: 100,
   colorBlend: "multiply",
 
-  cometRadius: 0.1,
-  cometGlow: 2.5,
-  cometDensityBoost: 0.8,
-  cometTrailDecay: 0.8,
-  cometFadeSpeed: 0.8,
+  cometRadius: 0.25484,
+  cometGlow: 0.295,
+  cometDensityBoost: 0.338,
+  cometTrailDecay: 1.8922,
+  cometFadeSpeed: 2.2982,
   trailLength: 16,
 
-  particleRepelForce: 80,
-  particleSpring: 120,
+  particleRepelForce: 181.97,
+  particleSpring: 61.42,
   particleDamping: 0.85,
+
+  auroraEnabled: true,
+  auroraIntensity: 60,
+  auroraSpeed: 50,
+  auroraGlowCount: 18,
+  auroraTwinkleCount: 35,
+  auroraGlowSize: 80,
+  auroraTwinkleSize: 3,
+  auroraColorShift: 40,
+  auroraCursorInfluence: 40,
+  auroraCursorRadius: 0.15,
+  auroraCurtainEnabled: true,
+  auroraCurtainOpacity: 4,
+  auroraCurtainWaves: 3,
+  auroraCurtainSpeed: 30,
+  auroraLuminanceReactive: true,
+  auroraLuminanceBias: 60,
 };
 
 export const MOBILE_CONFIG: AsciiConfig = {

@@ -3,7 +3,7 @@
 import { useState, lazy, Suspense } from "react";
 import { AsciiCanvas } from "@/components/AsciiCanvas";
 import { BioOverlay } from "@/components/BioOverlay";
-import { ParticleOverlay } from "@/components/ParticleOverlay";
+import { AuroraOverlay } from "@/components/AuroraOverlay";
 import { type AsciiRenderer } from "@/lib/ascii-renderer/renderer";
 import { DESKTOP_CONFIG, MOBILE_CONFIG } from "@/lib/ascii-renderer/config";
 
@@ -34,7 +34,7 @@ export default function Home() {
         mobileConfig={MOBILE_CONFIG}
         onRendererReady={setRenderer}
       />
-      <ParticleOverlay config={activeConfig} renderer={renderer} />
+      <AuroraOverlay config={activeConfig} renderer={renderer} />
       <BioOverlay />
       <Suspense fallback={null}>
         <DevPanel renderer={renderer} />
