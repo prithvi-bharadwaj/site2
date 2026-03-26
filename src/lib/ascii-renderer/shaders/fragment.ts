@@ -50,11 +50,11 @@ vec2 coverUV(vec2 uv, vec2 canvasSize, vec2 videoSize) {
 
   vec2 scale = vec2(1.0);
   if (canvasAspect > videoAspect) {
-    // Canvas is wider than video — scale video width to fill, crop height
-    scale.y = canvasAspect / videoAspect;
+    // Canvas wider than video — match width, crop top/bottom
+    scale.y = videoAspect / canvasAspect;
   } else {
-    // Canvas is taller than video — scale video height to fill, crop width
-    scale.x = videoAspect / canvasAspect;
+    // Canvas taller than video — match height, crop left/right
+    scale.x = canvasAspect / videoAspect;
   }
 
   return (uv - 0.5) * scale + 0.5;
