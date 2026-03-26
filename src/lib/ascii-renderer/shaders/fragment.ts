@@ -43,18 +43,21 @@ uniform float uTrailAlpha[16];
 uniform int uTrailCount;
 
 // Aspect-correct "cover" UV mapping for video
+// Fills the canvas completely, cropping the video as needed (never stretches)
 vec2 coverUV(vec2 uv, vec2 canvasSize, vec2 videoSize) {
   float canvasAspect = canvasSize.x / canvasSize.y;
   float videoAspect = videoSize.x / videoSize.y;
 
   vec2 scale = vec2(1.0);
   if (canvasAspect > videoAspect) {
-    scale.y = videoAspect / canvasAspect;
+    // Canvas is wider than video — scale video width to fill, crop height
+    scale.y = canvasAspect / videoAspect;
   } else {
-    scale.x = canvasAspect / videoAspect;
+    // Canvas is taller than video — scale video height to fill, crop width
+    scale.x = videoAspect / canvasAspect;
   }
 
-  return (uv - 0.5) / scale + 0.5;
+  return (uv - 0.5) * scale + 0.5;
 }
 
 float luminance(vec3 c) {
