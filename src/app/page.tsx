@@ -11,7 +11,11 @@ export default function Home() {
 
   return (
     <main>
-      <AsciiCanvas videoSrc="/video/bg.mp4" onRendererReady={setRenderer} />
+      <AsciiCanvas
+        desktopSrc="/video/bg-desktop.mp4"
+        mobileSrc="/video/bg-mobile.mp4"
+        onRendererReady={setRenderer}
+      />
       <BioOverlay />
       <DevPanel renderer={renderer} />
     </main>
