@@ -86,13 +86,13 @@ Estimated: 1.5hr | Files: ~6
 Estimated: 2hr | Files: ~4
 
 #### Tasks
-- [ ] Create `src/lib/ascii-renderer/glyph-atlas.ts` — render minimal charset (`@#*+=-:. `) to an offscreen canvas, upload as WebGL texture
+- [x] Create `src/lib/ascii-renderer/glyph-atlas.ts` — render minimal charset (`@#*+=-:. `) to an offscreen canvas, upload as WebGL texture
   Verify: Atlas texture created without errors (check with a test render)
-- [ ] Create `src/lib/ascii-renderer/config.ts` — typed config object with all ascii-magic.com parameters as defaults
+- [x] Create `src/lib/ascii-renderer/config.ts` — typed config object with all ascii-magic.com parameters as defaults
   Verify: Config imports cleanly, TypeScript happy
-- [ ] Update `fragment.glsl` — divide viewport into grid cells, sample video at cell center, compute luminance (BT.601), map to glyph atlas index, sample glyph texture
+- [x] Update `fragment.glsl` — divide viewport into grid cells, sample video at cell center, compute luminance (BT.601), map to glyph atlas index, sample glyph texture
   Verify: Video renders as ASCII characters in the browser
-- [ ] Wire uniforms from config: `uCellSize`, `uCharCount`, `uCharOpacity`, `uCoverage`, `uDensity`, `uBrightness`, `uContrast`
+- [x] Wire uniforms from config: `uCellSize`, `uCharCount`, `uCharOpacity`, `uCoverage`, `uDensity`, `uBrightness`, `uContrast`
   Verify: Changing config values changes the ASCII output
 
 **Test checkpoint:** Video displays as ASCII art. Characters map to brightness. Adjusting coverage/density in code changes the look.

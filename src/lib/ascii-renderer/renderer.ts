@@ -1,5 +1,7 @@
 import vertexSource from "./shaders/vertex.glsl";
 import fragmentSource from "./shaders/fragment.glsl";
+import { createGlyphAtlas, type GlyphAtlas } from "./glyph-atlas";
+import { type AsciiConfig, DEFAULT_CONFIG, getCharsForPreset } from "./config";
 
 function compileShader(
   gl: WebGLRenderingContext,
@@ -43,12 +45,15 @@ function createProgram(
 export interface AsciiRenderer {
   render: () => void;
   resize: (width: number, height: number) => void;
+  updateConfig: (config: AsciiConfig) => void;
+  getConfig: () => AsciiConfig;
   destroy: () => void;
 }
 
 export function createAsciiRenderer(
   canvas: HTMLCanvasElement,
-  video: HTMLVideoElement
+  video: HTMLVideoElement,
+  initialConfig?: Partial<AsciiConfig>
 ): AsciiRenderer {
   const glOrNull = canvas.getContext("webgl", {
     alpha: false,
@@ -60,7 +65,7 @@ export function createAsciiRenderer(
 
   const program = createProgram(gl, vertexSource, fragmentSource);
 
-  // Fullscreen quad: two triangles covering [-1, 1]
+  // Fullscreen quad
   const posBuffer = gl.createBuffer();
   gl.bindBuffer(gl.ARRAY_BUFFER, posBuffer);
   gl.bufferData(
@@ -70,28 +75,53 @@ export function createAsciiRenderer(
   );
 
   const aPosition = gl.getAttribLocation(program, "aPosition");
-  const uVideo = gl.getUniformLocation(program, "uVideo");
-  const uResolution = gl.getUniformLocation(program, "uResolution");
 
-  // Video texture
+  // Uniform locations
+  const uniforms = {
+    uVideo: gl.getUniformLocation(program, "uVideo"),
+    uAtlas: gl.getUniformLocation(program, "uAtlas"),
+    uResolution: gl.getUniformLocation(program, "uResolution"),
+    uCellSize: gl.getUniformLocation(program, "uCellSize"),
+    uCharCount: gl.getUniformLocation(program, "uCharCount"),
+    uCharOpacity: gl.getUniformLocation(program, "uCharOpacity"),
+    uCoverage: gl.getUniformLocation(program, "uCoverage"),
+    uDensity: gl.getUniformLocation(program, "uDensity"),
+    uBrightness: gl.getUniformLocation(program, "uBrightness"),
+    uContrast: gl.getUniformLocation(program, "uContrast"),
+    uInvert: gl.getUniformLocation(program, "uInvert"),
+    uEdgeEmphasis: gl.getUniformLocation(program, "uEdgeEmphasis"),
+    uBgOpacity: gl.getUniformLocation(program, "uBgOpacity"),
+    uBgBlur: gl.getUniformLocation(program, "uBgBlur"),
+    uBgMode: gl.getUniformLocation(program, "uBgMode"),
+    uTime: gl.getUniformLocation(program, "uTime"),
+    uAnimated: gl.getUniformLocation(program, "uAnimated"),
+    uAnimSpeed: gl.getUniformLocation(program, "uAnimSpeed"),
+    uAnimIntensity: gl.getUniformLocation(program, "uAnimIntensity"),
+    uAnimRandomness: gl.getUniformLocation(program, "uAnimRandomness"),
+  };
+
+  // Video texture (unit 0)
   const videoTex = gl.createTexture();
+  gl.activeTexture(gl.TEXTURE0);
   gl.bindTexture(gl.TEXTURE_2D, videoTex);
   gl.texImage2D(
-    gl.TEXTURE_2D,
-    0,
-    gl.RGBA,
-    1,
-    1,
-    0,
-    gl.RGBA,
-    gl.UNSIGNED_BYTE,
-    new Uint8Array([0, 0, 0, 255])
+    gl.TEXTURE_2D, 0, gl.RGBA, 1, 1, 0,
+    gl.RGBA, gl.UNSIGNED_BYTE, new Uint8Array([0, 0, 0, 255])
   );
   gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
   gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
   gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
   gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
 
+  // Config + glyph atlas
+  let config: AsciiConfig = { ...DEFAULT_CONFIG, ...initialConfig };
+  let atlas: GlyphAtlas = createGlyphAtlas(
+    gl,
+    getCharsForPreset(config),
+    config.fontSize
+  );
+
+  // Video readiness
   let videoReady = false;
   let playing = false;
   let timeUpdated = false;
@@ -109,28 +139,70 @@ export function createAsciiRenderer(
   video.addEventListener("timeupdate", onTimeUpdate);
 
   let animFrameId = 0;
+  const startTime = performance.now();
+
+  const BG_MODE_MAP: Record<string, number> = {
+    blur: 0,
+    solid: 1,
+    original: 2,
+    none: 3,
+  };
 
   function render() {
+    const elapsed = (performance.now() - startTime) / 1000;
+
+    // Upload video frame
     if (videoReady) {
+      gl.activeTexture(gl.TEXTURE0);
       gl.bindTexture(gl.TEXTURE_2D, videoTex);
       gl.texImage2D(
-        gl.TEXTURE_2D,
-        0,
-        gl.RGBA,
-        gl.RGBA,
-        gl.UNSIGNED_BYTE,
-        video
+        gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, video
       );
     }
 
     gl.useProgram(program);
-    gl.uniform1i(uVideo, 0);
-    gl.uniform2f(uResolution, canvas.width, canvas.height);
 
+    // Bind textures
+    gl.activeTexture(gl.TEXTURE0);
+    gl.bindTexture(gl.TEXTURE_2D, videoTex);
+    gl.uniform1i(uniforms.uVideo, 0);
+
+    gl.activeTexture(gl.TEXTURE1);
+    gl.bindTexture(gl.TEXTURE_2D, atlas.texture);
+    gl.uniform1i(uniforms.uAtlas, 1);
+
+    // Resolution + cell size
+    gl.uniform2f(uniforms.uResolution, canvas.width, canvas.height);
+    gl.uniform2f(uniforms.uCellSize, atlas.charWidth, atlas.charHeight);
+    gl.uniform1f(uniforms.uCharCount, atlas.charCount);
+
+    // Character params
+    gl.uniform1f(uniforms.uCharOpacity, config.charOpacity / 100);
+    gl.uniform1f(uniforms.uInvert, config.invertMapping ? 1 : 0);
+
+    // Intensity params
+    gl.uniform1f(uniforms.uCoverage, config.coverage / 100);
+    gl.uniform1f(uniforms.uDensity, config.density / 100);
+    gl.uniform1f(uniforms.uBrightness, config.brightness / 100);
+    gl.uniform1f(uniforms.uContrast, config.contrast / 100);
+    gl.uniform1f(uniforms.uEdgeEmphasis, config.edgeEmphasis / 100);
+
+    // Background params
+    gl.uniform1f(uniforms.uBgMode, BG_MODE_MAP[config.bgMode] ?? 0);
+    gl.uniform1f(uniforms.uBgBlur, config.bgBlur);
+    gl.uniform1f(uniforms.uBgOpacity, config.bgOpacity / 100);
+
+    // Animation params
+    gl.uniform1f(uniforms.uTime, elapsed);
+    gl.uniform1f(uniforms.uAnimated, config.animated ? 1 : 0);
+    gl.uniform1f(uniforms.uAnimSpeed, config.animSpeed / 1000);
+    gl.uniform1f(uniforms.uAnimIntensity, config.animIntensity / 100);
+    gl.uniform1f(uniforms.uAnimRandomness, config.animRandomness / 100);
+
+    // Draw
     gl.bindBuffer(gl.ARRAY_BUFFER, posBuffer);
     gl.enableVertexAttribArray(aPosition);
     gl.vertexAttribPointer(aPosition, 2, gl.FLOAT, false, 0, 0);
-
     gl.drawArrays(gl.TRIANGLES, 0, 6);
 
     animFrameId = requestAnimationFrame(render);
@@ -142,11 +214,30 @@ export function createAsciiRenderer(
     gl.viewport(0, 0, width, height);
   }
 
+  function updateConfig(newConfig: AsciiConfig) {
+    const charsChanged =
+      newConfig.charPreset !== config.charPreset ||
+      newConfig.customChars !== config.customChars ||
+      newConfig.fontSize !== config.fontSize;
+
+    config = { ...newConfig };
+
+    if (charsChanged) {
+      gl.deleteTexture(atlas.texture);
+      atlas = createGlyphAtlas(gl, getCharsForPreset(config), config.fontSize);
+    }
+  }
+
+  function getConfig() {
+    return { ...config };
+  }
+
   function destroy() {
     cancelAnimationFrame(animFrameId);
     video.removeEventListener("playing", onPlaying);
     video.removeEventListener("timeupdate", onTimeUpdate);
     gl.deleteTexture(videoTex);
+    gl.deleteTexture(atlas.texture);
     gl.deleteBuffer(posBuffer);
     gl.deleteProgram(program);
   }
@@ -154,5 +245,5 @@ export function createAsciiRenderer(
   // Start render loop
   animFrameId = requestAnimationFrame(render);
 
-  return { render, resize, destroy };
+  return { render, resize, updateConfig, getConfig, destroy };
 }

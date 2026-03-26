@@ -2,12 +2,15 @@
 
 import { useRef, useEffect, useCallback } from "react";
 import { createAsciiRenderer, type AsciiRenderer } from "@/lib/ascii-renderer/renderer";
+import { type AsciiConfig } from "@/lib/ascii-renderer/config";
 
 interface AsciiCanvasProps {
   videoSrc: string;
+  config?: Partial<AsciiConfig>;
+  onRendererReady?: (renderer: AsciiRenderer) => void;
 }
 
-export function AsciiCanvas({ videoSrc }: AsciiCanvasProps) {
+export function AsciiCanvas({ videoSrc, config, onRendererReady }: AsciiCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const rendererRef = useRef<AsciiRenderer | null>(null);
@@ -21,15 +24,12 @@ export function AsciiCanvas({ videoSrc }: AsciiCanvasProps) {
     const video = videoRef.current;
     if (!canvas || !video) return;
 
-    const renderer = createAsciiRenderer(canvas, video);
+    const renderer = createAsciiRenderer(canvas, video, config);
     rendererRef.current = renderer;
+    onRendererReady?.(renderer);
 
-    // Start video playback
-    video.play().catch(() => {
-      // Autoplay may be blocked — silent fail for background video
-    });
+    video.play().catch(() => {});
 
-    // ResizeObserver for responsive canvas
     const maxDpr = Math.min(window.devicePixelRatio, 2);
 
     const observer = new ResizeObserver((entries) => {
