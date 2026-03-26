@@ -33,6 +33,10 @@ export interface AsciiConfig {
   brightness: number;
   contrast: number;
 
+  // Video framing
+  videoAnchorX: number; // 0=left, 0.5=center, 1=right
+  videoAnchorY: number; // 0=top, 0.5=center, 1=bottom
+
   // Background
   bgMode: BgMode;
   bgBlur: number;
@@ -92,6 +96,9 @@ export const DEFAULT_CONFIG: AsciiConfig = {
   density: 30,
   brightness: 0,
   contrast: 0,
+
+  videoAnchorX: 0.5,
+  videoAnchorY: 1.0, // bottom-anchored by default
 
   bgMode: "blur",
   bgBlur: 15,

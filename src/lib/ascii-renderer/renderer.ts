@@ -83,6 +83,7 @@ export function createAsciiRenderer(
     uAtlas: gl.getUniformLocation(program, "uAtlas"),
     uResolution: gl.getUniformLocation(program, "uResolution"),
     uVideoSize: gl.getUniformLocation(program, "uVideoSize"),
+    uVideoAnchor: gl.getUniformLocation(program, "uVideoAnchor"),
     uCellSize: gl.getUniformLocation(program, "uCellSize"),
     uCharCount: gl.getUniformLocation(program, "uCharCount"),
     uCharOpacity: gl.getUniformLocation(program, "uCharOpacity"),
@@ -202,6 +203,7 @@ export function createAsciiRenderer(
     // Resolution + video size + cell size
     gl.uniform2f(uniforms.uResolution, canvas.width, canvas.height);
     gl.uniform2f(uniforms.uVideoSize, video.videoWidth || 1280, video.videoHeight || 720);
+    gl.uniform2f(uniforms.uVideoAnchor, config.videoAnchorX, config.videoAnchorY);
     gl.uniform2f(uniforms.uCellSize, atlas.charWidth, atlas.charHeight);
     gl.uniform1f(uniforms.uCharCount, atlas.charCount);
 

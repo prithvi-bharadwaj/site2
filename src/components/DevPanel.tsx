@@ -48,6 +48,11 @@ export function DevPanel({ renderer }: DevPanelProps) {
       intensity.add(params, "brightness", -100, 100).onChange(update);
       intensity.add(params, "contrast", -100, 100).onChange(update);
 
+      // Video Framing
+      const framing = gui.addFolder("Video Framing");
+      framing.add(params, "videoAnchorX", 0, 1).name("Anchor X (0=L 1=R)").onChange(update);
+      framing.add(params, "videoAnchorY", 0, 1).name("Anchor Y (0=Top 1=Bot)").onChange(update);
+
       // Background
       const bg = gui.addFolder("Background");
       bg.add(params, "bgMode", ["blur", "solid", "original", "none"]).onChange(update);

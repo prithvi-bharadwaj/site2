@@ -7,6 +7,7 @@ uniform sampler2D uVideo;
 uniform sampler2D uAtlas;
 uniform vec2 uResolution;
 uniform vec2 uVideoSize;      // actual video dimensions
+uniform vec2 uVideoAnchor;    // crop anchor: 0=top/left, 0.5=center, 1=bottom/right
 uniform vec2 uCellSize;
 uniform float uCharCount;
 uniform float uCharOpacity;
@@ -50,14 +51,13 @@ vec2 coverUV(vec2 uv, vec2 canvasSize, vec2 videoSize) {
 
   vec2 scale = vec2(1.0);
   if (canvasAspect > videoAspect) {
-    // Canvas wider than video — match width, crop top/bottom
     scale.y = videoAspect / canvasAspect;
   } else {
-    // Canvas taller than video — match height, crop left/right
     scale.x = canvasAspect / videoAspect;
   }
 
-  return (uv - 0.5) * scale + 0.5;
+  // Anchor: 0=top/left, 0.5=center, 1=bottom/right
+  return uv * scale + uVideoAnchor * (1.0 - scale);
 }
 
 float luminance(vec3 c) {
