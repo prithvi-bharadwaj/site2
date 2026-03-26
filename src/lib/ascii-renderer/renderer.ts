@@ -82,6 +82,7 @@ export function createAsciiRenderer(
     uVideo: gl.getUniformLocation(program, "uVideo"),
     uAtlas: gl.getUniformLocation(program, "uAtlas"),
     uResolution: gl.getUniformLocation(program, "uResolution"),
+    uVideoSize: gl.getUniformLocation(program, "uVideoSize"),
     uCellSize: gl.getUniformLocation(program, "uCellSize"),
     uCharCount: gl.getUniformLocation(program, "uCharCount"),
     uCharOpacity: gl.getUniformLocation(program, "uCharOpacity"),
@@ -102,9 +103,21 @@ export function createAsciiRenderer(
     uPointer: gl.getUniformLocation(program, "uPointer"),
     uPointerRadius: gl.getUniformLocation(program, "uPointerRadius"),
     uPointerSoftness: gl.getUniformLocation(program, "uPointerSoftness"),
-    uPointerActive: gl.getUniformLocation(program, "uPointerActive"),
+    uPointerOpacity: gl.getUniformLocation(program, "uPointerOpacity"),
     uInteractionMode: gl.getUniformLocation(program, "uInteractionMode"),
+    uRippleFrequency: gl.getUniformLocation(program, "uRippleFrequency"),
+    uRippleAmplitude: gl.getUniformLocation(program, "uRippleAmplitude"),
+    uRippleSpeed: gl.getUniformLocation(program, "uRippleSpeed"),
+    uTrailCount: gl.getUniformLocation(program, "uTrailCount"),
   };
+
+  // Trail uniform locations (arrays)
+  const uTrail: (WebGLUniformLocation | null)[] = [];
+  const uTrailAlpha: (WebGLUniformLocation | null)[] = [];
+  for (let i = 0; i < 16; i++) {
+    uTrail.push(gl.getUniformLocation(program, `uTrail[${i}]`));
+    uTrailAlpha.push(gl.getUniformLocation(program, `uTrailAlpha[${i}]`));
+  }
 
   // Video texture (unit 0)
   const videoTex = gl.createTexture();
@@ -128,10 +141,16 @@ export function createAsciiRenderer(
   );
 
   // Pointer state
-  let pointerState: PointerState = { x: 0.5, y: 0.5, active: false };
-  const pointerHandler = createPointerHandler(canvas, (state) => {
-    pointerState = state;
-  });
+  let pointerState: PointerState = { x: 0.5, y: 0.5, opacity: 0, trail: [] };
+  const pointerHandler = createPointerHandler(
+    canvas,
+    (state) => { pointerState = state; },
+    {
+      fadeSpeed: config.pointerFadeSpeed,
+      trailLength: config.trailLength,
+      trailDuration: config.trailDuration,
+    }
+  );
 
   // Video readiness
   let videoReady = false;
@@ -154,10 +173,7 @@ export function createAsciiRenderer(
   const startTime = performance.now();
 
   const BG_MODE_MAP: Record<string, number> = {
-    blur: 0,
-    solid: 1,
-    original: 2,
-    none: 3,
+    blur: 0, solid: 1, original: 2, none: 3,
   };
 
   function render() {
@@ -183,8 +199,9 @@ export function createAsciiRenderer(
     gl.bindTexture(gl.TEXTURE_2D, atlas.texture);
     gl.uniform1i(uniforms.uAtlas, 1);
 
-    // Resolution + cell size
+    // Resolution + video size + cell size
     gl.uniform2f(uniforms.uResolution, canvas.width, canvas.height);
+    gl.uniform2f(uniforms.uVideoSize, video.videoWidth || 1280, video.videoHeight || 720);
     gl.uniform2f(uniforms.uCellSize, atlas.charWidth, atlas.charHeight);
     gl.uniform1f(uniforms.uCharCount, atlas.charCount);
 
@@ -215,8 +232,26 @@ export function createAsciiRenderer(
     gl.uniform2f(uniforms.uPointer, pointerState.x, pointerState.y);
     gl.uniform1f(uniforms.uPointerRadius, config.pointerRadius);
     gl.uniform1f(uniforms.uPointerSoftness, config.pointerSoftness);
-    gl.uniform1f(uniforms.uPointerActive, pointerState.active ? 1 : 0);
+    gl.uniform1f(uniforms.uPointerOpacity, pointerState.opacity);
     gl.uniform1f(uniforms.uInteractionMode, config.interactionMode);
+    gl.uniform1f(uniforms.uRippleFrequency, config.rippleFrequency);
+    gl.uniform1f(uniforms.uRippleAmplitude, config.rippleAmplitude);
+    gl.uniform1f(uniforms.uRippleSpeed, config.rippleSpeed);
+
+    // Trail data
+    const trailCount = Math.min(pointerState.trail.length, 16);
+    gl.uniform1i(uniforms.uTrailCount, trailCount);
+    for (let i = 0; i < 16; i++) {
+      if (i < trailCount) {
+        const t = pointerState.trail[i];
+        const alpha = 1.0 - t.age / config.trailDuration;
+        gl.uniform2f(uTrail[i], t.x, t.y);
+        gl.uniform1f(uTrailAlpha[i], Math.max(0, alpha));
+      } else {
+        gl.uniform2f(uTrail[i], 0, 0);
+        gl.uniform1f(uTrailAlpha[i], 0);
+      }
+    }
 
     // Draw
     gl.bindBuffer(gl.ARRAY_BUFFER, posBuffer);
@@ -262,7 +297,6 @@ export function createAsciiRenderer(
     gl.deleteProgram(program);
   }
 
-  // Start render loop
   animFrameId = requestAnimationFrame(render);
 
   return { render, resize, updateConfig, getConfig, destroy };

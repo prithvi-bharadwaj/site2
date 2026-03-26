@@ -6,6 +6,7 @@ varying vec2 vUV;
 uniform sampler2D uVideo;
 uniform sampler2D uAtlas;
 uniform vec2 uResolution;
+uniform vec2 uVideoSize;      // actual video dimensions
 uniform vec2 uCellSize;
 uniform float uCharCount;
 uniform float uCharOpacity;
@@ -26,12 +27,35 @@ uniform float uAnimSpeed;
 uniform float uAnimIntensity;
 uniform float uAnimRandomness;
 
-// Pointer interaction
+// Pointer
 uniform vec2 uPointer;
 uniform float uPointerRadius;
 uniform float uPointerSoftness;
-uniform float uPointerActive;
-uniform float uInteractionMode; // 0 = reveal, 1 = ripple
+uniform float uPointerOpacity;   // 0-1, fades when idle
+uniform float uInteractionMode;
+uniform float uRippleFrequency;
+uniform float uRippleAmplitude;
+uniform float uRippleSpeed;
+
+// Trail points (up to 16)
+uniform vec2 uTrail[16];
+uniform float uTrailAlpha[16];
+uniform int uTrailCount;
+
+// Aspect-correct "cover" UV mapping for video
+vec2 coverUV(vec2 uv, vec2 canvasSize, vec2 videoSize) {
+  float canvasAspect = canvasSize.x / canvasSize.y;
+  float videoAspect = videoSize.x / videoSize.y;
+
+  vec2 scale = vec2(1.0);
+  if (canvasAspect > videoAspect) {
+    scale.y = videoAspect / canvasAspect;
+  } else {
+    scale.x = canvasAspect / videoAspect;
+  }
+
+  return (uv - 0.5) / scale + 0.5;
+}
 
 float luminance(vec3 c) {
   return dot(c, vec3(0.299, 0.587, 0.114));
@@ -67,36 +91,70 @@ float sobelEdge(vec2 cellCenter, vec2 texelSize) {
   return sqrt(gx * gx + gy * gy);
 }
 
-void main() {
-  // Aspect-correct pointer distance
-  float aspect = uResolution.x / uResolution.y;
-  vec2 uvAspect = vec2(vUV.x * aspect, vUV.y);
-  vec2 pointerAspect = vec2(uPointer.x * aspect, uPointer.y);
-  float pointerDist = distance(uvAspect, pointerAspect);
+// Box blur approximation — 9 samples in a circle
+vec3 blurSample(vec2 uv, float radius) {
+  vec2 texel = radius / uResolution;
+  vec3 sum = texture2D(uVideo, uv).rgb;
+  sum += texture2D(uVideo, uv + vec2( texel.x, 0.0)).rgb;
+  sum += texture2D(uVideo, uv + vec2(-texel.x, 0.0)).rgb;
+  sum += texture2D(uVideo, uv + vec2(0.0,  texel.y)).rgb;
+  sum += texture2D(uVideo, uv + vec2(0.0, -texel.y)).rgb;
+  sum += texture2D(uVideo, uv + vec2( texel.x,  texel.y)).rgb;
+  sum += texture2D(uVideo, uv + vec2(-texel.x,  texel.y)).rgb;
+  sum += texture2D(uVideo, uv + vec2( texel.x, -texel.y)).rgb;
+  sum += texture2D(uVideo, uv + vec2(-texel.x, -texel.y)).rgb;
+  // Extra ring for stronger blur
+  sum += texture2D(uVideo, uv + vec2( texel.x * 2.0, 0.0)).rgb;
+  sum += texture2D(uVideo, uv + vec2(-texel.x * 2.0, 0.0)).rgb;
+  sum += texture2D(uVideo, uv + vec2(0.0,  texel.y * 2.0)).rgb;
+  sum += texture2D(uVideo, uv + vec2(0.0, -texel.y * 2.0)).rgb;
+  return sum / 13.0;
+}
 
-  // Ripple mode: distort UVs near pointer
-  vec2 sampleUV = vUV;
-  if (uPointerActive > 0.5 && uInteractionMode > 0.5) {
+void main() {
+  float aspect = uResolution.x / uResolution.y;
+
+  // Cover-mapped UV for video sampling
+  vec2 videoUV = coverUV(vUV, uResolution, uVideoSize);
+
+  // Compute combined ripple distortion from pointer + trail
+  vec2 rippleOffset = vec2(0.0);
+  if (uPointerOpacity > 0.01 && uInteractionMode > 0.5) {
+    // Main pointer ripple
     vec2 delta = vUV - uPointer;
     float dist = length(vec2(delta.x * aspect, delta.y));
-    float wave = sin(dist * 50.0 - uTime * 4.0) * 0.008;
-    float falloff = smoothstep(uPointerRadius * 1.5, 0.0, dist);
-    sampleUV = vUV + normalize(vec2(delta.x * aspect, delta.y)) * wave * falloff / vec2(aspect, 1.0);
+    float wave = sin(dist * uRippleFrequency - uTime * uRippleSpeed) * uRippleAmplitude;
+    float falloff = smoothstep(uPointerRadius * 1.5, 0.0, dist) * uPointerOpacity;
+    rippleOffset += normalize(vec2(delta.x * aspect, delta.y) + 0.0001) * wave * falloff / vec2(aspect, 1.0);
+
+    // Trail ripples
+    for (int i = 0; i < 16; i++) {
+      if (i >= uTrailCount) break;
+      float trailAlpha = uTrailAlpha[i];
+      if (trailAlpha < 0.01) continue;
+      vec2 tDelta = vUV - uTrail[i];
+      float tDist = length(vec2(tDelta.x * aspect, tDelta.y));
+      float tWave = sin(tDist * uRippleFrequency - uTime * uRippleSpeed) * uRippleAmplitude * 0.5;
+      float tFalloff = smoothstep(uPointerRadius * 1.2, 0.0, tDist) * trailAlpha;
+      rippleOffset += normalize(vec2(tDelta.x * aspect, tDelta.y) + 0.0001) * tWave * tFalloff / vec2(aspect, 1.0);
+    }
   }
 
-  vec2 pixelCoord = sampleUV * uResolution;
+  vec2 sampleUV = videoUV + rippleOffset;
+  vec2 pixelCoord = (vUV + rippleOffset) * uResolution;
 
   vec2 cell = floor(pixelCoord / uCellSize);
   vec2 cellUV = fract(pixelCoord / uCellSize);
 
   vec2 cellCenter = (cell + 0.5) * uCellSize / uResolution;
-  vec4 videoColor = texture2D(uVideo, cellCenter);
+  vec2 cellCenterVideo = coverUV(cellCenter, uResolution, uVideoSize) + rippleOffset;
+  vec4 videoColor = texture2D(uVideo, cellCenterVideo);
   float lum = luminance(videoColor.rgb);
 
   lum = adjustBrightnessContrast(lum, uBrightness, uContrast);
 
   vec2 texelSize = uCellSize / uResolution;
-  float edge = sobelEdge(cellCenter, texelSize);
+  float edge = sobelEdge(cellCenterVideo, texelSize);
   lum = mix(lum, clamp(lum + edge * 2.0, 0.0, 1.0), uEdgeEmphasis);
 
   float mappedLum = mix(lum, 1.0 - lum, uInvert);
@@ -117,26 +175,36 @@ void main() {
   float glyph = texture2D(uAtlas, atlasUV).r;
   glyph *= showChar;
 
+  // Animation — more impactful
   if (uAnimated > 0.5) {
     float cellHash = hash(cell);
-    float wave = sin(uTime / uAnimSpeed * 6.2831 + cellHash * 6.2831) * 0.5 + 0.5;
-    float shimmer = mix(1.0, wave, uAnimIntensity * 0.3);
 
-    float swapChance = uAnimRandomness * 0.05;
-    float timeHash = hash(cell + vec2(floor(uTime / uAnimSpeed * 2.0)));
+    // Stronger wave modulation
+    float wave = sin(uTime / uAnimSpeed * 6.2831 + cellHash * 6.2831) * 0.5 + 0.5;
+    float shimmer = mix(1.0, wave, uAnimIntensity * 0.8);
+
+    // More aggressive character swap
+    float swapChance = uAnimRandomness * 0.15;
+    float timeHash = hash(cell + vec2(floor(uTime / uAnimSpeed * 3.0)));
     if (timeHash < swapChance && glyph > 0.01) {
-      float newIndex = floor(timeHash / swapChance * (uCharCount - 1.0));
+      float newIndex = floor(hash(cell + vec2(uTime * 0.7)) * (uCharCount - 1.0));
       vec2 newAtlasUV = vec2((newIndex + cellUV.x) / uCharCount, cellUV.y);
       glyph = texture2D(uAtlas, newAtlasUV).r * showChar;
     }
 
-    glyph *= shimmer;
+    // Flicker: random cells briefly go dark
+    float flickerHash = hash(cell + vec2(floor(uTime * 8.0)));
+    float flicker = step(uAnimRandomness * 0.03, flickerHash);
+
+    glyph *= shimmer * flicker;
   }
 
+  // Background
   vec3 bgColor = vec3(0.0);
   float bgAlpha = 0.0;
   if (uBgMode < 0.5) {
-    bgColor = texture2D(uVideo, sampleUV).rgb;
+    // Blurred image mode — actual blur sampling
+    bgColor = blurSample(sampleUV, uBgBlur);
     bgAlpha = uBgOpacity;
   } else if (uBgMode > 1.5 && uBgMode < 2.5) {
     bgColor = texture2D(uVideo, sampleUV).rgb;
@@ -147,11 +215,28 @@ void main() {
   float alpha = glyph * uCharOpacity;
   vec3 asciiResult = mix(bgColor * bgAlpha, charColor, alpha);
 
-  // Pointer reveal mode: show raw video inside pointer radius
-  if (uPointerActive > 0.5 && uInteractionMode < 0.5) {
+  // Pointer reveal mode
+  if (uPointerOpacity > 0.01 && uInteractionMode < 0.5) {
+    vec2 uvAspect = vec2(vUV.x * aspect, vUV.y);
+    vec2 ptrAspect = vec2(uPointer.x * aspect, uPointer.y);
+    float pointerDist = distance(uvAspect, ptrAspect);
     float reveal = 1.0 - smoothstep(uPointerRadius - uPointerSoftness, uPointerRadius, pointerDist);
-    vec3 rawVideo = texture2D(uVideo, vUV).rgb;
+    reveal *= uPointerOpacity;
+
+    vec3 rawVideo = texture2D(uVideo, videoUV).rgb;
     asciiResult = mix(asciiResult, rawVideo, reveal);
+
+    // Trail reveals
+    for (int i = 0; i < 16; i++) {
+      if (i >= uTrailCount) break;
+      float trailAlpha = uTrailAlpha[i];
+      if (trailAlpha < 0.01) continue;
+      vec2 tAspect = vec2(uTrail[i].x * aspect, uTrail[i].y);
+      float tDist = distance(uvAspect, tAspect);
+      float tReveal = 1.0 - smoothstep(uPointerRadius * 0.6 - uPointerSoftness, uPointerRadius * 0.6, tDist);
+      tReveal *= trailAlpha * 0.6;
+      asciiResult = mix(asciiResult, rawVideo, tReveal);
+    }
   }
 
   gl_FragColor = vec4(asciiResult, 1.0);

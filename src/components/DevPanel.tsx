@@ -21,13 +21,10 @@ export function DevPanel({ renderer }: DevPanelProps) {
       guiRef.current = gui;
 
       const config = renderer.getConfig();
-
-      // Proxy object for lil-gui (it mutates directly)
       const params = { ...config };
-
       const update = () => renderer.updateConfig({ ...params });
 
-      // Characters folder
+      // Characters
       const chars = gui.addFolder("Characters");
       chars.add(params, "renderMode", ["brightness", "edge-map", "dots"]).onChange(update);
       chars.add(params, "fontSize", 3, 48, 1).onChange(update);
@@ -43,7 +40,7 @@ export function DevPanel({ renderer }: DevPanelProps) {
       chars.add(params, "invertMapping").onChange(update);
       chars.add(params, "dotGrid").onChange(update);
 
-      // Intensity folder
+      // Intensity
       const intensity = gui.addFolder("Intensity");
       intensity.add(params, "coverage", 0, 100).onChange(update);
       intensity.add(params, "edgeEmphasis", 0, 100).onChange(update);
@@ -51,20 +48,20 @@ export function DevPanel({ renderer }: DevPanelProps) {
       intensity.add(params, "brightness", -100, 100).onChange(update);
       intensity.add(params, "contrast", -100, 100).onChange(update);
 
-      // Background folder
+      // Background
       const bg = gui.addFolder("Background");
       bg.add(params, "bgMode", ["blur", "solid", "original", "none"]).onChange(update);
       bg.add(params, "bgBlur", 0, 60).onChange(update);
       bg.add(params, "bgOpacity", 0, 100).onChange(update);
 
-      // Animation folder
+      // Animation
       const anim = gui.addFolder("Animation");
       anim.add(params, "animated").onChange(update);
-      anim.add(params, "animSpeed", 500, 3000, 100).name("Speed (ms)").onChange(update);
+      anim.add(params, "animSpeed", 100, 3000, 50).name("Speed (ms)").onChange(update);
       anim.add(params, "animIntensity", 0, 100).name("Intensity").onChange(update);
       anim.add(params, "animRandomness", 0, 100).name("Randomness").onChange(update);
 
-      // Color overlay folder
+      // Color Overlay
       const color = gui.addFolder("Color Overlay");
       color.addColor(params, "colorOverlay").onChange(update);
       color.add(params, "colorOpacity", 0, 100).onChange(update);
@@ -74,13 +71,22 @@ export function DevPanel({ renderer }: DevPanelProps) {
         "color-burn", "color-dodge",
       ]).onChange(update);
 
-      // Pointer folder
+      // Pointer
       const pointer = gui.addFolder("Pointer");
-      pointer.add(params, "pointerRadius", 0.02, 0.4).onChange(update);
-      pointer.add(params, "pointerSoftness", 0.01, 0.15).onChange(update);
       pointer.add(params, "interactionMode", { Reveal: 0, Ripple: 1 }).onChange(update);
+      pointer.add(params, "pointerRadius", 0.02, 0.5).onChange(update);
+      pointer.add(params, "pointerSoftness", 0.01, 0.2).onChange(update);
+      pointer.add(params, "pointerFadeSpeed", 0.1, 3.0).name("Fade Speed (s)").onChange(update);
 
-      // Copy config button
+      // Ripple
+      const ripple = gui.addFolder("Ripple");
+      ripple.add(params, "rippleFrequency", 5, 100).name("Frequency").onChange(update);
+      ripple.add(params, "rippleAmplitude", 0.001, 0.05).name("Amplitude").onChange(update);
+      ripple.add(params, "rippleSpeed", 0.5, 15).name("Speed").onChange(update);
+      ripple.add(params, "trailDuration", 0.1, 5.0).name("Trail Duration (s)").onChange(update);
+      ripple.add(params, "trailLength", 1, 16, 1).name("Trail Points").onChange(update);
+
+      // Copy Config
       gui.add(
         {
           copyConfig: () => {
@@ -89,7 +95,7 @@ export function DevPanel({ renderer }: DevPanelProps) {
           },
         },
         "copyConfig"
-      ).name("📋 Copy Config");
+      ).name("Copy Config");
     });
 
     return () => {
