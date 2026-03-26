@@ -6,8 +6,8 @@ varying vec2 vUV;
 uniform sampler2D uVideo;
 uniform sampler2D uAtlas;
 uniform vec2 uResolution;
-uniform vec2 uVideoSize;      // actual video dimensions
-uniform vec2 uVideoAnchor;    // crop anchor: 0=top/left, 0.5=center, 1=bottom/right
+uniform vec2 uVideoSize;
+uniform vec2 uVideoAnchor;
 uniform vec2 uCellSize;
 uniform float uCharCount;
 uniform float uCharOpacity;
@@ -28,35 +28,27 @@ uniform float uAnimSpeed;
 uniform float uAnimIntensity;
 uniform float uAnimRandomness;
 
-// Pointer
-uniform vec2 uPointer;
-uniform float uPointerRadius;
-uniform float uPointerSoftness;
-uniform float uPointerOpacity;   // 0-1, fades when idle
-uniform float uInteractionMode;
-uniform float uRippleFrequency;
-uniform float uRippleAmplitude;
-uniform float uRippleSpeed;
+// Comet pointer
+uniform vec2 uCometPos;
+uniform float uCometRadius;
+uniform float uCometGlow;
+uniform float uCometDensityBoost;
+uniform float uCometOpacity;  // fades when idle
 
-// Trail points (up to 16)
-uniform vec2 uTrail[16];
-uniform float uTrailAlpha[16];
-uniform int uTrailCount;
+// Comet trail
+uniform vec2 uCometTrail[16];
+uniform float uCometTrailAlpha[16];
+uniform int uCometTrailCount;
 
-// Aspect-correct "cover" UV mapping for video
-// Fills the canvas completely, cropping the video as needed (never stretches)
 vec2 coverUV(vec2 uv, vec2 canvasSize, vec2 videoSize) {
   float canvasAspect = canvasSize.x / canvasSize.y;
   float videoAspect = videoSize.x / videoSize.y;
-
   vec2 scale = vec2(1.0);
   if (canvasAspect > videoAspect) {
     scale.y = videoAspect / canvasAspect;
   } else {
     scale.x = canvasAspect / videoAspect;
   }
-
-  // Anchor: 0=top/left, 0.5=center, 1=bottom/right
   return uv * scale + uVideoAnchor * (1.0 - scale);
 }
 
@@ -87,14 +79,11 @@ float sobelEdge(vec2 cellCenter, vec2 texelSize) {
   float bl = luminance(texture2D(uVideo, cellCenter + vec2(-texelSize.x, -texelSize.y)).rgb);
   float b  = luminance(texture2D(uVideo, cellCenter + vec2(        0.0, -texelSize.y)).rgb);
   float br = luminance(texture2D(uVideo, cellCenter + vec2( texelSize.x, -texelSize.y)).rgb);
-
   float gx = -tl - 2.0 * l - bl + tr + 2.0 * r + br;
   float gy = -tl - 2.0 * t - tr + bl + 2.0 * b + br;
-
   return sqrt(gx * gx + gy * gy);
 }
 
-// Box blur approximation — 9 samples in a circle
 vec3 blurSample(vec2 uv, float radius) {
   vec2 texel = radius / uResolution;
   vec3 sum = texture2D(uVideo, uv).rgb;
@@ -106,7 +95,6 @@ vec3 blurSample(vec2 uv, float radius) {
   sum += texture2D(uVideo, uv + vec2(-texel.x,  texel.y)).rgb;
   sum += texture2D(uVideo, uv + vec2( texel.x, -texel.y)).rgb;
   sum += texture2D(uVideo, uv + vec2(-texel.x, -texel.y)).rgb;
-  // Extra ring for stronger blur
   sum += texture2D(uVideo, uv + vec2( texel.x * 2.0, 0.0)).rgb;
   sum += texture2D(uVideo, uv + vec2(-texel.x * 2.0, 0.0)).rgb;
   sum += texture2D(uVideo, uv + vec2(0.0,  texel.y * 2.0)).rgb;
@@ -114,43 +102,42 @@ vec3 blurSample(vec2 uv, float radius) {
   return sum / 13.0;
 }
 
-void main() {
-  float aspect = uResolution.x / uResolution.y;
+// Compute comet glow intensity at a point from cursor + trail
+float cometInfluence(vec2 uv, float aspect) {
+  float influence = 0.0;
 
-  // Cover-mapped UV for video sampling
-  vec2 videoUV = coverUV(vUV, uResolution, uVideoSize);
-
-  // Compute combined ripple distortion from pointer + trail
-  vec2 rippleOffset = vec2(0.0);
-  if (uPointerOpacity > 0.01 && uInteractionMode > 0.5) {
-    // Main pointer ripple
-    vec2 delta = vUV - uPointer;
-    float dist = length(vec2(delta.x * aspect, delta.y));
-    float wave = sin(dist * uRippleFrequency - uTime * uRippleSpeed) * uRippleAmplitude;
-    float falloff = smoothstep(uPointerRadius * 1.5, 0.0, dist) * uPointerOpacity;
-    rippleOffset += normalize(vec2(delta.x * aspect, delta.y) + 0.0001) * wave * falloff / vec2(aspect, 1.0);
-
-    // Trail ripples
-    for (int i = 0; i < 16; i++) {
-      if (i >= uTrailCount) break;
-      float trailAlpha = uTrailAlpha[i];
-      if (trailAlpha < 0.01) continue;
-      vec2 tDelta = vUV - uTrail[i];
-      float tDist = length(vec2(tDelta.x * aspect, tDelta.y));
-      float tWave = sin(tDist * uRippleFrequency - uTime * uRippleSpeed) * uRippleAmplitude * 0.5;
-      float tFalloff = smoothstep(uPointerRadius * 1.2, 0.0, tDist) * trailAlpha;
-      rippleOffset += normalize(vec2(tDelta.x * aspect, tDelta.y) + 0.0001) * tWave * tFalloff / vec2(aspect, 1.0);
-    }
+  // Main cursor
+  if (uCometOpacity > 0.01) {
+    vec2 d = vec2((uv.x - uCometPos.x) * aspect, uv.y - uCometPos.y);
+    float dist = length(d);
+    float glow = smoothstep(uCometRadius, 0.0, dist) * uCometOpacity;
+    influence = max(influence, glow);
   }
 
-  vec2 sampleUV = videoUV + rippleOffset;
-  vec2 pixelCoord = (vUV + rippleOffset) * uResolution;
+  // Trail points — additive glow
+  for (int i = 0; i < 16; i++) {
+    if (i >= uCometTrailCount) break;
+    float alpha = uCometTrailAlpha[i];
+    if (alpha < 0.01) continue;
+    vec2 d = vec2((uv.x - uCometTrail[i].x) * aspect, uv.y - uCometTrail[i].y);
+    float dist = length(d);
+    float glow = smoothstep(uCometRadius * 0.8, 0.0, dist) * alpha * 0.7;
+    influence = max(influence, glow);
+  }
+
+  return clamp(influence, 0.0, 1.0);
+}
+
+void main() {
+  float aspect = uResolution.x / uResolution.y;
+  vec2 videoUV = coverUV(vUV, uResolution, uVideoSize);
+  vec2 pixelCoord = vUV * uResolution;
 
   vec2 cell = floor(pixelCoord / uCellSize);
   vec2 cellUV = fract(pixelCoord / uCellSize);
 
   vec2 cellCenter = (cell + 0.5) * uCellSize / uResolution;
-  vec2 cellCenterVideo = coverUV(cellCenter, uResolution, uVideoSize) + rippleOffset;
+  vec2 cellCenterVideo = coverUV(cellCenter, uResolution, uVideoSize);
   vec4 videoColor = texture2D(uVideo, cellCenterVideo);
   float lum = luminance(videoColor.rgb);
 
@@ -162,9 +149,17 @@ void main() {
 
   float mappedLum = mix(lum, 1.0 - lum, uInvert);
 
-  float coverageThreshold = 1.0 - uCoverage;
+  // Comet influence on this cell
+  float comet = cometInfluence(cellCenter, aspect);
+
+  // Boost coverage near comet
+  float effectiveCoverage = mix(uCoverage, 1.0, comet * uCometDensityBoost);
+  float coverageThreshold = 1.0 - effectiveCoverage;
   float densityBoost = mappedLum * (1.0 + uDensity * 2.0);
   float finalLum = clamp(densityBoost, 0.0, 1.0);
+
+  // Boost luminance near comet — push toward white
+  finalLum = mix(finalLum, 1.0, comet * uCometGlow * 0.4);
 
   float showChar = step(coverageThreshold, finalLum);
 
@@ -178,15 +173,12 @@ void main() {
   float glyph = texture2D(uAtlas, atlasUV).r;
   glyph *= showChar;
 
-  // Animation — more impactful
+  // Animation
   if (uAnimated > 0.5) {
     float cellHash = hash(cell);
-
-    // Stronger wave modulation
     float wave = sin(uTime / uAnimSpeed * 6.2831 + cellHash * 6.2831) * 0.5 + 0.5;
     float shimmer = mix(1.0, wave, uAnimIntensity * 0.8);
 
-    // More aggressive character swap
     float swapChance = uAnimRandomness * 0.15;
     float timeHash = hash(cell + vec2(floor(uTime / uAnimSpeed * 3.0)));
     if (timeHash < swapChance && glyph > 0.01) {
@@ -195,10 +187,8 @@ void main() {
       glyph = texture2D(uAtlas, newAtlasUV).r * showChar;
     }
 
-    // Flicker: random cells briefly go dark
     float flickerHash = hash(cell + vec2(floor(uTime * 8.0)));
     float flicker = step(uAnimRandomness * 0.03, flickerHash);
-
     glyph *= shimmer * flicker;
   }
 
@@ -206,42 +196,25 @@ void main() {
   vec3 bgColor = vec3(0.0);
   float bgAlpha = 0.0;
   if (uBgMode < 0.5) {
-    // Blurred image mode — actual blur sampling
-    bgColor = blurSample(sampleUV, uBgBlur);
+    bgColor = blurSample(videoUV, uBgBlur);
     bgAlpha = uBgOpacity;
   } else if (uBgMode > 1.5 && uBgMode < 2.5) {
-    bgColor = texture2D(uVideo, sampleUV).rgb;
+    bgColor = texture2D(uVideo, videoUV).rgb;
     bgAlpha = uBgOpacity;
   }
 
+  // Composite
   vec3 charColor = videoColor.rgb;
+
+  // Comet brightness boost on character color — push toward white
+  charColor = mix(charColor, vec3(1.0), comet * uCometGlow * 0.6);
+
   float alpha = glyph * uCharOpacity;
-  vec3 asciiResult = mix(bgColor * bgAlpha, charColor, alpha);
+  vec3 finalColor = mix(bgColor * bgAlpha, charColor, alpha);
 
-  // Pointer reveal mode
-  if (uPointerOpacity > 0.01 && uInteractionMode < 0.5) {
-    vec2 uvAspect = vec2(vUV.x * aspect, vUV.y);
-    vec2 ptrAspect = vec2(uPointer.x * aspect, uPointer.y);
-    float pointerDist = distance(uvAspect, ptrAspect);
-    float reveal = 1.0 - smoothstep(uPointerRadius - uPointerSoftness, uPointerRadius, pointerDist);
-    reveal *= uPointerOpacity;
+  // Additive comet bloom — soft glow halo
+  finalColor += vec3(comet * uCometGlow * 0.15);
 
-    vec3 rawVideo = texture2D(uVideo, videoUV).rgb;
-    asciiResult = mix(asciiResult, rawVideo, reveal);
-
-    // Trail reveals
-    for (int i = 0; i < 16; i++) {
-      if (i >= uTrailCount) break;
-      float trailAlpha = uTrailAlpha[i];
-      if (trailAlpha < 0.01) continue;
-      vec2 tAspect = vec2(uTrail[i].x * aspect, uTrail[i].y);
-      float tDist = distance(uvAspect, tAspect);
-      float tReveal = 1.0 - smoothstep(uPointerRadius * 0.6 - uPointerSoftness, uPointerRadius * 0.6, tDist);
-      tReveal *= trailAlpha * 0.6;
-      asciiResult = mix(asciiResult, rawVideo, tReveal);
-    }
-  }
-
-  gl_FragColor = vec4(asciiResult, 1.0);
+  gl_FragColor = vec4(finalColor, 1.0);
 }
 `;

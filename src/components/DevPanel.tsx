@@ -29,9 +29,7 @@ export function DevPanel({ renderer }: DevPanelProps) {
       chars.add(params, "renderMode", ["brightness", "edge-map", "dots"]).onChange(update);
       chars.add(params, "fontSize", 3, 48, 1).onChange(update);
       chars.add(params, "charPreset", Object.keys(CHAR_PRESETS).concat("custom")).onChange((v: string) => {
-        if (v !== "custom") {
-          params.customChars = CHAR_PRESETS[v] ?? "";
-        }
+        if (v !== "custom") params.customChars = CHAR_PRESETS[v] ?? "";
         update();
       });
       chars.add(params, "customChars").onChange(update);
@@ -50,8 +48,8 @@ export function DevPanel({ renderer }: DevPanelProps) {
 
       // Video Framing
       const framing = gui.addFolder("Video Framing");
-      framing.add(params, "videoAnchorX", 0, 1).name("Anchor X (0=L 1=R)").onChange(update);
-      framing.add(params, "videoAnchorY", 0, 1).name("Anchor Y (0=Top 1=Bot)").onChange(update);
+      framing.add(params, "videoAnchorX", 0, 1).name("Anchor X").onChange(update);
+      framing.add(params, "videoAnchorY", 0, 1).name("Anchor Y").onChange(update);
 
       // Background
       const bg = gui.addFolder("Background");
@@ -76,31 +74,27 @@ export function DevPanel({ renderer }: DevPanelProps) {
         "color-burn", "color-dodge",
       ]).onChange(update);
 
-      // Pointer
-      const pointer = gui.addFolder("Pointer");
-      pointer.add(params, "interactionMode", { Reveal: 0, Ripple: 1 }).onChange(update);
-      pointer.add(params, "pointerRadius", 0.02, 0.5).onChange(update);
-      pointer.add(params, "pointerSoftness", 0.01, 0.2).onChange(update);
-      pointer.add(params, "pointerFadeSpeed", 0.1, 3.0).name("Fade Speed (s)").onChange(update);
+      // Comet Pointer
+      const comet = gui.addFolder("Comet Pointer");
+      comet.add(params, "cometRadius", 0.02, 0.4).name("Radius").onChange(update);
+      comet.add(params, "cometGlow", 0, 5).name("Glow Intensity").onChange(update);
+      comet.add(params, "cometDensityBoost", 0, 1).name("Density Boost").onChange(update);
+      comet.add(params, "cometTrailDecay", 0.1, 3).name("Trail Decay (s)").onChange(update);
+      comet.add(params, "cometFadeSpeed", 0.1, 3).name("Fade Speed (s)").onChange(update);
+      comet.add(params, "trailLength", 1, 16, 1).name("Trail Points").onChange(update);
 
-      // Ripple
-      const ripple = gui.addFolder("Ripple");
-      ripple.add(params, "rippleFrequency", 5, 100).name("Frequency").onChange(update);
-      ripple.add(params, "rippleAmplitude", 0.001, 0.05).name("Amplitude").onChange(update);
-      ripple.add(params, "rippleSpeed", 0.5, 15).name("Speed").onChange(update);
-      ripple.add(params, "trailDuration", 0.1, 5.0).name("Trail Duration (s)").onChange(update);
-      ripple.add(params, "trailLength", 1, 16, 1).name("Trail Points").onChange(update);
+      // Particle Displacement
+      const particles = gui.addFolder("Particle Displacement");
+      particles.add(params, "particleRepelForce", 10, 300).name("Repel Force").onChange(update);
+      particles.add(params, "particleSpring", 20, 400).name("Spring Stiffness").onChange(update);
+      particles.add(params, "particleDamping", 0.5, 0.99).name("Damping").onChange(update);
 
       // Copy Config
-      gui.add(
-        {
-          copyConfig: () => {
-            const json = JSON.stringify(params, null, 2);
-            navigator.clipboard.writeText(json);
-          },
+      gui.add({
+        copyConfig: () => {
+          navigator.clipboard.writeText(JSON.stringify(params, null, 2));
         },
-        "copyConfig"
-      ).name("Copy Config");
+      }, "copyConfig").name("Copy Config");
     });
 
     return () => {

@@ -48,6 +48,7 @@ export interface AsciiRenderer {
   resize: (width: number, height: number) => void;
   updateConfig: (config: AsciiConfig) => void;
   getConfig: () => AsciiConfig;
+  getPointerState: () => PointerState;
   destroy: () => void;
 }
 
@@ -66,7 +67,6 @@ export function createAsciiRenderer(
 
   const program = createProgram(gl, vertexSource, fragmentSource);
 
-  // Fullscreen quad
   const posBuffer = gl.createBuffer();
   gl.bindBuffer(gl.ARRAY_BUFFER, posBuffer);
   gl.bufferData(
@@ -77,8 +77,7 @@ export function createAsciiRenderer(
 
   const aPosition = gl.getAttribLocation(program, "aPosition");
 
-  // Uniform locations
-  const uniforms = {
+  const u = {
     uVideo: gl.getUniformLocation(program, "uVideo"),
     uAtlas: gl.getUniformLocation(program, "uAtlas"),
     uResolution: gl.getUniformLocation(program, "uResolution"),
@@ -101,161 +100,114 @@ export function createAsciiRenderer(
     uAnimSpeed: gl.getUniformLocation(program, "uAnimSpeed"),
     uAnimIntensity: gl.getUniformLocation(program, "uAnimIntensity"),
     uAnimRandomness: gl.getUniformLocation(program, "uAnimRandomness"),
-    uPointer: gl.getUniformLocation(program, "uPointer"),
-    uPointerRadius: gl.getUniformLocation(program, "uPointerRadius"),
-    uPointerSoftness: gl.getUniformLocation(program, "uPointerSoftness"),
-    uPointerOpacity: gl.getUniformLocation(program, "uPointerOpacity"),
-    uInteractionMode: gl.getUniformLocation(program, "uInteractionMode"),
-    uRippleFrequency: gl.getUniformLocation(program, "uRippleFrequency"),
-    uRippleAmplitude: gl.getUniformLocation(program, "uRippleAmplitude"),
-    uRippleSpeed: gl.getUniformLocation(program, "uRippleSpeed"),
-    uTrailCount: gl.getUniformLocation(program, "uTrailCount"),
+    uCometPos: gl.getUniformLocation(program, "uCometPos"),
+    uCometRadius: gl.getUniformLocation(program, "uCometRadius"),
+    uCometGlow: gl.getUniformLocation(program, "uCometGlow"),
+    uCometDensityBoost: gl.getUniformLocation(program, "uCometDensityBoost"),
+    uCometOpacity: gl.getUniformLocation(program, "uCometOpacity"),
+    uCometTrailCount: gl.getUniformLocation(program, "uCometTrailCount"),
   };
 
-  // Trail uniform locations (arrays)
   const uTrail: (WebGLUniformLocation | null)[] = [];
   const uTrailAlpha: (WebGLUniformLocation | null)[] = [];
   for (let i = 0; i < 16; i++) {
-    uTrail.push(gl.getUniformLocation(program, `uTrail[${i}]`));
-    uTrailAlpha.push(gl.getUniformLocation(program, `uTrailAlpha[${i}]`));
+    uTrail.push(gl.getUniformLocation(program, `uCometTrail[${i}]`));
+    uTrailAlpha.push(gl.getUniformLocation(program, `uCometTrailAlpha[${i}]`));
   }
 
-  // Video texture (unit 0)
+  // Video texture
   const videoTex = gl.createTexture();
   gl.activeTexture(gl.TEXTURE0);
   gl.bindTexture(gl.TEXTURE_2D, videoTex);
-  gl.texImage2D(
-    gl.TEXTURE_2D, 0, gl.RGBA, 1, 1, 0,
-    gl.RGBA, gl.UNSIGNED_BYTE, new Uint8Array([0, 0, 0, 255])
-  );
+  gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, new Uint8Array([0, 0, 0, 255]));
   gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
   gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
   gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
   gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
 
-  // Config + glyph atlas
   let config: AsciiConfig = { ...DEFAULT_CONFIG, ...initialConfig };
-  let atlas: GlyphAtlas = createGlyphAtlas(
-    gl,
-    getCharsForPreset(config),
-    config.fontSize
-  );
+  let atlas: GlyphAtlas = createGlyphAtlas(gl, getCharsForPreset(config), config.fontSize);
 
-  // Pointer state
   let pointerState: PointerState = { x: 0.5, y: 0.5, opacity: 0, trail: [] };
   const pointerHandler = createPointerHandler(
     canvas,
     (state) => { pointerState = state; },
-    {
-      fadeSpeed: config.pointerFadeSpeed,
-      trailLength: config.trailLength,
-      trailDuration: config.trailDuration,
-    }
+    config.cometFadeSpeed,
+    config.trailLength,
+    config.cometTrailDecay
   );
 
-  // Video readiness
   let videoReady = false;
   let playing = false;
   let timeUpdated = false;
-
-  const onPlaying = () => {
-    playing = true;
-    if (timeUpdated) videoReady = true;
-  };
-  const onTimeUpdate = () => {
-    timeUpdated = true;
-    if (playing) videoReady = true;
-  };
-
+  const onPlaying = () => { playing = true; if (timeUpdated) videoReady = true; };
+  const onTimeUpdate = () => { timeUpdated = true; if (playing) videoReady = true; };
   video.addEventListener("playing", onPlaying);
   video.addEventListener("timeupdate", onTimeUpdate);
 
   let animFrameId = 0;
   const startTime = performance.now();
-
-  const BG_MODE_MAP: Record<string, number> = {
-    blur: 0, solid: 1, original: 2, none: 3,
-  };
+  const BG_MODE_MAP: Record<string, number> = { blur: 0, solid: 1, original: 2, none: 3 };
 
   function render() {
     const elapsed = (performance.now() - startTime) / 1000;
 
-    // Upload video frame
     if (videoReady) {
       gl.activeTexture(gl.TEXTURE0);
       gl.bindTexture(gl.TEXTURE_2D, videoTex);
-      gl.texImage2D(
-        gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, video
-      );
+      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, video);
     }
 
     gl.useProgram(program);
 
-    // Bind textures
     gl.activeTexture(gl.TEXTURE0);
     gl.bindTexture(gl.TEXTURE_2D, videoTex);
-    gl.uniform1i(uniforms.uVideo, 0);
-
+    gl.uniform1i(u.uVideo, 0);
     gl.activeTexture(gl.TEXTURE1);
     gl.bindTexture(gl.TEXTURE_2D, atlas.texture);
-    gl.uniform1i(uniforms.uAtlas, 1);
+    gl.uniform1i(u.uAtlas, 1);
 
-    // Resolution + video size + cell size
-    gl.uniform2f(uniforms.uResolution, canvas.width, canvas.height);
-    gl.uniform2f(uniforms.uVideoSize, video.videoWidth || 1280, video.videoHeight || 720);
-    gl.uniform2f(uniforms.uVideoAnchor, config.videoAnchorX, config.videoAnchorY);
-    gl.uniform2f(uniforms.uCellSize, atlas.charWidth, atlas.charHeight);
-    gl.uniform1f(uniforms.uCharCount, atlas.charCount);
+    gl.uniform2f(u.uResolution, canvas.width, canvas.height);
+    gl.uniform2f(u.uVideoSize, video.videoWidth || 1280, video.videoHeight || 720);
+    gl.uniform2f(u.uVideoAnchor, config.videoAnchorX, config.videoAnchorY);
+    gl.uniform2f(u.uCellSize, atlas.charWidth, atlas.charHeight);
+    gl.uniform1f(u.uCharCount, atlas.charCount);
+    gl.uniform1f(u.uCharOpacity, config.charOpacity / 100);
+    gl.uniform1f(u.uInvert, config.invertMapping ? 1 : 0);
+    gl.uniform1f(u.uCoverage, config.coverage / 100);
+    gl.uniform1f(u.uDensity, config.density / 100);
+    gl.uniform1f(u.uBrightness, config.brightness / 100);
+    gl.uniform1f(u.uContrast, config.contrast / 100);
+    gl.uniform1f(u.uEdgeEmphasis, config.edgeEmphasis / 100);
+    gl.uniform1f(u.uBgMode, BG_MODE_MAP[config.bgMode] ?? 0);
+    gl.uniform1f(u.uBgBlur, config.bgBlur);
+    gl.uniform1f(u.uBgOpacity, config.bgOpacity / 100);
+    gl.uniform1f(u.uTime, elapsed);
+    gl.uniform1f(u.uAnimated, config.animated ? 1 : 0);
+    gl.uniform1f(u.uAnimSpeed, config.animSpeed / 1000);
+    gl.uniform1f(u.uAnimIntensity, config.animIntensity / 100);
+    gl.uniform1f(u.uAnimRandomness, config.animRandomness / 100);
 
-    // Character params
-    gl.uniform1f(uniforms.uCharOpacity, config.charOpacity / 100);
-    gl.uniform1f(uniforms.uInvert, config.invertMapping ? 1 : 0);
+    // Comet
+    gl.uniform2f(u.uCometPos, pointerState.x, pointerState.y);
+    gl.uniform1f(u.uCometRadius, config.cometRadius);
+    gl.uniform1f(u.uCometGlow, config.cometGlow);
+    gl.uniform1f(u.uCometDensityBoost, config.cometDensityBoost);
+    gl.uniform1f(u.uCometOpacity, pointerState.opacity);
 
-    // Intensity params
-    gl.uniform1f(uniforms.uCoverage, config.coverage / 100);
-    gl.uniform1f(uniforms.uDensity, config.density / 100);
-    gl.uniform1f(uniforms.uBrightness, config.brightness / 100);
-    gl.uniform1f(uniforms.uContrast, config.contrast / 100);
-    gl.uniform1f(uniforms.uEdgeEmphasis, config.edgeEmphasis / 100);
-
-    // Background params
-    gl.uniform1f(uniforms.uBgMode, BG_MODE_MAP[config.bgMode] ?? 0);
-    gl.uniform1f(uniforms.uBgBlur, config.bgBlur);
-    gl.uniform1f(uniforms.uBgOpacity, config.bgOpacity / 100);
-
-    // Animation params
-    gl.uniform1f(uniforms.uTime, elapsed);
-    gl.uniform1f(uniforms.uAnimated, config.animated ? 1 : 0);
-    gl.uniform1f(uniforms.uAnimSpeed, config.animSpeed / 1000);
-    gl.uniform1f(uniforms.uAnimIntensity, config.animIntensity / 100);
-    gl.uniform1f(uniforms.uAnimRandomness, config.animRandomness / 100);
-
-    // Pointer params
-    gl.uniform2f(uniforms.uPointer, pointerState.x, pointerState.y);
-    gl.uniform1f(uniforms.uPointerRadius, config.pointerRadius);
-    gl.uniform1f(uniforms.uPointerSoftness, config.pointerSoftness);
-    gl.uniform1f(uniforms.uPointerOpacity, pointerState.opacity);
-    gl.uniform1f(uniforms.uInteractionMode, config.interactionMode);
-    gl.uniform1f(uniforms.uRippleFrequency, config.rippleFrequency);
-    gl.uniform1f(uniforms.uRippleAmplitude, config.rippleAmplitude);
-    gl.uniform1f(uniforms.uRippleSpeed, config.rippleSpeed);
-
-    // Trail data
     const trailCount = Math.min(pointerState.trail.length, 16);
-    gl.uniform1i(uniforms.uTrailCount, trailCount);
+    gl.uniform1i(u.uCometTrailCount, trailCount);
     for (let i = 0; i < 16; i++) {
       if (i < trailCount) {
         const t = pointerState.trail[i];
-        const alpha = 1.0 - t.age / config.trailDuration;
         gl.uniform2f(uTrail[i], t.x, t.y);
-        gl.uniform1f(uTrailAlpha[i], Math.max(0, alpha));
+        gl.uniform1f(uTrailAlpha[i], Math.max(0, 1 - t.age / config.cometTrailDecay));
       } else {
         gl.uniform2f(uTrail[i], 0, 0);
         gl.uniform1f(uTrailAlpha[i], 0);
       }
     }
 
-    // Draw
     gl.bindBuffer(gl.ARRAY_BUFFER, posBuffer);
     gl.enableVertexAttribArray(aPosition);
     gl.vertexAttribPointer(aPosition, 2, gl.FLOAT, false, 0, 0);
@@ -275,18 +227,15 @@ export function createAsciiRenderer(
       newConfig.charPreset !== config.charPreset ||
       newConfig.customChars !== config.customChars ||
       newConfig.fontSize !== config.fontSize;
-
     config = { ...newConfig };
-
     if (charsChanged) {
       gl.deleteTexture(atlas.texture);
       atlas = createGlyphAtlas(gl, getCharsForPreset(config), config.fontSize);
     }
   }
 
-  function getConfig() {
-    return { ...config };
-  }
+  function getConfig() { return { ...config }; }
+  function getPointerState() { return { ...pointerState, trail: [...pointerState.trail] }; }
 
   function destroy() {
     cancelAnimationFrame(animFrameId);
@@ -301,5 +250,5 @@ export function createAsciiRenderer(
 
   animFrameId = requestAnimationFrame(render);
 
-  return { render, resize, updateConfig, getConfig, destroy };
+  return { render, resize, updateConfig, getConfig, getPointerState, destroy };
 }

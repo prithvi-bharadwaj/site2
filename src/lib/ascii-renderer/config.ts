@@ -34,8 +34,8 @@ export interface AsciiConfig {
   contrast: number;
 
   // Video framing
-  videoAnchorX: number; // 0=left, 0.5=center, 1=right
-  videoAnchorY: number; // 0=top, 0.5=center, 1=bottom
+  videoAnchorX: number;
+  videoAnchorY: number;
 
   // Background
   bgMode: BgMode;
@@ -53,16 +53,18 @@ export interface AsciiConfig {
   colorOpacity: number;
   colorBlend: ColorBlend;
 
-  // Pointer
-  pointerRadius: number;
-  pointerSoftness: number;
-  interactionMode: number; // 0 = reveal, 1 = ripple
-  pointerFadeSpeed: number; // seconds to fade out
-  rippleFrequency: number; // wave frequency
-  rippleAmplitude: number; // wave strength
-  rippleSpeed: number; // wave scroll speed
-  trailDuration: number; // seconds trail points last
-  trailLength: number; // max trail points
+  // Comet pointer
+  cometRadius: number;       // radius of glow effect (0-1 normalized)
+  cometGlow: number;         // brightness boost intensity (0-5)
+  cometDensityBoost: number; // how much to force coverage near cursor (0-1)
+  cometTrailDecay: number;   // seconds for trail to fade (0.1-3)
+  cometFadeSpeed: number;    // seconds for pointer to fade when idle
+  trailLength: number;       // max trail points
+
+  // Particle displacement
+  particleRepelForce: number;  // how hard cursor pushes particles
+  particleSpring: number;      // spring stiffness (higher = snappier return)
+  particleDamping: number;     // velocity damping (0-1, higher = less bouncy)
 }
 
 export const CHAR_PRESETS: Record<string, string> = {
@@ -113,15 +115,16 @@ export const DESKTOP_CONFIG: AsciiConfig = {
   colorOpacity: 100,
   colorBlend: "multiply",
 
-  pointerRadius: 0.06656,
-  pointerSoftness: 0.04,
-  interactionMode: 0,
-  pointerFadeSpeed: 0.8,
-  rippleFrequency: 40,
-  rippleAmplitude: 0.012,
-  rippleSpeed: 4,
-  trailDuration: 1,
+  cometRadius: 0.1,
+  cometGlow: 2.5,
+  cometDensityBoost: 0.8,
+  cometTrailDecay: 0.8,
+  cometFadeSpeed: 0.8,
   trailLength: 16,
+
+  particleRepelForce: 80,
+  particleSpring: 120,
+  particleDamping: 0.85,
 };
 
 export const MOBILE_CONFIG: AsciiConfig = {
@@ -129,7 +132,7 @@ export const MOBILE_CONFIG: AsciiConfig = {
   fontSize: 10,
   videoAnchorX: 0.5,
   videoAnchorY: 0.5,
-  pointerRadius: 0.1,
+  cometRadius: 0.15,
   coverage: 80,
 };
 
