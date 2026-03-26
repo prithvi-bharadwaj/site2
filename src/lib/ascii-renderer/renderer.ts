@@ -1,5 +1,5 @@
-import vertexSource from "./shaders/vertex.glsl";
-import fragmentSource from "./shaders/fragment.glsl";
+import { vertexShader as vertexSource } from "./shaders/vertex";
+import { fragmentShader as fragmentSource } from "./shaders/fragment";
 import { createGlyphAtlas, type GlyphAtlas } from "./glyph-atlas";
 import { type AsciiConfig, DEFAULT_CONFIG, getCharsForPreset } from "./config";
 

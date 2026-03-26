@@ -1,3 +1,4 @@
+export const vertexShader = `
 attribute vec2 aPosition;
 varying vec2 vUV;
 
@@ -6,3 +7,4 @@ void main() {
   vUV.y = 1.0 - vUV.y;
   gl_Position = vec4(aPosition, 0.0, 1.0);
 }
+`;
