@@ -107,20 +107,20 @@ Estimated: 2hr | Files: ~4
 Estimated: 1hr | Files: ~2
 
 #### Tasks
-- [ ] Add Sobel operator to fragment shader — 3x3 kernel, compute gradient magnitude per cell
+- [x] Add Sobel operator to fragment shader — 3x3 kernel, compute gradient magnitude per cell
   Verify: Edges of objects in the video get denser/bolder characters
-- [ ] Wire `uEdgeEmphasis` uniform — controls blend between pure brightness and edge-boosted brightness
+- [x] Wire `uEdgeEmphasis` uniform — controls blend between pure brightness and edge-boosted brightness
   Verify: Setting edge emphasis to 0 matches Phase 3 output, setting to 1.0 shows strong edges
 
 ### Phase 5: Animated ASCII + Blurred Background
 Estimated: 1.5hr | Files: ~3
 
 #### Tasks
-- [ ] Add animation uniforms: `uTime`, `uAnimSpeed`, `uAnimIntensity`, `uAnimRandomness`
+- [x] Add animation uniforms: `uTime`, `uAnimSpeed`, `uAnimIntensity`, `uAnimRandomness`
   Verify: Characters shimmer/swap over time when animated ASCII is enabled
-- [ ] Implement per-character alpha modulation using sine wave + noise — ascii-magic.com style shimmer
+- [x] Implement per-character alpha modulation using sine wave + noise — ascii-magic.com style shimmer
   Verify: Animation speed and randomness controls produce visible changes
-- [ ] Add blurred background layer — CSS `backdrop-filter: blur()` on a layer behind the canvas, or render blurred video in a second pass with `uBgBlur` and `uBgOpacity` uniforms
+- [x] Add blurred background layer — CSS `backdrop-filter: blur()` on a layer behind the canvas, or render blurred video in a second pass with `uBgBlur` and `uBgOpacity` uniforms
   Verify: Blurred video visible behind the ASCII characters at 53% opacity
 
 **Test checkpoint:** Full ASCII effect with edge detection, animated shimmer, and blurred background. Matches the look from ascii-magic.com settings.
@@ -135,13 +135,13 @@ Estimated: 1.5hr | Files: ~3
 Estimated: 1.5hr | Files: ~3
 
 #### Tasks
-- [ ] Create `src/lib/ascii-renderer/pointer.ts` — unified mouse/touch handler, normalizes coordinates to [0,1], tracks velocity
+- [x] Create `src/lib/ascii-renderer/pointer.ts` — unified mouse/touch handler, normalizes coordinates to [0,1], tracks velocity
   Verify: Console logs normalized pointer position on move
-- [ ] Add reveal mode to fragment shader — `smoothstep` circle around `uPointer`, mix ASCII with raw video inside radius
+- [x] Add reveal mode to fragment shader — `smoothstep` circle around `uPointer`, mix ASCII with raw video inside radius
   Verify: Moving mouse reveals original video in a soft circle
-- [ ] Add ripple mode to fragment shader — displace UV coordinates near pointer using sine wave + distance falloff
+- [x] Add ripple mode to fragment shader — displace UV coordinates near pointer using sine wave + distance falloff
   Verify: Moving mouse creates visible ripple distortion in the ASCII
-- [ ] Add `uInteractionMode` uniform to toggle between reveal (0) and ripple (1)
+- [x] Add `uInteractionMode` uniform to toggle between reveal (0) and ripple (1)
   Verify: Can switch between modes via config
 
 **Test checkpoint:** Move mouse over the ASCII canvas — see either a reveal zone showing the raw video, or a ripple distortion. Works on desktop and mobile (touch).
@@ -156,22 +156,22 @@ Estimated: 1.5hr | Files: ~3
 Estimated: 1hr | Files: ~3
 
 #### Tasks
-- [ ] Create `src/components/BioOverlay.tsx` — positioned top-left, no background, floating text over the ASCII canvas
+- [x] Create `src/components/BioOverlay.tsx` — positioned top-left, no background, floating text over the ASCII canvas
   Verify: Text renders over the ASCII effect with no background/card
-- [ ] Add content: name, bio paragraph, social links (Twitter/X, GitHub, LinkedIn), game/project links
+- [x] Add content: name, bio paragraph, social links (Twitter/X, GitHub, LinkedIn), game/project links
   Verify: All links clickable, text readable over the ASCII effect
-- [ ] Add GSAP entrance animation using `useGSAP` — staggered fade-in of text elements
+- [x] Add GSAP entrance animation using `useGSAP` — staggered fade-in of text elements
   Verify: Text animates in on page load
 
 ### Phase 8: lil-gui Dev Panel
 Estimated: 1hr | Files: ~2
 
 #### Tasks
-- [ ] Create `src/components/DevPanel.tsx` — dynamic `import('lil-gui')` gated on `NODE_ENV === 'development'`
+- [x] Create `src/components/DevPanel.tsx` — dynamic `import('lil-gui')` gated on `NODE_ENV === 'development'`
   Verify: Panel appears in dev, absent in production build
-- [ ] Wire ALL config parameters to GUI folders matching ascii-magic.com layout: Characters, Intensity, Background, Animation, Pointer
+- [x] Wire ALL config parameters to GUI folders matching ascii-magic.com layout: Characters, Intensity, Background, Animation, Pointer
   Verify: Every slider/dropdown updates the ASCII effect in real-time
-- [ ] Add "Copy Config" button — copies current parameter values as a JSON object to clipboard
+- [x] Add "Copy Config" button — copies current parameter values as a JSON object to clipboard
   Verify: Can paste config values into `config.ts` and get the same result
 
 **Test checkpoint:** Full site visible — ASCII background, bio overlay, interactive pointer, dev panel for tweaking. All parameters adjustable in real-time.

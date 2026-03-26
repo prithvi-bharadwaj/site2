@@ -2,6 +2,7 @@ import { vertexShader as vertexSource } from "./shaders/vertex";
 import { fragmentShader as fragmentSource } from "./shaders/fragment";
 import { createGlyphAtlas, type GlyphAtlas } from "./glyph-atlas";
 import { type AsciiConfig, DEFAULT_CONFIG, getCharsForPreset } from "./config";
+import { createPointerHandler, type PointerState } from "./pointer";
 
 function compileShader(
   gl: WebGLRenderingContext,
@@ -98,6 +99,11 @@ export function createAsciiRenderer(
     uAnimSpeed: gl.getUniformLocation(program, "uAnimSpeed"),
     uAnimIntensity: gl.getUniformLocation(program, "uAnimIntensity"),
     uAnimRandomness: gl.getUniformLocation(program, "uAnimRandomness"),
+    uPointer: gl.getUniformLocation(program, "uPointer"),
+    uPointerRadius: gl.getUniformLocation(program, "uPointerRadius"),
+    uPointerSoftness: gl.getUniformLocation(program, "uPointerSoftness"),
+    uPointerActive: gl.getUniformLocation(program, "uPointerActive"),
+    uInteractionMode: gl.getUniformLocation(program, "uInteractionMode"),
   };
 
   // Video texture (unit 0)
@@ -120,6 +126,12 @@ export function createAsciiRenderer(
     getCharsForPreset(config),
     config.fontSize
   );
+
+  // Pointer state
+  let pointerState: PointerState = { x: 0.5, y: 0.5, active: false };
+  const pointerHandler = createPointerHandler(canvas, (state) => {
+    pointerState = state;
+  });
 
   // Video readiness
   let videoReady = false;
@@ -199,6 +211,13 @@ export function createAsciiRenderer(
     gl.uniform1f(uniforms.uAnimIntensity, config.animIntensity / 100);
     gl.uniform1f(uniforms.uAnimRandomness, config.animRandomness / 100);
 
+    // Pointer params
+    gl.uniform2f(uniforms.uPointer, pointerState.x, pointerState.y);
+    gl.uniform1f(uniforms.uPointerRadius, config.pointerRadius);
+    gl.uniform1f(uniforms.uPointerSoftness, config.pointerSoftness);
+    gl.uniform1f(uniforms.uPointerActive, pointerState.active ? 1 : 0);
+    gl.uniform1f(uniforms.uInteractionMode, config.interactionMode);
+
     // Draw
     gl.bindBuffer(gl.ARRAY_BUFFER, posBuffer);
     gl.enableVertexAttribArray(aPosition);
@@ -234,6 +253,7 @@ export function createAsciiRenderer(
 
   function destroy() {
     cancelAnimationFrame(animFrameId);
+    pointerHandler.destroy();
     video.removeEventListener("playing", onPlaying);
     video.removeEventListener("timeupdate", onTimeUpdate);
     gl.deleteTexture(videoTex);
