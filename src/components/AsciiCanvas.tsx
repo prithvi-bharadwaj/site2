@@ -8,7 +8,8 @@ interface AsciiCanvasProps {
   desktopSrc: string;
   mobileSrc: string;
   breakpoint?: number; // px width threshold, default 768
-  config?: Partial<AsciiConfig>;
+  desktopConfig?: Partial<AsciiConfig>;
+  mobileConfig?: Partial<AsciiConfig>;
   onRendererReady?: (renderer: AsciiRenderer) => void;
 }
 
@@ -31,7 +32,8 @@ export function AsciiCanvas({
   desktopSrc,
   mobileSrc,
   breakpoint = 768,
-  config,
+  desktopConfig,
+  mobileConfig,
   onRendererReady,
 }: AsciiCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -40,6 +42,7 @@ export function AsciiCanvas({
   const isMobile = useIsMobile(breakpoint);
 
   const videoSrc = isMobile ? mobileSrc : desktopSrc;
+  const config = isMobile ? mobileConfig : desktopConfig;
 
   const handleResize = useCallback((width: number, height: number) => {
     rendererRef.current?.resize(width, height);

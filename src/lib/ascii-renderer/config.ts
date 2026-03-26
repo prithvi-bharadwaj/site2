@@ -81,45 +81,56 @@ export function getCharsForPreset(config: AsciiConfig): string {
   return CHAR_PRESETS[config.charPreset] ?? CHAR_PRESETS.standard;
 }
 
-export const DEFAULT_CONFIG: AsciiConfig = {
+export const DESKTOP_CONFIG: AsciiConfig = {
   renderMode: "brightness",
-  fontSize: 17,
-  charPreset: "minimal",
-  customChars: "@#S08Xx+=-;:,. ",
+  fontSize: 14,
+  charPreset: "dense",
+  customChars: "@%#*+=-:. ",
   blendMode: "source-over",
   charOpacity: 100,
-  invertMapping: false,
+  invertMapping: true,
   dotGrid: false,
 
-  coverage: 73,
-  edgeEmphasis: 85,
-  density: 30,
-  brightness: 0,
-  contrast: 0,
+  coverage: 84.7,
+  edgeEmphasis: 2,
+  density: 0,
+  brightness: 5.8,
+  contrast: 21.2,
 
   videoAnchorX: 0.5,
-  videoAnchorY: 1.0, // bottom-anchored by default
+  videoAnchorY: 0,
 
   bgMode: "blur",
-  bgBlur: 15,
+  bgBlur: 4.26,
   bgOpacity: 53,
 
   animated: true,
   animSpeed: 900,
-  animIntensity: 99,
+  animIntensity: 100,
   animRandomness: 100,
 
-  colorOverlay: "#ff0000",
-  colorOpacity: 0,
+  colorOverlay: "#ffffff",
+  colorOpacity: 100,
   colorBlend: "multiply",
 
-  pointerRadius: 0.12,
+  pointerRadius: 0.06656,
   pointerSoftness: 0.04,
   interactionMode: 0,
   pointerFadeSpeed: 0.8,
-  rippleFrequency: 40.0,
+  rippleFrequency: 40,
   rippleAmplitude: 0.012,
-  rippleSpeed: 4.0,
-  trailDuration: 1.0,
+  rippleSpeed: 4,
+  trailDuration: 1,
   trailLength: 16,
 };
+
+export const MOBILE_CONFIG: AsciiConfig = {
+  ...DESKTOP_CONFIG,
+  fontSize: 10,
+  videoAnchorX: 0.5,
+  videoAnchorY: 0.5,
+  pointerRadius: 0.1,
+  coverage: 80,
+};
+
+export const DEFAULT_CONFIG = DESKTOP_CONFIG;
