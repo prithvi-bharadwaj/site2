@@ -1,0 +1,5 @@
+node_modules/
+.next/
+progress.json
+skill-runs.jsonl
+.DS_Store

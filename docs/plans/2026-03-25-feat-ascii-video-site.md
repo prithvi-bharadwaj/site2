@@ -50,28 +50,28 @@ Video → texImage2D → Fragment Shader (luminance + sobel + pointer uniforms)
 Estimated: 30min | Files: ~8
 
 #### Tasks
-- [ ] Init Next.js with TypeScript, App Router, Tailwind — `npx create-next-app@latest`
+- [x] Init Next.js with TypeScript, App Router, Tailwind — `npx create-next-app@latest`
   Verify: `npm run dev` serves default page at localhost:3000
-- [ ] Configure webpack for GLSL imports (`asset/source`) + TypeScript declarations
+- [x] Configure webpack for GLSL imports (`asset/source`) + TypeScript declarations
   Verify: Can import a `.glsl` file without TS errors
-- [ ] Install dependencies: `gsap @gsap/react lil-gui`
+- [x] Install dependencies: `gsap @gsap/react lil-gui`
   Verify: `npm ls gsap lil-gui` shows installed
 
 ### Phase 2: Fullscreen Video WebGL Canvas
 Estimated: 1.5hr | Files: ~6
 
 #### Tasks
-- [ ] Create `src/lib/ascii-renderer/renderer.ts` — WebGL context init, fullscreen quad (2 triangles), basic vertex shader
+- [x] Create `src/lib/ascii-renderer/renderer.ts` — WebGL context init, fullscreen quad (2 triangles), basic vertex shader
   Verify: Canvas renders a solid color fullscreen
-- [ ] Create `src/lib/ascii-renderer/shaders/vertex.glsl` — passthrough vertex shader with UV coordinates
+- [x] Create `src/lib/ascii-renderer/shaders/vertex.glsl` — passthrough vertex shader with UV coordinates
   Verify: Compiles without shader errors in console
-- [ ] Create `src/lib/ascii-renderer/shaders/fragment.glsl` — sample video texture, output raw video color
+- [x] Create `src/lib/ascii-renderer/shaders/fragment.glsl` — sample video texture, output raw video color
   Verify: Video displays on the WebGL canvas
-- [ ] Create `src/components/AsciiCanvas.tsx` — React wrapper with useRef, useEffect, ResizeObserver (DPR capped at 2)
+- [x] Create `src/components/AsciiCanvas.tsx` — React wrapper with useRef, useEffect, ResizeObserver (DPR capped at 2)
   Verify: Canvas resizes correctly on window resize
-- [ ] Wire up video element: hidden `<video muted loop playsInline>`, upload frames via `texImage2D` each RAF
+- [x] Wire up video element: hidden `<video muted loop playsInline>`, upload frames via `texImage2D` each RAF
   Verify: Video plays smoothly on the WebGL canvas in the browser
-- [ ] Add placeholder video to `public/video/` (user will swap in their own)
+- [x] Add placeholder video to `public/video/` (user will swap in their own)
   Verify: Video loops seamlessly
 
 **Test checkpoint:** Open localhost:3000, see the video playing fullscreen on a WebGL canvas. Resize the window — canvas follows.
@@ -210,6 +210,98 @@ Estimated: 1hr | Files: ~4
 - [ ] Desktop: Chrome, Safari, Firefox — ASCII renders, pointer works, links clickable
 - [ ] Mobile: iOS Safari, Android Chrome — touch works, performance smooth, text readable
 - [ ] Production build: `npm run build && npm run start` — no errors, no dev panel, fast load
+
+---
+
+## Exhaustive Customization Reference (from ascii-magic.com)
+
+All controls available in the tool. We implement the relevant subset as WebGL uniforms + lil-gui controls.
+
+### CHARACTERS
+
+| Control | Type | Range / Options | Default |
+|---------|------|----------------|---------|
+| Render Mode | Dropdown | **Brightness**, **Edge Map**, **Dot Matrix** | Brightness |
+| Font Size | Slider | 3–48, step 1 | 8 |
+| Preset | Dropdown | **Standard** (`@#S08Xx+=-;:,.`), **Detailed** (`$@B%8&WM#*oahkbdpqwmZO0QLCJUYXzcvunxrjft/\|()1{}[]?-_+~<>i!lI;:,"^'. `), **Minimal** (`@#*+=-:. `), **Blocks** (█▓▒░ ), **Custom** | Standard |
+| Custom Chars | Text input | Any string (visible only when Preset = Custom) | `@#S08Xx+=-;:,.` |
+| Blend Mode | Dropdown | **Normal** (`source-over`), **Overlay**, **Color Dodge**, **Screen**, **Lighter** | Normal |
+| Char Opacity | Slider | 0–100 | 100 |
+| Invert Mapping | Toggle | on/off | OFF |
+| Dot Grid Overlay | Toggle | on/off | OFF |
+
+### INTENSITY
+
+| Control | Type | Range | Default |
+|---------|------|-------|---------|
+| Coverage | Slider | 0–100 | 85 |
+| Edge Emphasis | Slider | 0–100 | 60 |
+| Density | Slider | 0–100 | 30 |
+| Brightness | Slider | -100–100 | 0 |
+| Contrast | Slider | -100–100 | 0 |
+
+### BACKGROUND
+
+| Control | Type | Range / Options | Default |
+|---------|------|----------------|---------|
+| Mode | Dropdown | **Blurred Image**, **Solid Black**, **Original Image**, **None (Transparent)** | Blurred Image |
+| Blur | Slider | 0–60px (hidden when mode is Solid/None) | 8 |
+| Opacity | Slider | 0–100 (hidden when mode is Solid/None) | 70 |
+
+### ANIMATION
+
+| Control | Type | Range | Default |
+|---------|------|-------|---------|
+| Animated ASCII | Toggle | on/off | OFF |
+| Speed | Slider | 500–3000ms, step 100 (shown as seconds, e.g. "1.5s") | 1500 |
+| Intensity | Slider | 0–100 | 60 |
+| Randomness | Slider | 0–100 | 50 |
+
+Animation effect: sine-wave alpha modulation + character shimmer (glyph substitution) when intensity exceeds threshold.
+
+### COLOR OVERLAY
+
+| Control | Type | Range / Options | Default |
+|---------|------|----------------|---------|
+| Color | Color picker | Any hex color | `#ff0000` |
+| Opacity | Slider | 0–100 | 0 (transparent) |
+| Blend | Dropdown | **Multiply**, **Overlay**, **Screen**, **Color**, **Hue**, **Saturation**, **Luminosity**, **Soft Light**, **Hard Light**, **Color Burn**, **Color Dodge** | Multiply |
+
+### MASK (paint-to-reveal)
+
+| Control | Type | Range / Options | Default |
+|---------|------|----------------|---------|
+| Enable Mask | Toggle | on/off | OFF |
+| Tool | Dropdown | **Freehand**, **Rectangle**, **Ellipse** | Freehand |
+| Brush Size | Slider | 5–100 (visible only when tool = Freehand) | 30 |
+| Show Overlay | Toggle | on/off | ON |
+| Invert Mask | Toggle | on/off | OFF |
+| Clear Mask | Button | — | — |
+
+### EXPORT
+
+| Control | Type | Options | Default |
+|---------|------|---------|---------|
+| Format | Dropdown | **PNG**, **JPG**, **GIF (Animated)**, **MP4 (Video)**, **MP4 (Animation)** | PNG |
+| Resolution | Dropdown | **1x (Source)**, **2x**, **3x**, **4x** | 2x |
+| Duration | Dropdown | **3s**, **5s**, **10s**, **15s** (animation export only) | 5s |
+| Frame Rate | Dropdown | **15fps**, **20fps**, **24fps**, **30fps**, **60fps** (animation export only) | 30fps |
+
+### What We Implement vs. Skip
+
+**Implement as shader uniforms + lil-gui:**
+- All CHARACTERS controls (render mode, font size, preset, custom chars, blend mode, opacity, invert, dot grid)
+- All INTENSITY controls (coverage, edge emphasis, density, brightness, contrast)
+- All BACKGROUND controls (mode, blur, opacity)
+- All ANIMATION controls (toggle, speed, intensity, randomness)
+- All COLOR OVERLAY controls (color, opacity, blend)
+- Pointer interaction (our addition — not in ascii-magic.com)
+
+**Skip (not relevant to a live website):**
+- Export controls (PNG/JPG/GIF/MP4 — we're rendering live)
+- Mask painting tool (we use pointer interaction instead)
+- Crop/rotate (video is pre-selected)
+- Playback controls (video auto-loops)
 
 ---
 
