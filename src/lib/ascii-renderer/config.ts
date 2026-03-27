@@ -14,8 +14,10 @@ export type ColorBlend =
   | "hard-light"
   | "color-burn"
   | "color-dodge";
+export type ParticleMode = "repel" | "attract";
 
-export interface AsciiConfig {
+/** Per-layer configuration — each layer renders independently */
+export interface LayerConfig {
   // Characters
   renderMode: RenderMode;
   fontSize: number;
@@ -33,15 +35,6 @@ export interface AsciiConfig {
   brightness: number;
   contrast: number;
 
-  // Video framing
-  videoAnchorX: number;
-  videoAnchorY: number;
-
-  // Background
-  bgMode: BgMode;
-  bgBlur: number;
-  bgOpacity: number;
-
   // Animation
   animated: boolean;
   animSpeed: number;
@@ -52,19 +45,32 @@ export interface AsciiConfig {
   colorOverlay: string;
   colorOpacity: number;
   colorBlend: ColorBlend;
+}
+
+export interface AsciiConfig {
+  layers: [LayerConfig, LayerConfig];
+
+  // Video framing
+  videoAnchorX: number;
+  videoAnchorY: number;
+
+  // Background
+  bgMode: BgMode;
+  bgBlur: number;
+  bgOpacity: number;
 
   // Comet pointer
-  cometRadius: number;       // radius of glow effect (0-1 normalized)
-  cometGlow: number;         // brightness boost intensity (0-5)
-  cometDensityBoost: number; // how much to force coverage near cursor (0-1)
-  cometTrailDecay: number;   // seconds for trail to fade (0.1-3)
-  cometFadeSpeed: number;    // seconds for pointer to fade when idle
-  trailLength: number;       // max trail points
+  cometRadius: number;
+  cometGlow: number;
+  cometTrailDecay: number;
+  cometFadeSpeed: number;
+  trailLength: number;
 
   // Particle displacement
   particleRepelForce: number;
   particleSpring: number;
   particleDamping: number;
+  particleMode: ParticleMode;
 
   // Aurora overlay
   auroraEnabled: boolean;
@@ -96,12 +102,12 @@ export const CHAR_PRESETS: Record<string, string> = {
   dense: "@%#*+=-:. ",
 };
 
-export function getCharsForPreset(config: AsciiConfig): string {
-  if (config.charPreset === "custom") return config.customChars;
-  return CHAR_PRESETS[config.charPreset] ?? CHAR_PRESETS.standard;
+export function getCharsForPreset(layer: LayerConfig): string {
+  if (layer.charPreset === "custom") return layer.customChars;
+  return CHAR_PRESETS[layer.charPreset] ?? CHAR_PRESETS.standard;
 }
 
-export const DESKTOP_CONFIG: AsciiConfig = {
+const DARK_LAYER: LayerConfig = {
   renderMode: "brightness",
   fontSize: 14,
   charPreset: "dense",
@@ -117,13 +123,6 @@ export const DESKTOP_CONFIG: AsciiConfig = {
   brightness: 5.8,
   contrast: 21.2,
 
-  videoAnchorX: 0.5,
-  videoAnchorY: 0,
-
-  bgMode: "blur",
-  bgBlur: 4.26,
-  bgOpacity: 53,
-
   animated: true,
   animSpeed: 900,
   animIntensity: 100,
@@ -132,10 +131,46 @@ export const DESKTOP_CONFIG: AsciiConfig = {
   colorOverlay: "#ffffff",
   colorOpacity: 100,
   colorBlend: "multiply",
+};
+
+const LIGHT_LAYER: LayerConfig = {
+  renderMode: "brightness",
+  fontSize: 14,
+  charPreset: "minimal",
+  customChars: "@#*+=-:. ",
+  blendMode: "source-over",
+  charOpacity: 40,
+  invertMapping: false,
+  dotGrid: false,
+
+  coverage: 60,
+  edgeEmphasis: 2,
+  density: 0,
+  brightness: 5.8,
+  contrast: 21.2,
+
+  animated: true,
+  animSpeed: 1200,
+  animIntensity: 60,
+  animRandomness: 50,
+
+  colorOverlay: "#ffffff",
+  colorOpacity: 100,
+  colorBlend: "multiply",
+};
+
+export const DESKTOP_CONFIG: AsciiConfig = {
+  layers: [DARK_LAYER, LIGHT_LAYER],
+
+  videoAnchorX: 0.5,
+  videoAnchorY: 0,
+
+  bgMode: "blur",
+  bgBlur: 4.26,
+  bgOpacity: 53,
 
   cometRadius: 0.25484,
   cometGlow: 0.295,
-  cometDensityBoost: 0.338,
   cometTrailDecay: 1.8922,
   cometFadeSpeed: 2.2982,
   trailLength: 16,
@@ -143,6 +178,7 @@ export const DESKTOP_CONFIG: AsciiConfig = {
   particleRepelForce: 181.97,
   particleSpring: 61.42,
   particleDamping: 0.85,
+  particleMode: "repel",
 
   auroraEnabled: true,
   auroraIntensity: 60,
@@ -164,11 +200,13 @@ export const DESKTOP_CONFIG: AsciiConfig = {
 
 export const MOBILE_CONFIG: AsciiConfig = {
   ...DESKTOP_CONFIG,
-  fontSize: 10,
+  layers: [
+    { ...DARK_LAYER, fontSize: 10 },
+    { ...LIGHT_LAYER, fontSize: 10 },
+  ],
   videoAnchorX: 0.5,
   videoAnchorY: 0.5,
   cometRadius: 0.15,
-  coverage: 80,
 };
 
 export const DEFAULT_CONFIG = DESKTOP_CONFIG;

@@ -45,7 +45,8 @@ export class DisplacementField {
   repel(
     pointerX: number, // normalized 0-1
     pointerY: number,
-    cfg: DisplacementConfig
+    cfg: DisplacementConfig,
+    mode: "repel" | "attract" = "repel"
   ) {
     const radiusCols = (cfg.repelRadius * this.canvasW) / this.cellW;
     const radiusRows = (cfg.repelRadius * this.canvasH) / this.cellH;
@@ -80,9 +81,10 @@ export class DisplacementField {
           const nx = ddx / dist;
           const ny = ddy / dist;
 
+          const sign = mode === "attract" ? -1 : 1;
           const cell = this.cells[row * this.cols + col];
-          cell.vx += nx * strength;
-          cell.vy += ny * strength;
+          cell.vx += sign * nx * strength;
+          cell.vy += sign * ny * strength;
         }
       }
     }

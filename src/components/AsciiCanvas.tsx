@@ -59,8 +59,14 @@ export function AsciiCanvas({
 
     // Performance fallback: low-end devices get larger cells
     const cores = navigator.hardwareConcurrency ?? 4;
-    const perfConfig = cores <= 4
-      ? { ...config, fontSize: Math.max((config?.fontSize ?? 14) + 4, 18) }
+    const perfConfig = cores <= 4 && config?.layers
+      ? {
+          ...config,
+          layers: config.layers.map((l) => ({
+            ...l,
+            fontSize: Math.max(l.fontSize + 4, 18),
+          })) as [typeof config.layers[0], typeof config.layers[1]],
+        }
       : config;
 
     const renderer = createAsciiRenderer(canvas, video, perfConfig);
