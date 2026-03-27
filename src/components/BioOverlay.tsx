@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef } from "react";
+import Link from "next/link";
 import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
 
@@ -62,6 +63,23 @@ export function BioOverlay({
       <p data-animate className="text-white/70 text-sm mb-6 leading-relaxed">
         {bio}
       </p>
+
+      <div className="mb-4">
+        {[
+          { label: "about", href: "/about" },
+          { label: "projects", href: "/projects" },
+          { label: "writing", href: "/writing" },
+        ].map((page) => (
+          <Link
+            key={page.href}
+            data-animate
+            href={page.href}
+            className="block text-white/60 text-sm hover:text-white transition-colors duration-200 mb-1"
+          >
+            → {page.label}
+          </Link>
+        ))}
+      </div>
 
       <div className="mb-4">
         {links.map((link) => (
