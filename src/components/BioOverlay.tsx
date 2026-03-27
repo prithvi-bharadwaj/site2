@@ -40,7 +40,7 @@ export function BioOverlay({
         stagger: 0.08,
         duration: 0.6,
         ease: "power2.out",
-        delay: 0.3,
+        delay: 2.0,
       });
     },
     { scope: containerRef }

@@ -50,6 +50,7 @@ export interface AsciiRenderer {
   updateConfig: (config: AsciiConfig) => void;
   getConfig: () => AsciiConfig;
   getPointerState: () => PointerState;
+  getDecodeProgress: () => number;
   sampleLuminance: () => Uint8Array | null;
   destroy: () => void;
 }
@@ -113,6 +114,8 @@ export function createAsciiRenderer(
     uCometDensityBoost: gl.getUniformLocation(program, "uCometDensityBoost"),
     uCometOpacity: gl.getUniformLocation(program, "uCometOpacity"),
     uCometTrailCount: gl.getUniformLocation(program, "uCometTrailCount"),
+    uDecodeProgress: gl.getUniformLocation(program, "uDecodeProgress"),
+    uRevealProgress: gl.getUniformLocation(program, "uRevealProgress"),
   };
 
   const uTrail: (WebGLUniformLocation | null)[] = [];
@@ -169,6 +172,9 @@ export function createAsciiRenderer(
   let videoReady = false;
   let playing = false;
   let timeUpdated = false;
+  let decodeProgress = config.entranceEnabled ? 0 : 1;
+  let revealProgress = config.entranceEnabled ? 0 : 1;
+  let decodeStartTime = -1;
   const onPlaying = () => { playing = true; if (timeUpdated) videoReady = true; };
   const onTimeUpdate = () => { timeUpdated = true; if (playing) videoReady = true; };
   video.addEventListener("playing", onPlaying);
@@ -225,6 +231,23 @@ export function createAsciiRenderer(
       gl.activeTexture(gl.TEXTURE0);
       gl.bindTexture(gl.TEXTURE_2D, videoTex);
       gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, video);
+
+      // Start decode once video is ready
+      if (decodeStartTime < 0 && config.entranceEnabled) {
+        decodeStartTime = now;
+      }
+    }
+
+    // --- Decode entrance progress ---
+    if (decodeStartTime >= 0) {
+      const decodeElapsed = (now - decodeStartTime) / 1000;
+      if (decodeProgress < 1) {
+        decodeProgress = Math.min(1, decodeElapsed / config.entranceDuration);
+      }
+      // Bg reveal starts after revealDelay, ramps over revealDuration
+      if (revealProgress < 1 && decodeElapsed > config.revealDelay) {
+        revealProgress = Math.min(1, (decodeElapsed - config.revealDelay) / config.revealDuration);
+      }
     }
 
     gl.useProgram(program);
@@ -262,6 +285,8 @@ export function createAsciiRenderer(
     gl.uniform1f(u.uAnimSpeed, config.animSpeed / 1000);
     gl.uniform1f(u.uAnimIntensity, config.animIntensity / 100);
     gl.uniform1f(u.uAnimRandomness, config.animRandomness / 100);
+    gl.uniform1f(u.uDecodeProgress, decodeProgress);
+    gl.uniform1f(u.uRevealProgress, revealProgress);
 
     // Comet
     gl.uniform2f(u.uCometPos, pointerState.x, pointerState.y);
@@ -359,5 +384,7 @@ export function createAsciiRenderer(
 
   animFrameId = requestAnimationFrame(render);
 
-  return { render, resize, updateConfig, getConfig, getPointerState, sampleLuminance, destroy };
+  function getDecodeProgress() { return decodeProgress; }
+
+  return { render, resize, updateConfig, getConfig, getPointerState, getDecodeProgress, sampleLuminance, destroy };
 }

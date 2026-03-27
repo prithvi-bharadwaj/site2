@@ -83,6 +83,12 @@ export interface AsciiConfig {
   auroraCurtainSpeed: number;
   auroraLuminanceReactive: boolean;
   auroraLuminanceBias: number;
+
+  // Entrance
+  entranceDuration: number;   // seconds for decode animation (desktop: 2.5, mobile: 1.5)
+  entranceEnabled: boolean;   // allow disabling for dev
+  revealDelay: number;        // seconds after decode starts before bg reveal begins
+  revealDuration: number;     // seconds for bg to fully reveal through random mask
 }
 
 export const CHAR_PRESETS: Record<string, string> = {
@@ -160,6 +166,11 @@ export const DESKTOP_CONFIG: AsciiConfig = {
   auroraCurtainSpeed: 30,
   auroraLuminanceReactive: true,
   auroraLuminanceBias: 60,
+
+  entranceDuration: 2.5,
+  entranceEnabled: true,
+  revealDelay: 1.5,
+  revealDuration: 2.0,
 };
 
 export const MOBILE_CONFIG: AsciiConfig = {
@@ -169,6 +180,9 @@ export const MOBILE_CONFIG: AsciiConfig = {
   videoAnchorY: 0.5,
   cometRadius: 0.15,
   coverage: 80,
+  entranceDuration: 1.5,
+  revealDelay: 1.0,
+  revealDuration: 1.5,
 };
 
 export const DEFAULT_CONFIG = DESKTOP_CONFIG;

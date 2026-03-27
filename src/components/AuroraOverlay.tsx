@@ -53,7 +53,7 @@ export function AuroraOverlay({ config, renderer }: AuroraOverlayProps) {
     let lastTime = performance.now();
     let initialized = false;
     let fadeIn = 0; // 0-1 fade-in progress
-    const FADE_DELAY = 1.0; // seconds before fade starts
+    const FADE_DELAY = 1.5; // seconds before fade starts (after decode ~60% done)
     const FADE_DURATION = 2.0; // seconds to fade in
     let elapsed = 0;
 

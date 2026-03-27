@@ -31,6 +31,10 @@ uniform float uAnimSpeed;
 uniform float uAnimIntensity;
 uniform float uAnimRandomness;
 
+// Decode entrance
+uniform float uDecodeProgress;
+uniform float uRevealProgress;
+
 // Comet pointer
 uniform vec2 uCometPos;
 uniform float uCometRadius;
@@ -180,6 +184,20 @@ void main() {
   float charIndex = floor(finalLum * (uCharCount - 1.0));
   charIndex = clamp(charIndex, 0.0, uCharCount - 1.0);
 
+  // Decode entrance: scrambled glyphs resolve top-down into real characters
+  if (uDecodeProgress < 1.0) {
+    float cellSeed = hash(cell);
+    float cellDelay = cellSeed * 0.6 + (cell.y / uGridSize.y) * 0.4;
+    float cellProgress = smoothstep(cellDelay, cellDelay + 0.3, uDecodeProgress);
+
+    if (cellProgress < 1.0) {
+      float scrambleIndex = floor(hash(cell + vec2(floor(uTime * 12.0))) * uCharCount);
+      charIndex = mix(scrambleIndex, charIndex, cellProgress);
+      charIndex = floor(clamp(charIndex, 0.0, uCharCount - 1.0));
+      showChar = mix(1.0, showChar, cellProgress);
+    }
+  }
+
   vec2 atlasUV = vec2(
     (charIndex + cellUV.x) / uCharCount,
     cellUV.y
@@ -216,6 +234,13 @@ void main() {
   } else if (uBgMode > 1.5 && uBgMode < 2.5) {
     bgColor = texture2D(uVideo, videoUV).rgb;
     bgAlpha = uBgOpacity;
+  }
+
+  // Random reveal mask: bg fades in per-cell through a random threshold
+  if (uRevealProgress < 1.0) {
+    float revealSeed = hash(cell * 1.37);
+    float cellReveal = smoothstep(revealSeed - 0.12, revealSeed + 0.12, uRevealProgress);
+    bgAlpha *= cellReveal;
   }
 
   // Composite
