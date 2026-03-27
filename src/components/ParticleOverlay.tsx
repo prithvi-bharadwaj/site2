@@ -2,7 +2,7 @@
 
 import { useRef, useEffect } from "react";
 import { ParticleSystem, type ParticleSystemConfig } from "@/lib/ascii-renderer/particles";
-import { type AsciiConfig, getCharsForPreset } from "@/lib/ascii-renderer/config";
+import { type AsciiConfig, type LayerConfig, getCharsForPreset } from "@/lib/ascii-renderer/config";
 import { type AsciiRenderer } from "@/lib/ascii-renderer/renderer";
 
 interface ParticleOverlayProps {
@@ -39,8 +39,9 @@ export function ParticleOverlay({ config, renderer }: ParticleOverlayProps) {
       canvas.height = h;
 
       // Reinit particles on resize
-      const chars = getCharsForPreset(config);
-      const fontSize = config.fontSize;
+      const layer0 = config.layers[0];
+      const chars = getCharsForPreset(layer0);
+      const fontSize = layer0.fontSize;
       // Approximate cell size matching the WebGL renderer
       const tempCanvas = document.createElement("canvas");
       const tempCtx = tempCanvas.getContext("2d");
@@ -103,7 +104,7 @@ export function ParticleOverlay({ config, renderer }: ParticleOverlayProps) {
       // Render
       ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-      const fontSize = config.fontSize * maxDpr;
+      const fontSize = config.layers[0].fontSize * maxDpr;
       ctx.font = `${fontSize}px "Courier New", Courier, monospace`;
       ctx.textBaseline = "middle";
       ctx.textAlign = "center";
