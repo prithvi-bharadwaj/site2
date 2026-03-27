@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, lazy, Suspense } from "react";
+import { useState, useEffect, lazy, Suspense } from "react";
 import { AsciiCanvas } from "@/components/AsciiCanvas";
 import { BioOverlay } from "@/components/BioOverlay";
 import { AuroraOverlay } from "@/components/AuroraOverlay";
@@ -13,10 +13,13 @@ const DevPanel = process.env.NODE_ENV === "development"
 
 function useIsMobile(breakpoint = 768) {
   const [isMobile, setIsMobile] = useState(false);
-  if (typeof window !== "undefined") {
+  useEffect(() => {
     const mql = window.matchMedia(`(max-width: ${breakpoint}px)`);
-    if (mql.matches !== isMobile) setIsMobile(mql.matches);
-  }
+    setIsMobile(mql.matches);
+    const handler = (e: MediaQueryListEvent) => setIsMobile(e.matches);
+    mql.addEventListener("change", handler);
+    return () => mql.removeEventListener("change", handler);
+  }, [breakpoint]);
   return isMobile;
 }
 

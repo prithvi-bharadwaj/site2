@@ -28,7 +28,8 @@ export function ParticleOverlay({ config, renderer }: ParticleOverlayProps) {
     let lastTime = performance.now();
     let initialized = false;
 
-    const maxDpr = Math.min(window.devicePixelRatio, 2);
+    const cores = navigator.hardwareConcurrency ?? 4;
+    const maxDpr = Math.min(window.devicePixelRatio, cores <= 4 ? 1.5 : 2);
 
     const observer = new ResizeObserver((entries) => {
       if (!canvasRef.current) return;

@@ -169,6 +169,11 @@ export const MOBILE_CONFIG: AsciiConfig = {
   videoAnchorY: 0.5,
   cometRadius: 0.15,
   coverage: 80,
+  trailLength: 8,
+  // Aurora: reduce particle load and skip expensive GPU luminance readback
+  auroraGlowCount: 8,
+  auroraTwinkleCount: 15,
+  auroraLuminanceReactive: false,
 };
 
 export const DEFAULT_CONFIG = DESKTOP_CONFIG;

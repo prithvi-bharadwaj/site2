@@ -47,7 +47,8 @@ export function AuroraOverlay({ config, renderer }: AuroraOverlayProps) {
 
     const system = new AuroraSystem();
     const curtain = new AuroraCurtain();
-    const maxDpr = Math.min(window.devicePixelRatio, 2);
+    const cores = navigator.hardwareConcurrency ?? 4;
+    const maxDpr = Math.min(window.devicePixelRatio, cores <= 4 ? 1.5 : 2);
 
     let rafId = 0;
     let lastTime = performance.now();
