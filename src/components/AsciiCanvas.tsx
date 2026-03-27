@@ -39,6 +39,7 @@ export function AsciiCanvas({
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const rendererRef = useRef<AsciiRenderer | null>(null);
+  const [webglError, setWebglError] = useState(false);
   const isMobile = useIsMobile(breakpoint);
 
   const videoSrc = isMobile ? mobileSrc : desktopSrc;
@@ -63,7 +64,13 @@ export function AsciiCanvas({
       ? { ...config, fontSize: Math.max((config?.fontSize ?? 14) + 4, 18) }
       : config;
 
-    const renderer = createAsciiRenderer(canvas, video, perfConfig);
+    let renderer: AsciiRenderer;
+    try {
+      renderer = createAsciiRenderer(canvas, video, perfConfig);
+    } catch {
+      setWebglError(true);
+      return;
+    }
     rendererRef.current = renderer;
     onRendererReady?.(renderer);
 
@@ -89,6 +96,28 @@ export function AsciiCanvas({
     };
   }, [videoSrc, handleResize]);
 
+  if (webglError) {
+    return (
+      <div
+        style={{
+          position: "fixed",
+          inset: 0,
+          background: "#000",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          fontFamily: "'Courier New', Courier, monospace",
+          color: "#fff",
+          fontSize: "0.875rem",
+          textAlign: "center",
+          padding: "2rem",
+        }}
+      >
+        this site requires webgl. try a different browser.
+      </div>
+    );
+  }
+
   return (
     <>
       <video
@@ -101,6 +130,8 @@ export function AsciiCanvas({
       />
       <canvas
         ref={canvasRef}
+        role="img"
+        aria-label="ASCII video background rendering"
         style={{
           position: "fixed",
           inset: 0,

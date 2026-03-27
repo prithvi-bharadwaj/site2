@@ -38,6 +38,7 @@ export function PageShell({ title, children }: PageShellProps) {
       <div data-animate className="mb-8">
         <Link
           href="/"
+          aria-label="Back to home"
           className="text-white/40 text-sm hover:text-white transition-colors duration-200"
         >
           ← back

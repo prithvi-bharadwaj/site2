@@ -2,6 +2,12 @@ import { PageShell } from "@/components/PageShell";
 
 export const metadata = {
   title: "Writing — Prithvi",
+  description: "Occasional notes on building things — WebGL, creative coding, systems design, and finishing what you start.",
+  openGraph: {
+    title: "Writing — Prithvi",
+    description: "Occasional notes on building things — WebGL, creative coding, systems design, and finishing what you start.",
+    type: "website",
+  },
 };
 
 interface Entry {

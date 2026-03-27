@@ -34,6 +34,22 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
+      <head>
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              "@context": "https://schema.org",
+              "@type": "Person",
+              name: "Prithvi",
+              url: "https://prithvi.me",
+              jobTitle: "Software Developer",
+              description: "Developer, creator, explorer.",
+              sameAs: [],
+            }),
+          }}
+        />
+      </head>
       <body>{children}</body>
     </html>
   );
