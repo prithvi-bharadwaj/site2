@@ -24,7 +24,6 @@ const projects: Project[] = [
     description:
       "Real-time ASCII video renderer using WebGL displacement maps. Characters respond to video luminance; pointer leaves a comet-trail distortion in the field.",
     stack: ["WebGL", "GLSL", "TypeScript", "Next.js"],
-    github: "https://github.com",
     live: "/",
   },
   {
@@ -32,30 +31,24 @@ const projects: Project[] = [
     description:
       "Procedural terrain generation with erosion simulation. Hydraulic and thermal erosion run on the GPU; outputs tileable heightmaps and normal maps.",
     stack: ["WebGPU", "WGSL", "Rust", "WASM"],
-    github: "https://github.com",
   },
   {
     title: "sequencer",
     description:
       "A browser-based step sequencer with a programmable modulation system. Each step can hold a script that manipulates neighboring steps at runtime.",
     stack: ["Web Audio API", "TypeScript", "React"],
-    github: "https://github.com",
-    live: "#",
   },
   {
     title: "sprout",
     description:
       "Minimal task manager built around the idea that context is more valuable than priority. Tasks carry context snapshots so you can re-enter flow faster.",
     stack: ["Rust", "SQLite", "Tauri", "React"],
-    github: "https://github.com",
   },
   {
     title: "lightfield",
     description:
       "Experimental renderer that approximates light field photography in the browser. Drag to shift perspective; depth-of-field computed per-pixel in GLSL.",
     stack: ["Three.js", "GLSL", "TypeScript"],
-    github: "https://github.com",
-    live: "#",
   },
 ];
 

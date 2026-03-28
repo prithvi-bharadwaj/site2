@@ -3,19 +3,10 @@
 import Link from "next/link";
 import { AsciiDissolve } from "@/components/AsciiDissolve";
 
-const PROJECTS = [
-  { label: "Project Alpha", href: "/projects/alpha" },
-  { label: "Project Beta", href: "/projects/beta" },
-  { label: "Project Gamma", href: "/projects/gamma" },
-  { label: "Neural Garden", href: "/projects/neural-garden" },
-  { label: "Pixel Forge", href: "/projects/pixel-forge" },
-] as const;
-
 const PAGES = [
+  { label: "Projects", href: "/projects" },
   { label: "About", href: "/about" },
   { label: "Writing", href: "/writing" },
-  { label: "Games", href: "/games" },
-  { label: "Work", href: "/work" },
 ] as const;
 
 export default function Home() {
@@ -51,24 +42,6 @@ export default function Home() {
               game development, and whatever else catches my attention.
             </p>
           </div>
-
-          {/* Project links — inline, soulwire-style */}
-          <nav className="mb-8">
-            <span className="text-white/30 text-xs uppercase tracking-widest block mb-3">
-              Projects
-            </span>
-            <div className="flex flex-wrap gap-x-6 gap-y-2">
-              {PROJECTS.map((project) => (
-                <Link
-                  key={project.href}
-                  href={project.href}
-                  className="nav-link text-white/50 text-sm"
-                >
-                  {project.label}
-                </Link>
-              ))}
-            </div>
-          </nav>
 
           {/* Page links */}
           <nav>
