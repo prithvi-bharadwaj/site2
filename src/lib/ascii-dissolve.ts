@@ -1,7 +1,8 @@
 /**
  * Lightweight image-to-ASCII dissolve engine.
- * Converts an image to ASCII by sampling pixel brightness,
- * then renders a blend between the original image and its ASCII form.
+ * Converts an image to ASCII by sampling pixel brightness.
+ * Supports mouse-local radial dissolve — only the area near
+ * the cursor dissolves into ASCII characters.
  */
 
 const CHAR_RAMP = " .:-=+*#%@";
@@ -74,41 +75,74 @@ export function prepareDissolve(
   return { grid, image, width, height, fontSize };
 }
 
-export function renderDissolve(
+export interface PointerState {
+  x: number;
+  y: number;
+  active: boolean;
+}
+
+/**
+ * Render with a radial dissolve around the pointer.
+ * Cells near the mouse show ASCII; cells far away show the original image.
+ */
+export function renderRadialDissolve(
   ctx: CanvasRenderingContext2D,
   state: DissolveState,
-  progress: number
+  pointer: PointerState,
+  radius = 60
 ): void {
   const { grid, image, width, height, fontSize } = state;
-  const p = Math.max(0, Math.min(1, progress));
 
   ctx.clearRect(0, 0, width, height);
+  ctx.drawImage(image, 0, 0, width, height);
 
-  // Draw original image with fading opacity
-  if (p < 1) {
-    ctx.globalAlpha = 1 - p;
-    ctx.drawImage(image, 0, 0, width, height);
-  }
+  if (!pointer.active) return;
 
-  // Draw ASCII overlay with increasing opacity
-  if (p > 0) {
-    ctx.globalAlpha = p;
-    ctx.fillStyle = "#0a0a0a";
-    ctx.fillRect(0, 0, width, height);
+  ctx.font = `${fontSize}px ${FONT}`;
+  ctx.textBaseline = "top";
 
-    ctx.font = `${fontSize}px ${FONT}`;
-    ctx.fillStyle = "#ffffff";
-    ctx.textBaseline = "top";
+  for (let row = 0; row < grid.rows; row++) {
+    for (let col = 0; col < grid.cols; col++) {
+      const cx = col * grid.cellW + grid.cellW / 2;
+      const cy = row * grid.cellH + grid.cellH / 2;
 
-    for (let row = 0; row < grid.rows; row++) {
-      for (let col = 0; col < grid.cols; col++) {
-        const char = grid.chars[row * grid.cols + col];
-        if (char !== " ") {
-          ctx.fillText(char, col * grid.cellW, row * grid.cellH);
-        }
+      const dx = cx - pointer.x;
+      const dy = cy - pointer.y;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+
+      if (dist > radius) continue;
+
+      // Smooth falloff: 1 at center, 0 at edge
+      const strength = 1 - dist / radius;
+      const alpha = strength * strength; // ease-in curve
+
+      // Erase the image pixels for this cell
+      ctx.clearRect(col * grid.cellW, row * grid.cellH, grid.cellW, grid.cellH);
+
+      // Draw background
+      ctx.globalAlpha = alpha;
+      ctx.fillStyle = "#0a0a0a";
+      ctx.fillRect(col * grid.cellW, row * grid.cellH, grid.cellW, grid.cellH);
+
+      // Draw the original image behind at reduced opacity
+      if (alpha < 1) {
+        ctx.globalAlpha = 1 - alpha;
+        ctx.drawImage(
+          image,
+          col * grid.cellW, row * grid.cellH, grid.cellW, grid.cellH,
+          col * grid.cellW, row * grid.cellH, grid.cellW, grid.cellH
+        );
       }
+
+      // Draw ASCII char
+      const char = grid.chars[row * grid.cols + col];
+      if (char !== " ") {
+        ctx.globalAlpha = alpha;
+        ctx.fillStyle = "#ffffff";
+        ctx.fillText(char, col * grid.cellW, row * grid.cellH);
+      }
+
+      ctx.globalAlpha = 1;
     }
   }
-
-  ctx.globalAlpha = 1;
 }

@@ -3,8 +3,9 @@
 import { useRef, useEffect, useCallback } from "react";
 import {
   prepareDissolve,
-  renderDissolve,
+  renderRadialDissolve,
   type DissolveState,
+  type PointerState,
 } from "@/lib/ascii-dissolve";
 
 interface AsciiDissolveProps {
@@ -14,6 +15,7 @@ interface AsciiDissolveProps {
   height: number;
   className?: string;
   fontSize?: number;
+  radius?: number;
 }
 
 export function AsciiDissolve({
@@ -23,11 +25,11 @@ export function AsciiDissolve({
   height,
   className,
   fontSize = 10,
+  radius = 60,
 }: AsciiDissolveProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const stateRef = useRef<DissolveState | null>(null);
-  const progressRef = useRef(0);
-  const targetRef = useRef(0);
+  const pointerRef = useRef<PointerState>({ x: 0, y: 0, active: false });
   const rafRef = useRef<number>(0);
   const reducedMotion = useRef(false);
 
@@ -44,7 +46,7 @@ export function AsciiDissolve({
       stateRef.current = prepareDissolve(img, width, height, fontSize);
       const ctx = canvasRef.current?.getContext("2d");
       if (ctx && stateRef.current) {
-        renderDissolve(ctx, stateRef.current, 0);
+        renderRadialDissolve(ctx, stateRef.current, pointerRef.current, radius);
       }
     };
     img.src = src;
@@ -52,45 +54,53 @@ export function AsciiDissolve({
     return () => {
       if (rafRef.current) cancelAnimationFrame(rafRef.current);
     };
-  }, [src, width, height, fontSize]);
+  }, [src, width, height, fontSize, radius]);
 
-  const animate = useCallback(() => {
-    const target = targetRef.current;
-    const current = progressRef.current;
-    const diff = target - current;
-
-    if (Math.abs(diff) < 0.01) {
-      progressRef.current = target;
-    } else {
-      progressRef.current += diff * 0.12;
-    }
-
+  const renderFrame = useCallback(() => {
     const ctx = canvasRef.current?.getContext("2d");
     if (ctx && stateRef.current) {
-      renderDissolve(ctx, stateRef.current, progressRef.current);
+      renderRadialDissolve(ctx, stateRef.current, pointerRef.current, radius);
     }
+  }, [radius]);
 
-    if (Math.abs(targetRef.current - progressRef.current) > 0.005) {
-      rafRef.current = requestAnimationFrame(animate);
-    }
-  }, []);
-
-  const startAnimation = useCallback(
-    (target: number) => {
-      if (reducedMotion.current) {
-        progressRef.current = target;
-        const ctx = canvasRef.current?.getContext("2d");
-        if (ctx && stateRef.current) {
-          renderDissolve(ctx, stateRef.current, target);
-        }
-        return;
+  const startLoop = useCallback(() => {
+    const loop = () => {
+      renderFrame();
+      if (pointerRef.current.active) {
+        rafRef.current = requestAnimationFrame(loop);
       }
-      targetRef.current = target;
-      if (rafRef.current) cancelAnimationFrame(rafRef.current);
-      rafRef.current = requestAnimationFrame(animate);
+    };
+    if (rafRef.current) cancelAnimationFrame(rafRef.current);
+    rafRef.current = requestAnimationFrame(loop);
+  }, [renderFrame]);
+
+  const handleMouseMove = useCallback(
+    (e: React.MouseEvent<HTMLCanvasElement>) => {
+      if (reducedMotion.current) return;
+      const rect = canvasRef.current?.getBoundingClientRect();
+      if (!rect) return;
+      pointerRef.current = {
+        x: e.clientX - rect.left,
+        y: e.clientY - rect.top,
+        active: true,
+      };
+      if (!rafRef.current) startLoop();
     },
-    [animate]
+    [startLoop]
   );
+
+  const handleMouseEnter = useCallback(() => {
+    if (reducedMotion.current) return;
+    pointerRef.current = { ...pointerRef.current, active: true };
+    startLoop();
+  }, [startLoop]);
+
+  const handleMouseLeave = useCallback(() => {
+    pointerRef.current = { ...pointerRef.current, active: false };
+    if (rafRef.current) cancelAnimationFrame(rafRef.current);
+    rafRef.current = 0;
+    renderFrame();
+  }, [renderFrame]);
 
   return (
     <canvas
@@ -101,8 +111,9 @@ export function AsciiDissolve({
       aria-label={alt}
       className={className}
       style={{ display: "block" }}
-      onMouseEnter={() => startAnimation(1)}
-      onMouseLeave={() => startAnimation(0)}
+      onMouseMove={handleMouseMove}
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
     />
   );
 }
