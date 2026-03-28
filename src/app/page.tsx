@@ -1,47 +1,63 @@
 "use client";
 
-import { useState, useEffect, lazy, Suspense } from "react";
-import { AsciiCanvas } from "@/components/AsciiCanvas";
-import { BioOverlay } from "@/components/BioOverlay";
-import { AuroraOverlay } from "@/components/AuroraOverlay";
-import { type AsciiRenderer } from "@/lib/ascii-renderer/renderer";
-import { DESKTOP_CONFIG, MOBILE_CONFIG } from "@/lib/ascii-renderer/config";
+import Link from "next/link";
+import { AsciiDissolve } from "@/components/AsciiDissolve";
 
-const DevPanel = process.env.NODE_ENV === "development"
-  ? lazy(() => import("@/components/DevPanel").then((m) => ({ default: m.DevPanel })))
-  : () => null;
-
-function useIsMobile(breakpoint = 768) {
-  const [isMobile, setIsMobile] = useState(false);
-  useEffect(() => {
-    const mql = window.matchMedia(`(max-width: ${breakpoint}px)`);
-    setIsMobile(mql.matches);
-    const handler = (e: MediaQueryListEvent) => setIsMobile(e.matches);
-    mql.addEventListener("change", handler);
-    return () => mql.removeEventListener("change", handler);
-  }, [breakpoint]);
-  return isMobile;
-}
+const NAV_LINKS = [
+  { label: "Projects", href: "/projects" },
+  { label: "Games", href: "/games" },
+  { label: "Work", href: "/work" },
+  { label: "About", href: "/about" },
+] as const;
 
 export default function Home() {
-  const [renderer, setRenderer] = useState<AsciiRenderer | null>(null);
-  const isMobile = useIsMobile();
-  const activeConfig = isMobile ? MOBILE_CONFIG : DESKTOP_CONFIG;
-
   return (
-    <main>
-      <AsciiCanvas
-        desktopSrc="/video/bg-desktop.mp4"
-        mobileSrc="/video/bg-mobile.mp4"
-        desktopConfig={DESKTOP_CONFIG}
-        mobileConfig={MOBILE_CONFIG}
-        onRendererReady={setRenderer}
-      />
-      <AuroraOverlay config={activeConfig} renderer={renderer} />
-      <BioOverlay />
-      <Suspense fallback={null}>
-        <DevPanel renderer={renderer} />
-      </Suspense>
+    <main
+      className="relative min-h-screen flex items-center justify-center"
+      style={{ fontFamily: "'Courier New', Courier, monospace" }}
+    >
+      {/* Logo — top left */}
+      <div className="fixed top-8 left-8 z-10">
+        <AsciiDissolve
+          src="/images/logo.svg"
+          alt="Prithvi logo"
+          width={120}
+          height={120}
+          fontSize={8}
+        />
+      </div>
+
+      {/* Centered content */}
+      <div className="text-center z-10">
+        <h1 className="text-white text-4xl font-bold tracking-tight mb-3">
+          Prithvi
+        </h1>
+        <p className="text-white/60 text-sm mb-8">
+          Developer, creator, explorer.
+        </p>
+        <nav className="flex gap-6 justify-center">
+          {NAV_LINKS.map((link) => (
+            <Link
+              key={link.href}
+              href={link.href}
+              className="text-white/50 text-sm hover:text-white transition-colors duration-200"
+            >
+              {link.label}
+            </Link>
+          ))}
+        </nav>
+      </div>
+
+      {/* Flower — bottom right */}
+      <div className="fixed bottom-8 right-8 z-10">
+        <AsciiDissolve
+          src="/images/flower.svg"
+          alt="Decorative flower"
+          width={140}
+          height={140}
+          fontSize={8}
+        />
+      </div>
     </main>
   );
 }
