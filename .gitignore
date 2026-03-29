@@ -3,3 +3,4 @@ node_modules/
 progress.json
 skill-runs.jsonl
 .DS_Store
+.gstack/
