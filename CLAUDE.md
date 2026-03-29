@@ -35,3 +35,12 @@ Use the `/browse` skill from gstack for all web browsing. Never use `mcp__claude
 - `/gstack-upgrade` — Upgrade gstack
 
 If gstack skills aren't working, run `cd .claude/skills/gstack && ./setup` to build the binary and register skills.
+
+## Testing
+
+- **Framework:** Vitest + @testing-library/react
+- **Run:** `npm test` (or `npx vitest run`)
+- **Test directory:** `test/`
+- **Config:** `vitest.config.ts`
+
+When writing new functions, write a corresponding test. When fixing a bug, write a regression test.

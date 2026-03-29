@@ -16,8 +16,8 @@ export default function Error({
   return (
     <div
       style={{
-        fontFamily: "'Courier New', Courier, monospace",
-        background: "#000",
+        fontFamily: "'Red Hat Display', sans-serif",
+        background: "#0a0a0a",
         color: "#fff",
         minHeight: "100vh",
         display: "flex",

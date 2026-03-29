@@ -65,7 +65,7 @@ function WritingEntry({ entry, isLast }: { entry: Entry; isLast: boolean }) {
       </p>
       <a
         href={entry.href}
-        className="text-white/30 text-xs hover:text-white transition-colors duration-200"
+        className="text-white/30 text-xs hover:text-white link-hover"
       >
         → read
       </a>
