@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useEffect, useState, useCallback } from "react";
+import { useRef, useEffect, useState, useCallback, useMemo } from "react";
 import {
   textToPoints,
   measureText,
@@ -69,10 +69,15 @@ export function ParticleText({
   const pointsCacheRef = useRef<Map<string, Point[]>>(new Map());
   const mouseRef = useRef<MouseState>({ x: 0, y: 0, active: false });
 
-  const physicsConfig: PhysicsConfig = {
-    ...DEFAULT_PHYSICS,
-    ...physicsOverrides,
-  };
+  const physicsConfig = useMemo<PhysicsConfig>(
+    () => ({ ...DEFAULT_PHYSICS, ...physicsOverrides }),
+    [
+      physicsOverrides?.repelRadius,
+      physicsOverrides?.repelStrength,
+      physicsOverrides?.springStiffness,
+      physicsOverrides?.damping,
+    ]
+  );
 
   const getDimensions = useCallback(() => {
     const isMobile = typeof window !== "undefined" && window.innerWidth < 768;

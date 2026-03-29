@@ -17,7 +17,7 @@ export default function Error({
     <div
       style={{
         fontFamily: "'Red Hat Display', sans-serif",
-        background: "#000",
+        background: "#0a0a0a",
         color: "#fff",
         minHeight: "100vh",
         display: "flex",

@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useEffect, useState } from "react";
+import { useRef, useEffect, useState, useMemo } from "react";
 import {
   imageToPoints,
   createPool,
@@ -41,10 +41,15 @@ export function ParticleImage({
   const rafRef = useRef<number>(0);
   const [reducedMotion, setReducedMotion] = useState(false);
 
-  const physicsConfig: PhysicsConfig = {
-    ...DEFAULT_PHYSICS,
-    ...physicsOverrides,
-  };
+  const physicsConfig = useMemo<PhysicsConfig>(
+    () => ({ ...DEFAULT_PHYSICS, ...physicsOverrides }),
+    [
+      physicsOverrides?.repelRadius,
+      physicsOverrides?.repelStrength,
+      physicsOverrides?.springStiffness,
+      physicsOverrides?.damping,
+    ]
+  );
 
   useEffect(() => {
     const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
