@@ -17,13 +17,21 @@ export function PageShell({ title, children }: PageShellProps) {
 
   useGSAP(
     () => {
-      gsap.from("[data-animate]", {
-        opacity: 0,
-        y: 16,
-        stagger: 0.06,
-        duration: 0.5,
-        ease: "power2.out",
-        delay: 0.1,
+      const elements = containerRef.current?.querySelectorAll("[data-animate]");
+      if (!elements) return;
+
+      elements.forEach((el, i) => {
+        const tag = el.tagName.toLowerCase();
+        const isHeading = tag === "h1" || tag === "h2";
+        const isCard = el.classList.contains("card-hover");
+
+        gsap.from(el, {
+          opacity: 0,
+          y: isHeading ? 12 : isCard ? 16 : 8,
+          duration: 0.35,
+          ease: "power3.out",
+          delay: 0.1 + i * 0.04,
+        });
       });
     },
     { scope: containerRef }
@@ -33,13 +41,13 @@ export function PageShell({ title, children }: PageShellProps) {
     <div
       ref={containerRef}
       className="page-scroll min-h-screen bg-black text-white px-8 py-8 md:px-16 md:py-12 max-w-3xl mx-auto"
-      style={{ fontFamily: "'Courier New', Courier, monospace" }}
+      style={{ fontFamily: "'Red Hat Display', sans-serif" }}
     >
       <div data-animate className="mb-8">
         <Link
           href="/"
           aria-label="Back to home"
-          className="text-white/40 text-sm hover:text-white transition-colors duration-200"
+          className="text-white/40 text-sm hover:text-white link-hover"
         >
           ← back
         </Link>

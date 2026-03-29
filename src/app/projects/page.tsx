@@ -56,7 +56,7 @@ function ProjectCard({ project }: { project: Project }) {
   return (
     <div
       data-animate
-      className="border border-white/10 p-5 mb-4 hover:border-white/30 transition-colors duration-300"
+      className="border border-white/10 p-5 mb-4 hover:border-white/30 card-hover"
     >
       <div className="flex items-start justify-between gap-4 mb-2">
         <h2 className="text-white text-sm font-bold">┌ {project.title}</h2>
@@ -66,7 +66,7 @@ function ProjectCard({ project }: { project: Project }) {
               href={project.github}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-white/30 text-xs hover:text-white transition-colors duration-200"
+              className="text-white/30 text-xs hover:text-white link-hover"
             >
               [github]
             </a>
@@ -76,7 +76,7 @@ function ProjectCard({ project }: { project: Project }) {
               href={project.live}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-white/30 text-xs hover:text-white transition-colors duration-200"
+              className="text-white/30 text-xs hover:text-white link-hover"
             >
               [live]
             </a>

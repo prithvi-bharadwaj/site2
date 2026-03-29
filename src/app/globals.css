@@ -21,22 +21,41 @@ body::before {
   background-size: 256px 256px;
 }
 
-/* Animated underline on hover */
+/* Custom easing curves */
+:root {
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+}
+
+/* Press feedback for all interactive elements */
+.pressable {
+  transition: transform 160ms var(--ease-out);
+}
+
+.pressable:active {
+  transform: scale(0.97);
+}
+
+/* Animated underline on hover — center-out */
 .nav-link {
   position: relative;
   display: inline-block;
-  transition: color 0.2s ease;
+  transition: color 200ms var(--ease-out), transform 160ms var(--ease-out);
+}
+
+.nav-link:active {
+  transform: scale(0.97);
 }
 
 .nav-link::after {
   content: "";
   position: absolute;
-  left: 0;
+  left: 50%;
   bottom: -2px;
   width: 0;
   height: 1px;
   background: currentColor;
-  transition: width 0.3s ease;
+  transition: width 200ms var(--ease-out), left 200ms var(--ease-out);
 }
 
 .nav-link:hover {
@@ -45,10 +64,36 @@ body::before {
 
 .nav-link:hover::after {
   width: 100%;
+  left: 0;
+}
+
+/* Clickable text links */
+.link-hover {
+  transition: color 200ms var(--ease-out), transform 160ms var(--ease-out);
+}
+
+.link-hover:active {
+  transform: scale(0.97);
+}
+
+/* Project cards */
+.card-hover {
+  transition: border-color 200ms var(--ease-out), transform 200ms var(--ease-out);
+}
+
+.card-hover:active {
+  transform: scale(0.99);
 }
 
 .page-scroll {
   overflow-y: auto;
+}
+
+/* Gate hover effects behind pointer:fine to avoid touch false positives */
+@media (hover: hover) and (pointer: fine) {
+  .card-hover:hover {
+    transform: translateY(-1px);
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
