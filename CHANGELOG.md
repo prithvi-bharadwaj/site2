@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.1.1.1] - 2026-03-28
+
+### Fixed
+- Stabilize physicsConfig object references in ParticleImage and ParticleText with useMemo (prevents rAF leak on re-render)
+- Match error and 404 page background color to site (#0a0a0a instead of #000)
+
 ## [0.1.1.0] - 2026-03-28
 
 ### Added
