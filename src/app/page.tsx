@@ -1,53 +1,38 @@
 "use client";
 
 import { useRef } from "react";
-import Link from "next/link";
 import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
 import { ParticleImage } from "@/components/ParticleImage";
-import { ParticleText } from "@/components/ParticleText";
-import { ProjectGrid, type Project } from "@/components/ProjectGrid";
 
 gsap.registerPlugin(useGSAP);
 
-const PAGES = [
-  { label: "Projects", href: "/projects" },
-  { label: "Writing", href: "/writing" },
+interface LabItem {
+  title: string;
+  href?: string;
+}
+
+const LABS: LabItem[] = [
+  { title: "ASCII Render", href: "/" },
+  { title: "Terrain Sim" },
+  { title: "Sequencer" },
+  { title: "Sprout" },
+  { title: "Lightfield" },
+  { title: "Particle Text" },
+  { title: "Shader Toy" },
+  { title: "Wave Forms" },
+  { title: "Flow Field" },
+];
+
+const SOCIALS = [
+  { label: "Github", href: "https://github.com/prithvi" },
+  { label: "X", href: "https://x.com/prithvi" },
+  { label: "LinkedIn", href: "https://linkedin.com/in/prithvi" },
 ] as const;
 
-const PROJECTS: Project[] = [
-  {
-    title: "ascii-render",
-    description:
-      "Real-time ASCII video renderer using WebGL displacement maps. Characters respond to video luminance; pointer leaves a comet-trail distortion in the field.",
-    stack: ["WebGL", "GLSL", "TypeScript", "Next.js"],
-    live: "/",
-  },
-  {
-    title: "terrain-sim",
-    description:
-      "Procedural terrain generation with erosion simulation. Hydraulic and thermal erosion run on the GPU; outputs tileable heightmaps and normal maps.",
-    stack: ["WebGPU", "WGSL", "Rust", "WASM"],
-  },
-  {
-    title: "sequencer",
-    description:
-      "A browser-based step sequencer with a programmable modulation system. Each step can hold a script that manipulates neighboring steps at runtime.",
-    stack: ["Web Audio API", "TypeScript", "React"],
-  },
-  {
-    title: "sprout",
-    description:
-      "Minimal task manager built around the idea that context is more valuable than priority. Tasks carry context snapshots so you can re-enter flow faster.",
-    stack: ["Rust", "SQLite", "Tauri", "React"],
-  },
-  {
-    title: "lightfield",
-    description:
-      "Experimental renderer that approximates light field photography in the browser. Drag to shift perspective; depth-of-field computed per-pixel in GLSL.",
-    stack: ["Three.js", "GLSL", "TypeScript"],
-  },
-];
+function pad(n: number): string {
+  return String(n).padStart(3, "0");
+}
 
 export default function Home() {
   const mainRef = useRef<HTMLElement>(null);
@@ -61,127 +46,103 @@ export default function Home() {
 
       gsap.from("[data-stagger]", {
         opacity: 0,
-        y: 10,
+        y: 8,
         duration: 0.4,
         ease: "power3.out",
-        stagger: 0.06,
-        delay: 0.15,
+        stagger: 0.04,
+        delay: 0.1,
       });
     },
     { scope: mainRef }
   );
 
   return (
-    <main ref={mainRef} className="relative min-h-screen">
-      {/* Logo — top left */}
-      <div className="fixed top-8 left-8 z-10">
-        <ParticleImage
-          src="/images/logo.svg"
-          alt="PB logo"
-          width={60}
-          height={50}
-          targetCount={300}
-          particleSize={1}
-          particleColor="255,255,255"
-          physics={{ repelRadius: 40, repelStrength: 4 }}
-        />
-      </div>
-
-      {/* Hero section */}
-      <section className="min-h-screen flex items-center justify-center px-8">
-        <div className="max-w-xl w-full">
-          <div className="mb-12">
-            {/* Greeting — "hi, " in grey, "Prithvi" in accent */}
-            <div data-stagger className="flex items-center gap-2 mb-3">
-              <h1 className="text-2xl font-semibold tracking-tight">
-                <span className="text-white/50">hi, i&apos;m </span>
-                <span className="text-[#a78bfa]">Prithvi</span>
-              </h1>
-              <button
-                aria-label="Hear pronunciation"
-                className="text-white/20 hover:text-white/50 transition-colors mt-1"
-                title="Hear pronunciation"
-              >
-                <svg
-                  width="14"
-                  height="14"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
-                  <path d="M11 5L6 9H2v6h4l5 4V5z" />
-                  <path d="M15.54 8.46a5 5 0 0 1 0 7.07" />
-                </svg>
-              </button>
-            </div>
-
-            {/* Morphing particle tagline — minimal, slow */}
-            <div data-stagger className="mb-5">
-              <ParticleText
-                words={["developer", "creator", "explorer"]}
-                fontSize={14}
-                particleSize={0.8}
-                particleColor="255,255,255"
-                targetCount={300}
-                morphDuration={2000}
-                pauseDuration={4000}
-                physics={{ repelRadius: 40, repelStrength: 3 }}
-              />
-            </div>
-
-            <p
-              data-stagger
-              className="text-white/40 text-sm leading-relaxed max-w-md"
-            >
-              I build things at the intersection of code and creativity.
-              Craft, clarity, and tools that feel good to use.
-            </p>
-          </div>
-
-          {/* Nav links */}
-          <nav data-stagger>
-            <div className="flex flex-wrap gap-x-6 gap-y-2">
-              {PAGES.map((page) => (
-                <Link
-                  key={page.href}
-                  href={page.href}
-                  className="nav-link text-white/30 text-sm"
-                >
-                  {page.label}
-                </Link>
-              ))}
-            </div>
-          </nav>
+    <main ref={mainRef} className="relative min-h-screen flex flex-col">
+      {/* Header bar */}
+      <header className="flex items-center justify-between px-8 py-6 md:px-12">
+        <div data-stagger>
+          <ParticleImage
+            src="/images/logo.svg"
+            alt="PB logo"
+            width={40}
+            height={34}
+            targetCount={200}
+            particleSize={1}
+            particleColor="255,255,255"
+            physics={{ repelRadius: 30, repelStrength: 4 }}
+          />
         </div>
-      </section>
+        <span data-stagger className="text-[#555] text-xs">
+          v1.0.0
+        </span>
+      </header>
 
-      {/* Projects section */}
-      <section className="px-8 md:px-16 pb-24 max-w-5xl mx-auto">
-        <div data-stagger className="mb-8">
-          <p className="text-white/20 text-xs uppercase tracking-widest">
-            work
+      {/* Content */}
+      <div className="flex-1 px-8 md:px-12 lg:px-24 py-12 md:py-20 max-w-5xl">
+        {/* Greeting */}
+        <h1 data-stagger className="text-3xl md:text-4xl font-bold text-white mb-16 md:mb-24">
+          Hey
+        </h1>
+
+        {/* Info section */}
+        <section className="flex flex-col md:flex-row gap-4 md:gap-16 mb-20 md:mb-28">
+          <span data-stagger className="section-label shrink-0 pt-0.5">
+            Info.
+          </span>
+          <p data-stagger className="text-sm leading-relaxed max-w-2xl text-[#aaa]">
+            I&apos;m Prithvi, a developer and creative coder. I build
+            things at the intersection of code and creativity — from
+            interactive visuals and generative art to tools that feel
+            good to use. Craft, clarity, and curiosity drive everything
+            I make.
           </p>
-        </div>
+        </section>
 
-        <ProjectGrid projects={PROJECTS} />
-      </section>
-
-      {/* Footer flower */}
-      <div data-stagger className="flex justify-center pb-12">
-        <ParticleImage
-          src="/images/flower.svg"
-          alt="Decorative flower"
-          width={100}
-          height={100}
-          targetCount={400}
-          particleSize={1}
-          particleColor="255,255,255"
-          physics={{ repelRadius: 50, repelStrength: 4 }}
-        />
+        {/* Labs section */}
+        <section className="flex flex-col md:flex-row gap-4 md:gap-16 mb-20 md:mb-28">
+          <span data-stagger className="section-label shrink-0 pt-0.5">
+            Labs.
+          </span>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-16 gap-y-2 text-sm">
+            {LABS.map((item, i) => (
+              <div key={item.title} data-stagger>
+                {item.href ? (
+                  <a href={item.href} className="project-item">
+                    <span className="project-number">{pad(i)}</span>
+                    <span>{item.title}</span>
+                  </a>
+                ) : (
+                  <span className="project-item">
+                    <span className="project-number">{pad(i)}</span>
+                    <span>{item.title}</span>
+                  </span>
+                )}
+              </div>
+            ))}
+          </div>
+        </section>
       </div>
+
+      {/* Footer */}
+      <footer
+        data-stagger
+        className="flex items-center justify-between px-8 md:px-12 py-6 text-xs text-[#555] mt-auto"
+      >
+        <span>Email: Prithvi at this domain</span>
+        <nav className="flex gap-6">
+          {SOCIALS.map((s) => (
+            <a
+              key={s.label}
+              href={s.href}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-[#555] hover:text-white"
+            >
+              {s.label}
+            </a>
+          ))}
+        </nav>
+      </footer>
     </main>
   );
 }
