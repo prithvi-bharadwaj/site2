@@ -4,6 +4,7 @@ import { useRef } from "react";
 import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
 import { ParticleImage } from "@/components/ParticleImage";
+import { PretextHero } from "@/components/PretextHero";
 
 gsap.registerPlugin(useGSAP);
 
@@ -79,24 +80,12 @@ export default function Home() {
 
       {/* Content */}
       <div className="flex-1 px-8 md:px-12 lg:px-24 py-12 md:py-20 max-w-5xl">
-        {/* Greeting */}
-        <h1 data-stagger className="text-3xl md:text-4xl font-bold text-white mb-16 md:mb-24">
-          Hey
-        </h1>
-
-        {/* Info section */}
-        <section className="flex flex-col md:flex-row gap-4 md:gap-16 mb-20 md:mb-28">
-          <span data-stagger className="section-label shrink-0 pt-0.5">
-            Info.
-          </span>
-          <p data-stagger className="text-sm leading-relaxed max-w-2xl text-[#aaa]">
-            I&apos;m Prithvi, a developer and creative coder. I build
-            things at the intersection of code and creativity — from
-            interactive visuals and generative art to tools that feel
-            good to use. Craft, clarity, and curiosity drive everything
-            I make.
-          </p>
-        </section>
+        {/* Greeting + Info — pretext displacement effect */}
+        <PretextHero
+          greeting="Hey"
+          bio="I'm Prithvi, a developer and creative coder. I build things at the intersection of code and creativity — from interactive visuals and generative art to tools that feel good to use. Craft, clarity, and curiosity drive everything I make."
+          className="mb-20 md:mb-28"
+        />
 
         {/* Labs section */}
         <section className="flex flex-col md:flex-row gap-4 md:gap-16 mb-20 md:mb-28">

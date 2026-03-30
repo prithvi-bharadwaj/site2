@@ -95,8 +95,53 @@ a.project-item {
   font-size: 0.75rem;
 }
 
+/* Clickable text links */
+.link-hover {
+  transition: color 200ms var(--ease-out);
+}
+
+/* Project cards */
+.card-hover {
+  transition: border-color 200ms var(--ease-out), transform 200ms var(--ease-out);
+}
+
+.card-hover:active {
+  transform: scale(0.99);
+}
+
 .page-scroll {
   overflow-y: auto;
+}
+
+/* Gate hover effects behind pointer:fine to avoid touch false positives */
+@media (hover: hover) and (pointer: fine) {
+  .card-hover:hover {
+    transform: translateY(-1px);
+  }
+}
+
+/* Pretext hero — positioned word elements */
+.pretext-word {
+  position: absolute;
+  white-space: pre;
+  pointer-events: none;
+  will-change: transform, opacity;
+}
+
+.pretext-link {
+  position: absolute;
+  white-space: pre;
+  will-change: transform, opacity;
+  cursor: pointer;
+  text-decoration: none;
+  color: inherit;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .pretext-link:hover {
+    color: #ffffff !important;
+    opacity: 1 !important;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
