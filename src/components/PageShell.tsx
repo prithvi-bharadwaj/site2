@@ -40,8 +40,7 @@ export function PageShell({ title, children }: PageShellProps) {
   return (
     <div
       ref={containerRef}
-      className="page-scroll min-h-screen bg-black text-white px-8 py-8 md:px-16 md:py-12 max-w-3xl mx-auto"
-      style={{ fontFamily: "'Red Hat Display', sans-serif" }}
+      className="page-scroll min-h-screen bg-[#1a1a1a] text-white px-8 py-8 md:px-16 md:py-12 max-w-3xl mx-auto font-mono"
     >
       <div data-animate className="mb-8">
         <Link
