@@ -21,13 +21,9 @@ export function PageShell({ title, children }: PageShellProps) {
       if (!elements) return;
 
       elements.forEach((el, i) => {
-        const tag = el.tagName.toLowerCase();
-        const isHeading = tag === "h1" || tag === "h2";
-        const isCard = el.classList.contains("card-hover");
-
         gsap.from(el, {
           opacity: 0,
-          y: isHeading ? 12 : isCard ? 16 : 8,
+          y: 8,
           duration: 0.35,
           ease: "power3.out",
           delay: 0.1 + i * 0.04,
@@ -40,23 +36,22 @@ export function PageShell({ title, children }: PageShellProps) {
   return (
     <div
       ref={containerRef}
-      className="page-scroll min-h-screen bg-black text-white px-8 py-8 md:px-16 md:py-12 max-w-3xl mx-auto"
-      style={{ fontFamily: "'Red Hat Display', sans-serif" }}
+      className="page-scroll min-h-screen px-8 py-8 md:px-12 md:py-12 max-w-3xl mx-auto"
     >
       <div data-animate className="mb-8">
         <Link
           href="/"
           aria-label="Back to home"
-          className="text-white/40 text-sm hover:text-white link-hover"
+          className="text-[#555] text-sm hover:text-white"
         >
-          ← back
+          &larr; back
         </Link>
       </div>
 
       <h1 data-animate className="text-white text-2xl font-bold tracking-tight mb-1">
-        // {title}
+        {title}
       </h1>
-      <div data-animate className="text-white/20 text-sm mb-10">
+      <div data-animate className="text-[#333] text-sm mb-10 overflow-hidden">
         {"─".repeat(40)}
       </div>
 
