@@ -27,7 +27,7 @@ const LABS: LabItem[] = [
 const SOCIALS = [
   { label: "Github", href: "https://github.com/prithvi" },
   { label: "X", href: "https://x.com/prithvi" },
-  { label: "LinkedIn", href: "https://linkedin.com/in/prithvi" },
+  { label: "LinkedIn", href: "https://www.linkedin.com/in/prithvi" },
 ] as const;
 
 function pad(n: number): string {
