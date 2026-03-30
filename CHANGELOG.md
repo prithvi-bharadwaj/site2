@@ -2,6 +2,26 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.1.2.0] - 2026-03-30
+
+### Changed
+- Redesign homepage to soulwire-inspired single-page layout with labeled sections (Info, Labs)
+- Switch typography from Red Hat Display to JetBrains Mono (monospace)
+- Background color from `#0a0a0a` to `#1a1a1a` (lighter dark)
+- Replace card-based project grid with numbered project list in 3-column layout
+- Add footer with email and social links (Github, X, LinkedIn)
+- Add version number display in header
+- Simplify PageShell component (remove tag-specific animation offsets)
+- Use Next.js font optimization (next/font/google) instead of manual link tags
+
+### Removed
+- ParticleText morphing tagline from homepage
+- ProjectGrid card/modal system from homepage (component still exists)
+- Hero section full-screen layout
+- Purple accent color (`#a78bfa`)
+- Press feedback (scale) animations on interactive elements
+- Pronunciation button from greeting
+
 ## [0.1.1.1] - 2026-03-28
 
 ### Fixed
