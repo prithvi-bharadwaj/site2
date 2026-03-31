@@ -27,6 +27,8 @@ export interface ScrambleState {
   target: string;
   chars: ScrambleChar[];
   done: boolean;
+  /** True once the word's scramble animation has visibly begun */
+  started: boolean;
 }
 
 export interface ScrambleConfig {
@@ -68,10 +70,13 @@ export function createScrambleState(
     }
   }
 
+  const hasScrambling = chars.some((c) => c.phase < 2);
+
   return {
     target: text,
     chars,
     done: chars.every((c) => c.phase === 2),
+    started: !hasScrambling,
   };
 }
 
@@ -80,6 +85,11 @@ export function getScrambleText(state: ScrambleState): string {
   return state.chars.map((c, i) =>
     c.phase === 2 ? state.target[i] : c.frozen
   ).join("");
+}
+
+/** Has this word's scramble animation visibly begun? */
+export function hasScrambleStarted(state: ScrambleState): boolean {
+  return state.started;
 }
 
 /** Advance all chars by deltaMs. Mutates in place for performance. */
@@ -97,6 +107,10 @@ export function tickScramble(
 
     if (c.delay > 0) {
       c.delay -= deltaMs;
+      if (c.delay <= 0) {
+        // This char just started — mark the word as started
+        state.started = true;
+      }
       anyActive = true;
       continue;
     }

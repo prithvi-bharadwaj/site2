@@ -2,14 +2,21 @@
 
 import { useRef, useEffect } from "react";
 
-/** Grid resolution for the mesh distortion */
+/** Grid resolution */
 const COLS = 48;
 const ROWS = 48;
 const INFLUENCE_RADIUS = 180;
 const MAX_DISPLACEMENT = 14;
 const SPRING_BACK = 0.06;
 const DAMPING = 0.85;
-const LINE_OPACITY = 0.035;
+
+/** Light radius around cursor */
+const LIGHT_RADIUS = 280;
+const LIGHT_CORE_OPACITY = 0.06;
+
+/** Trail fog settings */
+const TRAIL_LENGTH = 12;
+const TRAIL_FADE = 0.92;
 
 interface GridPoint {
   restX: number;
@@ -20,10 +27,15 @@ interface GridPoint {
   vy: number;
 }
 
+interface TrailPoint {
+  x: number;
+  y: number;
+  age: number;
+}
+
 /**
- * Full-screen canvas that renders a subtle grid mesh.
- * The mesh deforms around the mouse cursor like a fabric curtain,
- * creating a depth distortion effect.
+ * Full-screen canvas grid mesh that is only visible near the cursor (flashlight).
+ * Grid deforms around the mouse like a curtain. A subtle fog trail follows the cursor.
  */
 export function BackdropRipple() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -41,6 +53,8 @@ export function BackdropRipple() {
     let dpr = 1;
     const mouse = { x: -9999, y: -9999, active: false };
     let grid: GridPoint[] = [];
+    const trail: TrailPoint[] = [];
+    let lastTrailTime = 0;
 
     function buildGrid() {
       grid = [];
@@ -80,12 +94,10 @@ export function BackdropRipple() {
           const dist = Math.sqrt(dx * dx + dy * dy);
 
           if (dist < INFLUENCE_RADIUS && dist > 0) {
-            const factor = (1 - dist / INFLUENCE_RADIUS);
-            // Quadratic falloff for smooth push
+            const factor = 1 - dist / INFLUENCE_RADIUS;
             const strength = factor * factor * MAX_DISPLACEMENT;
             const nx = dx / dist;
             const ny = dy / dist;
-            // Target displaced position
             const targetX = p.restX + nx * strength;
             const targetY = p.restY + ny * strength;
             p.vx += (targetX - p.x) * 0.15;
@@ -93,14 +105,10 @@ export function BackdropRipple() {
           }
         }
 
-        // Spring back to rest
         p.vx += (p.restX - p.x) * SPRING_BACK;
         p.vy += (p.restY - p.y) * SPRING_BACK;
-
-        // Damping
         p.vx *= DAMPING;
         p.vy *= DAMPING;
-
         p.x += p.vx;
         p.y += p.vy;
       }
@@ -110,35 +118,84 @@ export function BackdropRipple() {
       return grid[row * (COLS + 1) + col];
     }
 
-    function draw() {
-      updatePhysics();
+    /** Get line opacity based on distance from mouse (flashlight) */
+    function getSegmentOpacity(x1: number, y1: number, x2: number, y2: number): number {
+      if (!mouse.active) return 0;
+      // Use midpoint of segment
+      const mx = (x1 + x2) / 2;
+      const my = (y1 + y2) / 2;
+      const dx = mx - mouse.x;
+      const dy = my - mouse.y;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      if (dist > LIGHT_RADIUS) return 0;
+      const t = 1 - dist / LIGHT_RADIUS;
+      return t * t * LIGHT_CORE_OPACITY;
+    }
 
-      ctx!.clearRect(0, 0, w, h);
-      ctx!.strokeStyle = `rgba(244, 245, 248, ${LINE_OPACITY})`;
-      ctx!.lineWidth = 0.5;
-
-      // Draw horizontal lines
-      for (let row = 0; row <= ROWS; row++) {
-        ctx!.beginPath();
-        const p0 = getPoint(row, 0);
-        ctx!.moveTo(p0.x, p0.y);
-        for (let col = 1; col <= COLS; col++) {
-          const p = getPoint(row, col);
-          ctx!.lineTo(p.x, p.y);
-        }
-        ctx!.stroke();
+    function drawTrail() {
+      // Update trail
+      const now = performance.now();
+      if (mouse.active && now - lastTrailTime > 30) {
+        trail.push({ x: mouse.x, y: mouse.y, age: 1.0 });
+        if (trail.length > TRAIL_LENGTH) trail.shift();
+        lastTrailTime = now;
       }
 
-      // Draw vertical lines
-      for (let col = 0; col <= COLS; col++) {
-        ctx!.beginPath();
-        const p0 = getPoint(0, col);
-        ctx!.moveTo(p0.x, p0.y);
-        for (let row = 1; row <= ROWS; row++) {
-          const p = getPoint(row, col);
-          ctx!.lineTo(p.x, p.y);
+      // Draw fog circles along trail
+      for (let i = trail.length - 1; i >= 0; i--) {
+        const t = trail[i];
+        t.age *= TRAIL_FADE;
+        if (t.age < 0.01) {
+          trail.splice(i, 1);
+          continue;
         }
-        ctx!.stroke();
+        const radius = 60 + (1 - t.age) * 40;
+        const gradient = ctx!.createRadialGradient(t.x, t.y, 0, t.x, t.y, radius);
+        gradient.addColorStop(0, `rgba(244, 245, 248, ${0.015 * t.age})`);
+        gradient.addColorStop(1, "rgba(244, 245, 248, 0)");
+        ctx!.fillStyle = gradient;
+        ctx!.fillRect(t.x - radius, t.y - radius, radius * 2, radius * 2);
+      }
+    }
+
+    function draw() {
+      updatePhysics();
+      ctx!.clearRect(0, 0, w, h);
+
+      // Trail fog
+      drawTrail();
+
+      // Draw grid lines with per-segment flashlight opacity
+      ctx!.lineWidth = 0.5;
+
+      // Horizontal lines
+      for (let row = 0; row <= ROWS; row++) {
+        for (let col = 0; col < COLS; col++) {
+          const p1 = getPoint(row, col);
+          const p2 = getPoint(row, col + 1);
+          const opacity = getSegmentOpacity(p1.x, p1.y, p2.x, p2.y);
+          if (opacity < 0.001) continue;
+          ctx!.strokeStyle = `rgba(244, 245, 248, ${opacity})`;
+          ctx!.beginPath();
+          ctx!.moveTo(p1.x, p1.y);
+          ctx!.lineTo(p2.x, p2.y);
+          ctx!.stroke();
+        }
+      }
+
+      // Vertical lines
+      for (let col = 0; col <= COLS; col++) {
+        for (let row = 0; row < ROWS; row++) {
+          const p1 = getPoint(row, col);
+          const p2 = getPoint(row + 1, col);
+          const opacity = getSegmentOpacity(p1.x, p1.y, p2.x, p2.y);
+          if (opacity < 0.001) continue;
+          ctx!.strokeStyle = `rgba(244, 245, 248, ${opacity})`;
+          ctx!.beginPath();
+          ctx!.moveTo(p1.x, p1.y);
+          ctx!.lineTo(p2.x, p2.y);
+          ctx!.stroke();
+        }
       }
 
       raf = requestAnimationFrame(draw);

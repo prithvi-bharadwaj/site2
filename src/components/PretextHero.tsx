@@ -18,6 +18,7 @@ import {
   createScrambleState,
   tickScramble,
   getScrambleText,
+  hasScrambleStarted,
   type ScrambleState,
   type ScrambleConfig,
 } from "@/lib/text-scramble";
@@ -80,26 +81,41 @@ function useCoarsePointer(): boolean {
   return coarse;
 }
 
-/** Hook: manages scramble decode animation */
+interface ScrambleFrame {
+  texts: string[];
+  /** Per-word: has this word's scramble started yet? (delay expired) */
+  started: boolean[];
+}
+
+/**
+ * Hook: manages scramble decode with integrated left-to-right reveal.
+ * Words start invisible. When a word's scramble delay expires and it begins
+ * showing binary, that's when it fades in — combining typing + scramble.
+ */
 function useScramble(words: PositionedWord[] | null, reducedMotion: boolean) {
   const statesRef = useRef<ScrambleState[]>([]);
   const startedRef = useRef(false);
-  const [texts, setTexts] = useState<string[]>([]);
+  const [frame, setFrame] = useState<ScrambleFrame>({ texts: [], started: [] });
+
+  // Track whether words are ready (triggers effect re-run)
+  const wordsReady = (words?.length ?? 0) > 0;
 
   // Init states once when words arrive (render-phase ref write)
-  if (words && words.length > 0 && statesRef.current.length === 0 && !reducedMotion) {
-    statesRef.current = words.map((w, i) =>
-      createScrambleState(w.text, i, words.length, SCRAMBLE_CONFIG)
+  if (wordsReady && statesRef.current.length === 0 && !reducedMotion) {
+    statesRef.current = words!.map((w, i) =>
+      createScrambleState(w.text, i, words!.length, SCRAMBLE_CONFIG)
     );
   }
 
-  // Animation: setTimeout chain stored in a window variable to survive cleanup
   useEffect(() => {
     const states = statesRef.current;
     if (states.length === 0 || reducedMotion || startedRef.current) return;
     startedRef.current = true;
 
-    setTexts(states.map((s) => getScrambleText(s)));
+    setFrame({
+      texts: states.map((s) => getScrambleText(s)),
+      started: states.map((s) => hasScrambleStarted(s)),
+    });
 
     const TICK = 30;
 
@@ -108,7 +124,10 @@ function useScramble(words: PositionedWord[] | null, reducedMotion: boolean) {
       for (const s of states) {
         if (tickScramble(s, TICK, SCRAMBLE_CONFIG)) anyActive = true;
       }
-      setTexts(states.map((s) => getScrambleText(s)));
+      setFrame({
+        texts: states.map((s) => getScrambleText(s)),
+        started: states.map((s) => hasScrambleStarted(s)),
+      });
       if (anyActive) {
         setTimeout(step, TICK);
       }
@@ -116,46 +135,9 @@ function useScramble(words: PositionedWord[] | null, reducedMotion: boolean) {
 
     // Start after a microtask to survive Strict Mode double-invoke
     Promise.resolve().then(() => setTimeout(step, TICK));
-  }, [reducedMotion]);
+  }, [reducedMotion, wordsReady]);
 
-  return texts;
-}
-
-/** Hook: left-to-right stagger fade-in for each word */
-function useStaggerFade(words: PositionedWord[] | null, reducedMotion: boolean) {
-  const [visibleSet, setVisibleSet] = useState<Set<number>>(new Set());
-  const startedRef = useRef(false);
-
-  useEffect(() => {
-    if (!words || words.length === 0 || reducedMotion || startedRef.current) return;
-    startedRef.current = true;
-
-    // Sort word indices by x then y position for left-to-right, top-to-bottom reveal
-    const sorted = words
-      .map((w, i) => ({ i, x: w.x, y: w.y }))
-      .sort((a, b) => a.y - b.y || a.x - b.x);
-
-    // Stagger: reveal one word every 25ms
-    const STAGGER_MS = 25;
-    const timers: ReturnType<typeof setTimeout>[] = [];
-
-    for (let s = 0; s < sorted.length; s++) {
-      const idx = sorted[s].i;
-      timers.push(
-        setTimeout(() => {
-          setVisibleSet((prev) => {
-            const next = new Set(prev);
-            next.add(idx);
-            return next;
-          });
-        }, s * STAGGER_MS)
-      );
-    }
-
-    return () => timers.forEach(clearTimeout);
-  }, [words, reducedMotion]);
-
-  return visibleSet;
+  return frame;
 }
 
 export function PretextHero({ greeting, bio, className }: PretextHeroProps) {
@@ -169,6 +151,9 @@ export function PretextHero({ greeting, bio, className }: PretextHeroProps) {
   const mouseRef = useRef({ x: 0, y: 0, active: false });
   const rafRef = useRef<number>(0);
   const animatingRef = useRef(false);
+
+  // Trail fog canvas
+  const fogCanvasRef = useRef<HTMLCanvasElement>(null);
 
   const isMobile = typeof window !== "undefined" && window.innerWidth < 768;
   const displacementConfig: DisplacementConfig = {
@@ -210,18 +195,25 @@ export function PretextHero({ greeting, bio, className }: PretextHeroProps) {
     };
   }, [reducedMotion, computeLayout]);
 
-  // Scramble effect
-  const scrambleTexts = useScramble(layout?.words ?? null, reducedMotion);
+  // Scramble + integrated left-to-right reveal
+  const { texts: scrambleTexts, started: scrambleStarted } = useScramble(
+    layout?.words ?? null,
+    reducedMotion
+  );
 
-  // Left-to-right stagger fade-in
-  const visibleSet = useStaggerFade(layout?.words ?? null, reducedMotion);
-
-  // Sync displaced elements
+  // Sync displaced elements + size fog canvas
   useEffect(() => {
     if (!layout) return;
     displacedRef.current = layout.words.map((w) =>
       createDisplacedElement(w.x, w.y, w.width, w.height, w.block.baseOpacity ?? 0.5)
     );
+    // Size fog canvas to match container
+    const container = containerRef.current;
+    const fogCanvas = fogCanvasRef.current;
+    if (container && fogCanvas) {
+      fogCanvas.width = container.clientWidth;
+      fogCanvas.height = layout.totalHeight;
+    }
   }, [layout]);
 
   // Bind displaced elements to DOM
@@ -280,6 +272,41 @@ export function PretextHero({ greeting, bio, className }: PretextHeroProps) {
     const stillMoving = updateDisplacement(
       elements, mouse.x, mouse.y, mouse.active, displacementConfig
     );
+
+    // Draw trail fog on canvas
+    const fogCanvas = fogCanvasRef.current;
+    if (fogCanvas && mouse.active) {
+      const ctx = fogCanvas.getContext("2d");
+      if (ctx) {
+        // Gentle fade previous frame
+        ctx.globalCompositeOperation = "destination-out";
+        ctx.fillStyle = "rgba(0, 0, 0, 0.08)";
+        ctx.fillRect(0, 0, fogCanvas.width, fogCanvas.height);
+        ctx.globalCompositeOperation = "source-over";
+
+        // Draw glow at cursor position
+        const r = displacementConfig.repelRadius * 0.8;
+        const gradient = ctx.createRadialGradient(
+          mouse.x, mouse.y, 0,
+          mouse.x, mouse.y, r
+        );
+        gradient.addColorStop(0, "rgba(244, 245, 248, 0.02)");
+        gradient.addColorStop(0.5, "rgba(244, 245, 248, 0.008)");
+        gradient.addColorStop(1, "rgba(244, 245, 248, 0)");
+        ctx.fillStyle = gradient;
+        ctx.fillRect(mouse.x - r, mouse.y - r, r * 2, r * 2);
+      }
+    } else if (fogCanvas && !mouse.active) {
+      // Fade out when mouse leaves
+      const ctx = fogCanvas.getContext("2d");
+      if (ctx) {
+        ctx.globalCompositeOperation = "destination-out";
+        ctx.fillStyle = "rgba(0, 0, 0, 0.04)";
+        ctx.fillRect(0, 0, fogCanvas.width, fogCanvas.height);
+        ctx.globalCompositeOperation = "source-over";
+      }
+    }
+
     if (stillMoving || mouse.active) {
       rafRef.current = requestAnimationFrame(animateDisplacement);
     } else {
@@ -305,6 +332,14 @@ export function PretextHero({ greeting, bio, className }: PretextHeroProps) {
       style={{ height: layout ? layout.totalHeight : "auto", minHeight: 120 }}
       role="banner"
     >
+      {/* Trail fog canvas — sits behind text */}
+      <canvas
+        ref={fogCanvasRef}
+        className="absolute inset-0 pointer-events-none"
+        style={{ zIndex: 0 }}
+        aria-hidden="true"
+      />
+
       <div className="sr-only">
         <h1>{greeting}</h1>
         <p>{bio}</p>
@@ -312,7 +347,7 @@ export function PretextHero({ greeting, bio, className }: PretextHeroProps) {
 
       {layout?.words.map((word, i) => {
         const displayText = scrambleTexts[i] ?? word.text;
-        const isVisible = visibleSet.has(i);
+        const isVisible = scrambleStarted[i] ?? false;
 
         return (
           <span
@@ -331,7 +366,7 @@ export function PretextHero({ greeting, bio, className }: PretextHeroProps) {
               whiteSpace: "pre",
               willChange: coarsePointer ? undefined : "transform, opacity",
               pointerEvents: "none",
-              transition: "opacity 300ms ease-out",
+              transition: "opacity 250ms ease-out",
             }}
             aria-hidden="true"
           >
