@@ -152,8 +152,7 @@ export function PretextHero({ greeting, bio, className }: PretextHeroProps) {
   const rafRef = useRef<number>(0);
   const animatingRef = useRef(false);
 
-  // Trail fog canvas
-  const fogCanvasRef = useRef<HTMLCanvasElement>(null);
+  
 
   const isMobile = typeof window !== "undefined" && window.innerWidth < 768;
   const displacementConfig: DisplacementConfig = {
@@ -207,13 +206,7 @@ export function PretextHero({ greeting, bio, className }: PretextHeroProps) {
     displacedRef.current = layout.words.map((w) =>
       createDisplacedElement(w.x, w.y, w.width, w.height, w.block.baseOpacity ?? 0.5)
     );
-    // Size fog canvas to match container
-    const container = containerRef.current;
-    const fogCanvas = fogCanvasRef.current;
-    if (container && fogCanvas) {
-      fogCanvas.width = container.clientWidth;
-      fogCanvas.height = layout.totalHeight;
-    }
+    
   }, [layout]);
 
   // Bind displaced elements to DOM
@@ -273,40 +266,6 @@ export function PretextHero({ greeting, bio, className }: PretextHeroProps) {
       elements, mouse.x, mouse.y, mouse.active, displacementConfig
     );
 
-    // Draw trail fog on canvas
-    const fogCanvas = fogCanvasRef.current;
-    if (fogCanvas && mouse.active) {
-      const ctx = fogCanvas.getContext("2d");
-      if (ctx) {
-        // Gentle fade previous frame
-        ctx.globalCompositeOperation = "destination-out";
-        ctx.fillStyle = "rgba(0, 0, 0, 0.08)";
-        ctx.fillRect(0, 0, fogCanvas.width, fogCanvas.height);
-        ctx.globalCompositeOperation = "source-over";
-
-        // Draw glow at cursor position
-        const r = displacementConfig.repelRadius * 0.8;
-        const gradient = ctx.createRadialGradient(
-          mouse.x, mouse.y, 0,
-          mouse.x, mouse.y, r
-        );
-        gradient.addColorStop(0, "rgba(244, 245, 248, 0.02)");
-        gradient.addColorStop(0.5, "rgba(244, 245, 248, 0.008)");
-        gradient.addColorStop(1, "rgba(244, 245, 248, 0)");
-        ctx.fillStyle = gradient;
-        ctx.fillRect(mouse.x - r, mouse.y - r, r * 2, r * 2);
-      }
-    } else if (fogCanvas && !mouse.active) {
-      // Fade out when mouse leaves
-      const ctx = fogCanvas.getContext("2d");
-      if (ctx) {
-        ctx.globalCompositeOperation = "destination-out";
-        ctx.fillStyle = "rgba(0, 0, 0, 0.04)";
-        ctx.fillRect(0, 0, fogCanvas.width, fogCanvas.height);
-        ctx.globalCompositeOperation = "source-over";
-      }
-    }
-
     if (stillMoving || mouse.active) {
       rafRef.current = requestAnimationFrame(animateDisplacement);
     } else {
@@ -332,14 +291,6 @@ export function PretextHero({ greeting, bio, className }: PretextHeroProps) {
       style={{ height: layout ? layout.totalHeight : "auto", minHeight: 120 }}
       role="banner"
     >
-      {/* Trail fog canvas — sits behind text */}
-      <canvas
-        ref={fogCanvasRef}
-        className="absolute inset-0 pointer-events-none"
-        style={{ zIndex: 0 }}
-        aria-hidden="true"
-      />
-
       <div className="sr-only">
         <h1>{greeting}</h1>
         <p>{bio}</p>
