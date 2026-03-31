@@ -146,7 +146,6 @@ a.project-item {
 /* Hover underline — left-to-right sweep with fade */
 .hover-underline {
   position: relative;
-  display: inline-block;
 }
 
 .hover-underline::after {
@@ -159,6 +158,12 @@ a.project-item {
   background: currentColor;
   opacity: 0;
   transition: width 400ms var(--ease-out), opacity 300ms var(--ease-out);
+}
+
+/* Trigger underline on parent hover so it works inside flex containers */
+.group:hover .hover-underline::after {
+  width: 100%;
+  opacity: 0.5;
 }
 
 @media (hover: hover) and (pointer: fine) {
