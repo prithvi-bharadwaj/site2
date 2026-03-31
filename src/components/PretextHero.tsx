@@ -266,6 +266,36 @@ export function PretextHero({ greeting, bio, className }: PretextHeroProps) {
       elements, mouse.x, mouse.y, mouse.active, displacementConfig
     );
 
+    const fogCanvas = fogCanvasRef.current;
+    if (fogCanvas && mouse.active) {
+      const ctx = fogCanvas.getContext("2d");
+      if (ctx) {
+        ctx.globalCompositeOperation = "destination-out";
+        ctx.fillStyle = "rgba(0, 0, 0, 0.25)";
+        ctx.fillRect(0, 0, fogCanvas.width, fogCanvas.height);
+        ctx.globalCompositeOperation = "source-over";
+
+        const r = displacementConfig.repelRadius * 0.8;
+        const gradient = ctx.createRadialGradient(
+          mouse.x, mouse.y, 0,
+          mouse.x, mouse.y, r
+        );
+        gradient.addColorStop(0, "rgba(244, 245, 248, 0.02)");
+        gradient.addColorStop(0.5, "rgba(244, 245, 248, 0.008)");
+        gradient.addColorStop(1, "rgba(244, 245, 248, 0)");
+        ctx.fillStyle = gradient;
+        ctx.fillRect(mouse.x - r, mouse.y - r, r * 2, r * 2);
+      }
+    } else if (fogCanvas && !mouse.active) {
+      const ctx = fogCanvas.getContext("2d");
+      if (ctx) {
+        ctx.globalCompositeOperation = "destination-out";
+        ctx.fillStyle = "rgba(0, 0, 0, 0.15)";
+        ctx.fillRect(0, 0, fogCanvas.width, fogCanvas.height);
+        ctx.globalCompositeOperation = "source-over";
+      }
+    }
+
     if (stillMoving || mouse.active) {
       rafRef.current = requestAnimationFrame(animateDisplacement);
     } else {
