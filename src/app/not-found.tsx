@@ -4,8 +4,8 @@ export default function NotFound() {
   return (
     <div
       style={{
-        fontFamily: "var(--font-mono), monospace",
-        background: "#1a1a1a",
+        fontFamily: "var(--font-sans), sans-serif",
+        background: "#222326",
         color: "#fff",
         minHeight: "100vh",
         display: "flex",

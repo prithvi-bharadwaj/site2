@@ -1,11 +1,11 @@
 import type { Metadata, Viewport } from "next";
-import { JetBrains_Mono } from "next/font/google";
+import { Be_Vietnam_Pro } from "next/font/google";
 import "./globals.css";
 
-const mono = JetBrains_Mono({
+const sans = Be_Vietnam_Pro({
   subsets: ["latin"],
   weight: ["400", "500", "700"],
-  variable: "--font-mono",
+  variable: "--font-sans",
 });
 
 export const metadata: Metadata = {
@@ -31,7 +31,7 @@ export const viewport: Viewport = {
   initialScale: 1,
   maximumScale: 1,
   userScalable: false,
-  themeColor: "#1a1a1a",
+  themeColor: "#222326",
 };
 
 export default function RootLayout({
@@ -40,7 +40,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className={mono.variable}>
+    <html lang="en" className={sans.variable}>
       <head>
         <script
           type="application/ld+json"
@@ -57,7 +57,7 @@ export default function RootLayout({
           }}
         />
       </head>
-      <body className="font-mono">
+      <body className="font-sans">
         {children}
       </body>
     </html>

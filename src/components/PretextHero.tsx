@@ -1,8 +1,6 @@
 "use client";
 
 import { useRef, useEffect, useState, useCallback } from "react";
-import gsap from "gsap";
-import { useGSAP } from "@gsap/react";
 import {
   layoutHero,
   type SectionConfig,
@@ -16,8 +14,13 @@ import {
   type DisplacementConfig,
   DEFAULT_DISPLACEMENT_CONFIG,
 } from "@/lib/displacement-physics";
-
-gsap.registerPlugin(useGSAP);
+import {
+  createScrambleState,
+  tickScramble,
+  getScrambleText,
+  type ScrambleState,
+  type ScrambleConfig,
+} from "@/lib/text-scramble";
 
 interface PretextHeroProps {
   greeting: string;
@@ -25,45 +28,26 @@ interface PretextHeroProps {
   className?: string;
 }
 
-const FONT_FAMILY = '"JetBrains Mono", monospace';
+const FONT_FAMILY = '"Be Vietnam Pro", sans-serif';
 
-/** Build section configs for the monospace soulwire layout */
+const SCRAMBLE_CONFIG: ScrambleConfig = {
+  scrambleProbability: 0.65,
+  binaryDuration: 125,
+  asciiDuration: 175,
+  maxDelay: 400,
+};
+
 function buildSections(greeting: string, bio: string): SectionConfig[] {
   return [
-    // Greeting: "Hey" — large bold, per-char displacement
     {
-      blocks: [
-        {
-          text: greeting,
-          type: "accent",
-        },
-      ],
+      blocks: [{ text: greeting, type: "accent" }],
       font: `700 36px ${FONT_FAMILY}`,
       fontSize: 36,
       lineHeight: 48,
       marginBottom: 64,
     },
-    // Info label
     {
-      blocks: [
-        {
-          text: "Info.",
-          type: "label",
-        },
-      ],
-      font: `400 12px ${FONT_FAMILY}`,
-      fontSize: 12,
-      lineHeight: 18,
-      marginBottom: 16,
-    },
-    // Bio paragraph
-    {
-      blocks: [
-        {
-          text: bio,
-          type: "body",
-        },
-      ],
+      blocks: [{ text: bio, type: "body" }],
       font: `400 14px ${FONT_FAMILY}`,
       fontSize: 14,
       lineHeight: 22.4,
@@ -96,24 +80,97 @@ function useCoarsePointer(): boolean {
   return coarse;
 }
 
-export function PretextHero({
-  greeting,
-  bio,
-  className,
-}: PretextHeroProps) {
+/** Hook: manages scramble decode animation */
+function useScramble(words: PositionedWord[] | null, reducedMotion: boolean) {
+  const statesRef = useRef<ScrambleState[]>([]);
+  const startedRef = useRef(false);
+  const [texts, setTexts] = useState<string[]>([]);
+
+  // Init states once when words arrive (render-phase ref write)
+  if (words && words.length > 0 && statesRef.current.length === 0 && !reducedMotion) {
+    statesRef.current = words.map((w, i) =>
+      createScrambleState(w.text, i, words.length, SCRAMBLE_CONFIG)
+    );
+  }
+
+  // Animation: setTimeout chain stored in a window variable to survive cleanup
+  useEffect(() => {
+    const states = statesRef.current;
+    if (states.length === 0 || reducedMotion || startedRef.current) return;
+    startedRef.current = true;
+
+    setTexts(states.map((s) => getScrambleText(s)));
+
+    const TICK = 30;
+
+    function step() {
+      let anyActive = false;
+      for (const s of states) {
+        if (tickScramble(s, TICK, SCRAMBLE_CONFIG)) anyActive = true;
+      }
+      setTexts(states.map((s) => getScrambleText(s)));
+      if (anyActive) {
+        setTimeout(step, TICK);
+      }
+    }
+
+    // Start after a microtask to survive Strict Mode double-invoke
+    Promise.resolve().then(() => setTimeout(step, TICK));
+  }, [reducedMotion]);
+
+  return texts;
+}
+
+/** Hook: left-to-right stagger fade-in for each word */
+function useStaggerFade(words: PositionedWord[] | null, reducedMotion: boolean) {
+  const [visibleSet, setVisibleSet] = useState<Set<number>>(new Set());
+  const startedRef = useRef(false);
+
+  useEffect(() => {
+    if (!words || words.length === 0 || reducedMotion || startedRef.current) return;
+    startedRef.current = true;
+
+    // Sort word indices by x then y position for left-to-right, top-to-bottom reveal
+    const sorted = words
+      .map((w, i) => ({ i, x: w.x, y: w.y }))
+      .sort((a, b) => a.y - b.y || a.x - b.x);
+
+    // Stagger: reveal one word every 25ms
+    const STAGGER_MS = 25;
+    const timers: ReturnType<typeof setTimeout>[] = [];
+
+    for (let s = 0; s < sorted.length; s++) {
+      const idx = sorted[s].i;
+      timers.push(
+        setTimeout(() => {
+          setVisibleSet((prev) => {
+            const next = new Set(prev);
+            next.add(idx);
+            return next;
+          });
+        }, s * STAGGER_MS)
+      );
+    }
+
+    return () => timers.forEach(clearTimeout);
+  }, [words, reducedMotion]);
+
+  return visibleSet;
+}
+
+export function PretextHero({ greeting, bio, className }: PretextHeroProps) {
   const reducedMotion = useReducedMotion();
   const coarsePointer = useCoarsePointer();
   const containerRef = useRef<HTMLDivElement>(null);
   const [layout, setLayout] = useState<HeroLayoutResult | null>(null);
-  const [ready, setReady] = useState(false);
 
+  // Displacement
   const displacedRef = useRef<DisplacedElement[]>([]);
   const mouseRef = useRef({ x: 0, y: 0, active: false });
   const rafRef = useRef<number>(0);
   const animatingRef = useRef(false);
 
   const isMobile = typeof window !== "undefined" && window.innerWidth < 768;
-
   const displacementConfig: DisplacementConfig = {
     ...DEFAULT_DISPLACEMENT_CONFIG,
     repelRadius: isMobile ? 80 : 120,
@@ -123,26 +180,17 @@ export function PretextHero({
   const computeLayout = useCallback(() => {
     const container = containerRef.current;
     if (!container) return;
-
     const containerWidth = container.clientWidth;
     if (containerWidth <= 0) return;
-
     const sections = buildSections(greeting, bio);
     const result = layoutHero({ sections, containerWidth });
     setLayout(result);
   }, [greeting, bio]);
 
-  // Initialize: wait for fonts, then compute layout
+  // Wait for fonts
   useEffect(() => {
-    if (reducedMotion) {
-      setReady(true);
-      return;
-    }
-
-    document.fonts.ready.then(() => {
-      computeLayout();
-      setReady(true);
-    });
+    if (reducedMotion) return;
+    document.fonts.ready.then(computeLayout);
   }, [reducedMotion, computeLayout]);
 
   // ResizeObserver
@@ -150,15 +198,11 @@ export function PretextHero({
     if (reducedMotion) return;
     const container = containerRef.current;
     if (!container) return;
-
     let timeout: ReturnType<typeof setTimeout>;
     const observer = new ResizeObserver(() => {
       clearTimeout(timeout);
-      timeout = setTimeout(() => {
-        computeLayout();
-      }, 150);
+      timeout = setTimeout(computeLayout, 150);
     });
-
     observer.observe(container);
     return () => {
       observer.disconnect();
@@ -166,25 +210,23 @@ export function PretextHero({
     };
   }, [reducedMotion, computeLayout]);
 
-  // Sync displaced elements array when layout changes
+  // Scramble effect
+  const scrambleTexts = useScramble(layout?.words ?? null, reducedMotion);
+
+  // Left-to-right stagger fade-in
+  const visibleSet = useStaggerFade(layout?.words ?? null, reducedMotion);
+
+  // Sync displaced elements
   useEffect(() => {
     if (!layout) return;
-
     displacedRef.current = layout.words.map((w) =>
-      createDisplacedElement(
-        w.x,
-        w.y,
-        w.width,
-        w.height,
-        w.block.baseOpacity ?? 0.5
-      )
+      createDisplacedElement(w.x, w.y, w.width, w.height, w.block.baseOpacity ?? 0.5)
     );
   }, [layout]);
 
-  // Bind displaced elements to DOM refs after render
+  // Bind displaced elements to DOM
   useEffect(() => {
     if (!layout || !containerRef.current) return;
-
     const els = containerRef.current.querySelectorAll<HTMLElement>("[data-pretext-idx]");
     els.forEach((el) => {
       const idx = parseInt(el.dataset.pretextIdx!, 10);
@@ -197,35 +239,29 @@ export function PretextHero({
   // Mouse tracking
   useEffect(() => {
     if (reducedMotion || coarsePointer) return;
-
     const handleMove = (e: MouseEvent) => {
       const container = containerRef.current;
       if (!container) return;
-
       const rect = container.getBoundingClientRect();
       mouseRef.current = {
         x: e.clientX - rect.left,
         y: e.clientY - rect.top,
         active: true,
       };
-
       if (!animatingRef.current) {
         animatingRef.current = true;
-        rafRef.current = requestAnimationFrame(animate);
+        rafRef.current = requestAnimationFrame(animateDisplacement);
       }
     };
-
     const handleLeave = () => {
       mouseRef.current = { ...mouseRef.current, active: false };
       if (!animatingRef.current) {
         animatingRef.current = true;
-        rafRef.current = requestAnimationFrame(animate);
+        rafRef.current = requestAnimationFrame(animateDisplacement);
       }
     };
-
     document.addEventListener("mousemove", handleMove);
     document.addEventListener("mouseleave", handleLeave);
-
     return () => {
       document.removeEventListener("mousemove", handleMove);
       document.removeEventListener("mouseleave", handleLeave);
@@ -234,61 +270,30 @@ export function PretextHero({
     };
   }, [reducedMotion, coarsePointer]);
 
-  // Animation loop
-  const animate = useCallback(() => {
+  const animateDisplacement = useCallback(() => {
     const mouse = mouseRef.current;
     const elements = displacedRef.current;
-
     if (elements.length === 0) {
       animatingRef.current = false;
       return;
     }
-
     const stillMoving = updateDisplacement(
-      elements,
-      mouse.x,
-      mouse.y,
-      mouse.active,
-      displacementConfig
+      elements, mouse.x, mouse.y, mouse.active, displacementConfig
     );
-
     if (stillMoving || mouse.active) {
-      rafRef.current = requestAnimationFrame(animate);
+      rafRef.current = requestAnimationFrame(animateDisplacement);
     } else {
       animatingRef.current = false;
     }
   }, [displacementConfig]);
 
-  // GSAP entry animation
-  useGSAP(
-    () => {
-      if (!ready || reducedMotion) return;
-
-      gsap.from("[data-pretext-idx]", {
-        opacity: 0,
-        y: 8,
-        duration: 0.35,
-        ease: "power3.out",
-        stagger: 0.02,
-        delay: 0.15,
-      });
-    },
-    { scope: containerRef, dependencies: [ready, reducedMotion] }
-  );
-
-  // Reduced motion fallback
   if (reducedMotion) {
     return (
       <div className={className}>
-        <h1 className="text-3xl md:text-4xl font-bold text-white mb-16 md:mb-24">
+        <h1 className="text-3xl md:text-4xl font-bold text-[#F4F5F8] mb-16 md:mb-24">
           {greeting}
         </h1>
-        <section className="flex flex-col md:flex-row gap-4 md:gap-16">
-          <span className="section-label shrink-0 pt-0.5">Info.</span>
-          <p className="text-sm leading-relaxed max-w-2xl text-[#aaa]">
-            {bio}
-          </p>
-        </section>
+        <p className="text-sm leading-relaxed max-w-2xl text-[#F4F5F8]/60">{bio}</p>
       </div>
     );
   }
@@ -297,46 +302,40 @@ export function PretextHero({
     <div
       ref={containerRef}
       className={`w-full relative ${className ?? ""}`}
-      style={{
-        height: layout ? layout.totalHeight : "auto",
-        minHeight: 120,
-      }}
+      style={{ height: layout ? layout.totalHeight : "auto", minHeight: 120 }}
       role="banner"
     >
-      {/* Accessible hidden text */}
       <div className="sr-only">
         <h1>{greeting}</h1>
         <p>{bio}</p>
       </div>
 
-      {/* Positioned word elements */}
       {layout?.words.map((word, i) => {
-        const style: React.CSSProperties = {
-          position: "absolute",
-          left: word.x,
-          top: word.y,
-          color: word.block.color,
-          opacity: word.block.baseOpacity,
-          fontSize: getFontSize(word),
-          fontWeight: getFontWeight(word),
-          fontFamily: FONT_FAMILY,
-          letterSpacing: word.block.type === "label" ? "0.1em" : undefined,
-          textTransform:
-            word.block.type === "label" ? "uppercase" : undefined,
-          whiteSpace: "pre",
-          willChange: coarsePointer ? undefined : "transform, opacity",
-          pointerEvents: "none",
-        };
+        const displayText = scrambleTexts[i] ?? word.text;
+        const isVisible = visibleSet.has(i);
 
         return (
           <span
             key={word.key}
             data-pretext-idx={i}
             className="pretext-word"
-            style={style}
+            style={{
+              position: "absolute",
+              left: word.x,
+              top: word.y,
+              color: word.block.color,
+              opacity: isVisible ? word.block.baseOpacity : 0,
+              fontSize: getFontSize(word),
+              fontWeight: getFontWeight(word),
+              fontFamily: FONT_FAMILY,
+              whiteSpace: "pre",
+              willChange: coarsePointer ? undefined : "transform, opacity",
+              pointerEvents: "none",
+              transition: "opacity 300ms ease-out",
+            }}
             aria-hidden="true"
           >
-            {word.text}
+            {displayText}
           </span>
         );
       })}
@@ -349,8 +348,6 @@ function getFontSize(word: PositionedWord): number {
     case "heading":
     case "accent":
       return 36;
-    case "label":
-      return 12;
     default:
       return 14;
   }

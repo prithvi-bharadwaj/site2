@@ -62,12 +62,12 @@ export interface HeroLayoutResult {
 
 /** Style defaults per block type (monospace theme) */
 const BLOCK_DEFAULTS: Record<BlockType, { color: string; baseOpacity: number }> = {
-  heading: { color: "#ffffff", baseOpacity: 1.0 },
-  accent: { color: "#ffffff", baseOpacity: 1.0 },
-  tagline: { color: "#cccccc", baseOpacity: 0.9 },
-  body: { color: "#aaaaaa", baseOpacity: 0.7 },
-  label: { color: "#666666", baseOpacity: 0.5 },
-  link: { color: "#888888", baseOpacity: 0.6 },
+  heading: { color: "#F4F5F8", baseOpacity: 1.0 },
+  accent: { color: "#F4F5F8", baseOpacity: 1.0 },
+  tagline: { color: "#F4F5F8", baseOpacity: 0.8 },
+  body: { color: "#F4F5F8", baseOpacity: 0.6 },
+  label: { color: "#F4F5F8", baseOpacity: 0.35 },
+  link: { color: "#F4F5F8", baseOpacity: 0.5 },
 };
 
 /**
@@ -88,34 +88,37 @@ function splitLineIntoWords(
   const words: PositionedWord[] = [];
   const text = line.text;
 
-  // Use canvas to measure word positions within the line
   const canvas = document.createElement("canvas");
   const ctx = canvas.getContext("2d")!;
   ctx.font = font;
 
-  // Split on whitespace boundaries, keeping track of position
-  const parts = text.split(/(\s+)/);
-  let xOffset = 0;
+  // Find word boundaries (start index, end index) by scanning for non-space runs
+  const wordSpans: { start: number; end: number }[] = [];
+  let i = 0;
+  while (i < text.length) {
+    // Skip whitespace
+    while (i < text.length && text[i] === " ") i++;
+    if (i >= text.length) break;
+    const start = i;
+    // Consume word chars
+    while (i < text.length && text[i] !== " ") i++;
+    wordSpans.push({ start, end: i });
+  }
 
-  for (let p = 0; p < parts.length; p++) {
-    const part = parts[p];
-    if (!part) continue;
+  const defaults = BLOCK_DEFAULTS[block.type];
 
-    const partWidth = ctx.measureText(part).width;
-
-    // Skip pure whitespace chunks
-    if (/^\s+$/.test(part)) {
-      xOffset += partWidth;
-      continue;
-    }
-
-    const defaults = BLOCK_DEFAULTS[block.type];
+  for (let w = 0; w < wordSpans.length; w++) {
+    const span = wordSpans[w];
+    const word = text.slice(span.start, span.end);
+    // Measure prefix up to word start for exact x position (avoids cumulative rounding)
+    const xStart = ctx.measureText(text.slice(0, span.start)).width;
+    const wordWidth = ctx.measureText(word).width;
 
     words.push({
-      text: part,
-      x: lineX + xOffset,
+      text: word,
+      x: lineX + xStart,
       y: lineY,
-      width: partWidth,
+      width: wordWidth,
       height: lineHeight,
       block: {
         ...block,
@@ -123,10 +126,8 @@ function splitLineIntoWords(
         baseOpacity: block.baseOpacity ?? defaults.baseOpacity,
       },
       lineIndex,
-      key: `s${sectionIndex}-b${blockIndex}-l${lineIndex}-w${p}`,
+      key: `s${sectionIndex}-b${blockIndex}-l${lineIndex}-w${w}`,
     });
-
-    xOffset += partWidth;
   }
 
   return words;
