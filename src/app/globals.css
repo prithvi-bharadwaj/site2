@@ -233,33 +233,22 @@ a.project-item {
   display: none;
 }
 
-/* Inline dialogue — highlight noise fade-in */
-.hl-noise-in {
-  animation: hl-noise-in 700ms var(--ease-out) backwards;
+/* Inline dialogue — noise dissolve cells */
+.dissolve-in {
+  animation: dissolve-fade-in 180ms ease-out both;
 }
 
-@keyframes hl-noise-in {
-  0%  { opacity: 0; }
-  8%  { opacity: 0.008; }
-  16% { opacity: 0; }
-  24% { opacity: 0.012; }
-  32% { opacity: 0.004; }
-  40% { opacity: 0.018; }
-  48% { opacity: 0.006; }
-  56% { opacity: 0.02; }
-  64% { opacity: 0.01; }
-  72% { opacity: 0.024; }
-  80% { opacity: 0.015; }
-  88% { opacity: 0.026; }
-  /* 100% inherits element's natural opacity */
+.dissolve-out {
+  animation: dissolve-fade-out 150ms ease-out both;
 }
 
-/* Inline dialogue — highlight fade-out on exit */
-.hl-fade-out {
-  animation: hl-fade-out 400ms var(--ease-out) forwards;
+@keyframes dissolve-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 
-@keyframes hl-fade-out {
+@keyframes dissolve-fade-out {
+  from { opacity: 1; }
   to { opacity: 0; }
 }
 
