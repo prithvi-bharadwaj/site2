@@ -173,6 +173,29 @@ a.project-item {
   }
 }
 
+/* Story expand/collapse */
+.story-expand {
+  overflow: hidden;
+  transition: max-height 400ms var(--ease-out), opacity 300ms var(--ease-out);
+}
+
+/* Story section scroll target offset */
+.story-section {
+  scroll-margin-top: 80px;
+}
+
+/* Story toggle button */
+.story-toggle-btn {
+  cursor: pointer;
+  background: none;
+  font-family: inherit;
+}
+
+/* Grid layout transition for story expand */
+.story-grid {
+  transition: grid-template-columns 400ms var(--ease-out);
+}
+
 /* Work accordion expand/collapse */
 .work-detail {
   overflow: hidden;
