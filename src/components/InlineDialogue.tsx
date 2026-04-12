@@ -24,10 +24,10 @@ const HL_STAGGER = 80;
 const HL_ENTER_BASE = 200;
 
 const SCRAMBLE: ScrambleConfig = {
-  scrambleProbability: 0.5,
-  binaryDuration: 80,
-  asciiDuration: 160,
-  maxDelay: 350,
+  scrambleProbability: 0.95,  // nearly all chars animate
+  binaryDuration: 70,
+  asciiDuration: 140,
+  maxDelay: 300,
 };
 
 /* ── Types ── */
@@ -161,6 +161,11 @@ export function InlineDialogue({ segments }: { segments: DialogueSegment[] }) {
 
   function ensureScrambleLoop() {
     if (loopRunning.current) return;
+    // Check there's actually work to do
+    let hasWork = false;
+    for (const [, e] of scrambles.current) { if (!e.done) { hasWork = true; break; } }
+    if (!hasWork) return;
+
     loopRunning.current = true;
     const TICK = 25;
     function step() {
@@ -172,8 +177,15 @@ export function InlineDialogue({ segments }: { segments: DialogueSegment[] }) {
         else e.done = true;
       }
       tick(n => n + 1);
-      if (any) setTimeout(step, TICK);
-      else loopRunning.current = false;
+      if (any) {
+        setTimeout(step, TICK);
+      } else {
+        loopRunning.current = false;
+        // Race guard: entries may have been added during this tick
+        for (const [, e] of scrambles.current) {
+          if (!e.done) { ensureScrambleLoop(); break; }
+        }
+      }
     }
     setTimeout(step, TICK);
   }
