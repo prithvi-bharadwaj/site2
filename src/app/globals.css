@@ -233,34 +233,23 @@ a.project-item {
   display: none;
 }
 
-/* Inline dialogue — noise dissolve cells */
-.dissolve-in {
-  animation: dissolve-fade-in 180ms ease-out both;
+/* Inline dialogue — highlight SVG rect fade in/out */
+.hl-rect-enter {
+  animation: hl-rect-in 500ms var(--ease-out) both;
 }
 
-.dissolve-out {
-  animation: dissolve-fade-out 150ms ease-out both;
+.hl-rect-exit {
+  animation: hl-rect-out 300ms var(--ease-out) both;
 }
 
-@keyframes dissolve-fade-in {
+@keyframes hl-rect-in {
   from { opacity: 0; }
   to { opacity: 1; }
 }
 
-@keyframes dissolve-fade-out {
+@keyframes hl-rect-out {
   from { opacity: 1; }
   to { opacity: 0; }
-}
-
-/* Inline dialogue — character converge from offscreen */
-.char-converge {
-  animation: char-converge 450ms var(--ease-out) backwards;
-}
-
-@keyframes char-converge {
-  from {
-    transform: translate(var(--cx), var(--cy));
-  }
 }
 
 /* Inline dialogue — trigger overlay underline (unified across all words) */

@@ -19,13 +19,9 @@ const EASE = "cubic-bezier(0.23, 1, 0.32, 1)";
 const POS_T = `left 350ms ${EASE}, top 350ms ${EASE}`;
 const EXP_SIZE = 14 * 0.95;
 const HL_OPACITY = 0.03;
-const FLY_DIST = 160;
-const EXIT_MS = 750;
+const EXIT_MS = 600;
 const HL_STAGGER = 80;
-const CELL = 12;
-const HL_ENTER_BASE = 250;   // ms after text starts before highlight appears
-const HL_ENTER_SPREAD = 450; // ms random spread for dissolve-in cells
-const HL_EXIT_SPREAD = 350;  // ms random spread for dissolve-out cells
+const HL_ENTER_BASE = 200;
 
 const SCRAMBLE: ScrambleConfig = {
   scrambleProbability: 0.5,
@@ -33,12 +29,6 @@ const SCRAMBLE: ScrambleConfig = {
   asciiDuration: 160,
   maxDelay: 350,
 };
-
-/** Deterministic pseudo-random 0–1 from integer seed */
-function noise(n: number): number {
-  const s = Math.sin(n * 127.1 + n * 311.7) * 43758.5453;
-  return s - Math.floor(s);
-}
 
 /* ── Types ── */
 
@@ -61,13 +51,6 @@ interface CharData {
   x: number; y: number; role: Role;
   realChar: string; triggerId: string; key: string;
   idx: number; total: number;
-  flyX: number; flyY: number;
-}
-
-interface HLCell {
-  x: number; y: number; w: number; h: number;
-  enterDelay: number; exitDelay: number;
-  triggerId: string; key: string;
 }
 
 /* ── Layout helpers ── */
@@ -220,7 +203,7 @@ export function InlineDialogue({ segments }: { segments: DialogueSegment[] }) {
     return () => { obs.disconnect(); clearTimeout(t); };
   }, [recompute]);
 
-  /* ── Char positions + scatter ── */
+  /* ── Char positions (no scatter — just positions) ── */
   const charData = useMemo(() => {
     if (!layout) return [];
     const canvas = document.createElement("canvas");
@@ -236,26 +219,16 @@ export function InlineDialogue({ segments }: { segments: DialogueSegment[] }) {
         const c: CharData = {
           x: w.x + ctx.measureText(w.text.slice(0, ci)).width, y: w.y, role: w.role,
           realChar: w.text[ci], triggerId: tid, key: `${tid}-ch-${byTrigger.get(tid)!.length}`,
-          idx: byTrigger.get(tid)!.length, total: 0, flyX: 0, flyY: 0,
+          idx: byTrigger.get(tid)!.length, total: 0,
         };
         chars.push(c); byTrigger.get(tid)!.push(c);
       }
     }
-    for (const [, tc] of byTrigger) {
-      if (!tc.length) continue;
-      const cx = (Math.min(...tc.map(c => c.x)) + Math.max(...tc.map(c => c.x))) / 2;
-      const cy = (Math.min(...tc.map(c => c.y)) + Math.max(...tc.map(c => c.y)) + LH) / 2;
-      for (const c of tc) {
-        c.total = tc.length;
-        const dx = c.x - cx, dy = c.y + LH / 2 - cy, d = Math.sqrt(dx * dx + dy * dy);
-        if (d > 1) { c.flyX = (dx / d) * FLY_DIST; c.flyY = (dy / d) * FLY_DIST; }
-        else { const a = (c.idx / tc.length) * Math.PI * 2; c.flyX = Math.cos(a) * FLY_DIST; c.flyY = Math.sin(a) * FLY_DIST; }
-      }
-    }
+    for (const [, tc] of byTrigger) for (const c of tc) c.total = tc.length;
     return chars;
   }, [layout]);
 
-  /* ── Create scramble states + kick loop ── */
+  /* ── Create scramble states + kick persistent loop ── */
   useEffect(() => {
     if (!charData.length) return;
     const fresh = charData.filter(c => !exitingIds.has(c.triggerId) && !scrambles.current.has(c.key));
@@ -292,35 +265,9 @@ export function InlineDialogue({ segments }: { segments: DialogueSegment[] }) {
   const hlRects = useMemo(() => layout ? mergedHLRects(layout.words) : [], [layout]);
   const triggerRects = useMemo(() => layout ? roleRects(layout.words, "trigger") : [], [layout]);
   const actionRects = useMemo(() => layout ? roleRects(layout.words, "action") : [], [layout]);
-
-  /* ── Highlight dissolve cells ── */
-  const hlCells = useMemo(() => {
-    const cells: HLCell[] = [];
-    for (const r of hlRects) {
-      const pw = r.w + 16, ph = LH + 6;
-      const ox = r.x - 8, oy = r.y - 3;
-      const cols = Math.ceil(pw / CELL), rows = Math.ceil(ph / CELL);
-      const maxOrd = hlRects.filter(h => h.triggerId === r.triggerId).length;
-
-      for (let row = 0; row < rows; row++) {
-        for (let col = 0; col < cols; col++) {
-          cells.push({
-            x: ox + col * CELL, y: oy + row * CELL,
-            w: Math.min(CELL, pw - col * CELL), h: Math.min(CELL, ph - row * CELL),
-            enterDelay: HL_ENTER_BASE + r.order * HL_STAGGER + noise(col * 7919 + row * 6271 + r.order * 3571) * HL_ENTER_SPREAD,
-            exitDelay: (maxOrd - 1 - r.order) * HL_STAGGER + noise(col * 3571 + row * 8887 + r.order * 7919 + 1) * HL_EXIT_SPREAD,
-            triggerId: r.triggerId,
-            key: `hlc-${r.key}-${col}-${row}`,
-          });
-        }
-      }
-    }
-    return cells;
-  }, [hlRects]);
-
   const extras = segments.filter(s => s.type === "trigger" && s.id && openMap[s.id] && s.extra).map(s => ({ id: s.id!, node: s.extra! }));
 
-  /* ── Render ── */
+  /* ── Render helpers ── */
 
   function charDisplay(c: CharData): { ch: string; visible: boolean } {
     const entry = scrambles.current.get(c.key);
@@ -334,19 +281,30 @@ export function InlineDialogue({ segments }: { segments: DialogueSegment[] }) {
       <div ref={ref} className="relative w-full" style={{ height: layout ? layout.height : "auto", minHeight: LH, transition: `height 350ms ${EASE}` }}>
         <p className="sr-only">{segs.map(s => s.text).join("")}</p>
 
-        {/* ── Noise dissolve highlight cells ── */}
-        {hlCells.map(c => (
-          <div
-            key={c.key}
-            className={exitingIds.has(c.triggerId) ? "dissolve-out" : "dissolve-in"}
-            style={{
-              position: "absolute", left: c.x, top: c.y, width: c.w, height: c.h,
-              background: `rgba(244, 245, 248, ${HL_OPACITY})`,
-              pointerEvents: "none",
-              animationDelay: `${exitingIds.has(c.triggerId) ? c.exitDelay : c.enterDelay}ms`,
-            }}
-          />
-        ))}
+        {/* ── Highlight SVG — single layer, no opacity stacking ── */}
+        <svg
+          className="absolute inset-0 pointer-events-none"
+          style={{ width: "100%", height: "100%", opacity: HL_OPACITY }}
+        >
+          {hlRects.map(r => {
+            const exiting = exitingIds.has(r.triggerId);
+            const maxOrd = hlRects.filter(h => h.triggerId === r.triggerId).length;
+            const delay = exiting
+              ? (maxOrd - 1 - r.order) * HL_STAGGER
+              : HL_ENTER_BASE + r.order * HL_STAGGER;
+            return (
+              <rect
+                key={r.key}
+                x={r.x - 8} y={r.y - 3}
+                width={r.w + 16} height={LH + 6}
+                rx={6} ry={6}
+                fill="#F4F5F8"
+                className={exiting ? "hl-rect-exit" : "hl-rect-enter"}
+                style={{ animationDelay: `${delay}ms` }}
+              />
+            );
+          })}
+        </svg>
 
         {/* ── Normal + trigger word spans ── */}
         {layout?.words.filter(w => w.role === "normal" || w.role === "trigger").map(w => (
@@ -359,38 +317,29 @@ export function InlineDialogue({ segments }: { segments: DialogueSegment[] }) {
             }} aria-hidden>{w.text}</span>
         ))}
 
-        {/* ── Per-character expanded/action spans ── */}
+        {/* ── Per-character: scramble decode reveal, staggered opacity ── */}
         {charData.map(c => {
           const { ch, visible } = charDisplay(c);
           const exiting = exitingIds.has(c.triggerId);
           const step = Math.min(300 / (c.total || 1), 5);
-          const entryDelay = c.idx * step;
           const exitDelay = (c.total - 1 - c.idx) * step;
           const baseOp = c.role === "action" ? 0.35 : 0.4;
 
-          if (exiting) {
-            return (
-              <span key={c.key} style={{
-                position: "absolute", left: c.x, top: c.y, color: "#F4F5F8", opacity: 0,
-                fontSize: EXP_SIZE, fontWeight: 400, fontFamily: FONT_FAMILY,
-                whiteSpace: "pre", pointerEvents: "none",
-                transform: `translate(${c.flyX}px, ${c.flyY}px)`,
-                transition: `transform 400ms ${EASE} ${exitDelay}ms, opacity 150ms ease-out ${exitDelay}ms`,
-              }} aria-hidden>{c.realChar}</span>
-            );
-          }
-
           return (
-            <span key={c.key} data-repel className="char-converge"
+            <span
+              key={c.key}
+              data-repel={exiting ? undefined : true}
               style={{
                 position: "absolute", left: c.x, top: c.y, color: "#F4F5F8",
-                opacity: visible ? baseOp : 0,
+                opacity: exiting ? 0 : visible ? baseOp : 0,
                 fontSize: EXP_SIZE, fontWeight: 400, fontFamily: FONT_FAMILY,
                 whiteSpace: "pre", pointerEvents: "none",
-                "--cx": `${c.flyX}px`, "--cy": `${c.flyY}px`,
-                animationDelay: `${entryDelay}ms`,
-                transition: `${POS_T}, opacity 200ms ease-out, transform 180ms ${EASE}`,
-              } as React.CSSProperties} aria-hidden>{ch}</span>
+                transition: exiting
+                  ? `opacity 120ms ease-out ${exitDelay}ms`
+                  : `${POS_T}, opacity 200ms ease-out, transform 180ms ${EASE}`,
+              }}
+              aria-hidden
+            >{exiting ? c.realChar : ch}</span>
           );
         })}
 
