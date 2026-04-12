@@ -1,7 +1,7 @@
 ---
 title: Story Toggle Homepage — TL;DR + Expandable Full Story
 type: feat
-status: active
+status: completed
 date: 2026-04-11
 ---
 
