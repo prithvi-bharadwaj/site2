@@ -215,6 +215,7 @@ export default function Home() {
         className="relative px-8 md:px-0 pt-[18vh] md:pt-[22vh]"
         style={{ zIndex: 1 }}
       >
+        {/* Hero — always at the same position */}
         <div className="w-full max-w-2xl mx-auto md:ml-[15vw] lg:ml-[18vw]">
           <PretextHero
             greeting="Hey, I'm Prithvi."
@@ -222,12 +223,12 @@ export default function Home() {
           />
         </div>
 
-        {/* TL;DR — only visible when collapsed */}
-        <div className="w-full max-w-2xl mx-auto md:ml-[15vw] lg:ml-[18vw] mt-12 md:mt-16">
+        {/* Intro + story — seamless flow, same alignment as hero */}
+        <div className="w-full max-w-2xl mx-auto md:ml-[15vw] lg:ml-[18vw] mt-10 md:mt-14">
           <StoryToggle
             expanded={expanded}
             onExpandChange={setExpanded}
-            tldr={(expandToSection) => (
+            intro={(expandToSection) => (
               <p>
                 I&apos;ve been shipping things on the internet since I was 13.
                 Started with a{" "}
@@ -245,43 +246,16 @@ export default function Home() {
                 engine.
               </p>
             )}
-          />
+          >
+            <StorySections />
+          </StoryToggle>
         </div>
 
-        {/* Main content grid — layout shifts based on expanded state */}
-        <div
-          className={`w-full mx-auto mt-20 md:mt-28 ${
-            expanded
-              ? "max-w-5xl md:ml-[10vw] lg:ml-[12vw]"
-              : "max-w-4xl md:ml-[15vw] lg:ml-[18vw]"
-          }`}
-          style={{ transition: "max-width 400ms cubic-bezier(0.23, 1, 0.32, 1), margin-left 400ms cubic-bezier(0.23, 1, 0.32, 1)" }}
-        >
-          <div
-            className={`grid grid-cols-1 gap-12 md:gap-16 story-grid ${
-              expanded
-                ? "md:grid-cols-[2fr_1fr]"
-                : "md:grid-cols-[1fr_2fr]"
-            }`}
-          >
-            {/* Left column: story (when expanded) or Work (when collapsed) */}
-            {expanded ? (
-              <div className="max-w-2xl">
-                <StorySections />
-              </div>
-            ) : (
-              <WorkAccordion />
-            )}
-
-            {/* Right column: Work+Labs (when expanded) or Labs (when collapsed) */}
-            {expanded ? (
-              <div className="flex flex-col gap-12">
-                <WorkAccordion />
-                <LabsGrid compact />
-              </div>
-            ) : (
-              <LabsGrid />
-            )}
+        {/* Work + Labs — same left margin as hero, always */}
+        <div className="w-full max-w-4xl mx-auto md:ml-[15vw] lg:ml-[18vw] mt-16 md:mt-24">
+          <div className="grid grid-cols-1 md:grid-cols-[1fr_2fr] gap-12 md:gap-16">
+            <WorkAccordion />
+            <LabsGrid />
           </div>
         </div>
       </div>
