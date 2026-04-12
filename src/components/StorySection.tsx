@@ -179,8 +179,8 @@ function ScrambleParagraph({
   }, [text, delay]);
 
   if (done) {
-    // Render original children (preserves JSX like links, emphasis, etc.)
-    return <p>{children}</p>;
+    // Render original children as-is (already wrapped in <p>)
+    return <>{children}</>;
   }
 
   return (
