@@ -12,6 +12,7 @@ import {
   parseDialogue,
 } from "@/components/InlineDialogue";
 import { EditPanel } from "@/components/EditPanel";
+import { ProofMedia, type ProofProps } from "@/components/ProofMedia";
 
 /* ── Default content ── */
 
@@ -31,6 +32,17 @@ const DEFAULTS = {
 type Content = typeof DEFAULTS;
 
 const STORAGE_KEY = "prithvi-site-content";
+
+// Trigger id → media artifact. id comes from parseDialogue (lowercased, hyphenated).
+// Drop assets in /public/proof/ and reference as `/proof/<name>.jpg`.
+const PROOFS: Record<string, ProofProps> = {
+  "youtube-channel": {
+    src: "/images/flower.svg",
+    w: 320,
+    h: 180,
+    alt: "youtube channel placeholder",
+  },
+};
 
 function loadContent(): Content {
   if (typeof window === "undefined") return DEFAULTS;
@@ -56,7 +68,11 @@ function StorySections({ content, editMode, onUpdate }: { content: Content; edit
   return (
     <>
       {SECTION_ORDER.map(({ key, label, className }) => {
-        const segments = parseDialogue(content[key]);
+        const segments = parseDialogue(content[key]).map((s) =>
+          s.type === "trigger" && s.id && PROOFS[s.id]
+            ? { ...s, extra: <ProofMedia {...PROOFS[s.id]} /> }
+            : s
+        );
         return (
           <div key={key} className={className}>
             {editMode && (

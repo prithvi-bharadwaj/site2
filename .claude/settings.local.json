@@ -1,0 +1,20 @@
+{
+  "permissions": {
+    "allow": [
+      "WebFetch(domain:x.com)",
+      "Bash(find /Users/prithvi/.claude/projects -name CLAUDE.md -o -name *-Users-prithvi-2025-Main-Quests-Prithvi-site2 -type d)",
+      "mcp__Claude_Preview__preview_start",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:3334/)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:3333/)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:3000/)",
+      "Bash(grep -r \"scramble\\\\|typewriter\\\\|text.*animate\\\\|decode\" /Users/prithvi/2025/Main Quests/Prithvi/site2/src --include=*.ts --include=*.tsx -i)",
+      "Bash(npm search:*)",
+      "Bash(npm view:*)",
+      "Bash(npm run:*)",
+      "WebSearch",
+      "Bash(lsof -ti:3000)",
+      "Bash(xargs kill:*)",
+      "Bash(lsof -ti:3000 -ti:59549)"
+    ]
+  }
+}
