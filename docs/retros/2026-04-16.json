@@ -1,0 +1,23 @@
+{
+  "period": "2026-04-09 to 2026-04-16",
+  "commits": 10,
+  "linesAdded": 2365,
+  "linesRemoved": 744,
+  "filesChanged": 29,
+  "sessions": {
+    "total": 3,
+    "deep": 1,
+    "medium": 1,
+    "micro": 1
+  },
+  "streak": 2,
+  "peakHours": "20:00-00:00",
+  "fixRatio": 0.2,
+  "commitTypes": {
+    "feat": 5,
+    "fix": 2,
+    "refactor": 2,
+    "chore": 1
+  },
+  "tweetable": "Apr 9-16: 10 commits, 2.4k LOC, 3 sessions (1 deep), peak: 8pm-midnight | Last active Apr 12, streak: 2d"
+}

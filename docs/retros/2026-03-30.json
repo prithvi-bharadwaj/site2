@@ -1,0 +1,24 @@
+{
+  "period": "2026-03-23 to 2026-03-30",
+  "commits": 34,
+  "linesAdded": 12580,
+  "linesRemoved": 4961,
+  "filesChanged": 120,
+  "sessions": {
+    "total": 9,
+    "deep": 2,
+    "medium": 1,
+    "micro": 6
+  },
+  "streak": 4,
+  "peakHours": "13:00-15:00, 21:00-03:00",
+  "fixRatio": 0.12,
+  "commitTypes": {
+    "feat": 17,
+    "fix": 4,
+    "chore": 7,
+    "perf": 1,
+    "docs": 1
+  },
+  "tweetable": "Week of Mar 23: 34 commits, 12.6k LOC, 9 sessions, peak: 1pm & 9pm | Streak: 4d"
+}

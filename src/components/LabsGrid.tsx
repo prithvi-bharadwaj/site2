@@ -19,7 +19,7 @@ const LABS: LabItem[] = [
   { title: "Flow Field" },
 ];
 
-export function LabsGrid() {
+export function LabsGrid({ compact }: { compact?: boolean } = {}) {
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {
@@ -38,7 +38,7 @@ export function LabsGrid() {
       <span className="text-[#F4F5F8]/35 text-xs uppercase tracking-widest block mb-6">
         Projects.
       </span>
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-12 gap-y-2 text-sm">
+      <div className={`grid grid-cols-1 ${compact ? "" : "sm:grid-cols-2"} gap-x-12 gap-y-2 text-sm`}>
         {LABS.map((item) => (
           <div key={item.title}>
             {item.href ? (

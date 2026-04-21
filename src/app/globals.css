@@ -173,6 +173,29 @@ a.project-item {
   }
 }
 
+/* Story expand/collapse */
+.story-expand {
+  overflow: hidden;
+  transition: max-height 400ms var(--ease-out), opacity 300ms var(--ease-out);
+}
+
+/* Story section scroll target offset */
+.story-section {
+  scroll-margin-top: 80px;
+}
+
+/* Story toggle button */
+.story-toggle-btn {
+  cursor: pointer;
+  background: none;
+  font-family: inherit;
+}
+
+/* Grid layout transition for story expand */
+.story-grid {
+  transition: grid-template-columns 400ms var(--ease-out);
+}
+
 /* Work accordion expand/collapse */
 .work-detail {
   overflow: hidden;
@@ -186,6 +209,94 @@ a.project-item {
 @media (hover: hover) and (pointer: fine) {
   .work-item:hover {
     background-color: rgba(244, 245, 248, 0.02);
+  }
+}
+
+/* Inline popup entrance */
+.popup-enter {
+  animation: popup-in 200ms var(--ease-out) both;
+}
+
+@keyframes popup-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* Hide scrollbar */
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}
+
+/* Inline dialogue — highlight SVG rect fade in/out */
+.hl-rect-enter {
+  animation: hl-rect-in 500ms var(--ease-out) both;
+}
+
+.hl-rect-exit {
+  animation: hl-rect-out 300ms var(--ease-out) both;
+}
+
+@keyframes hl-rect-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes hl-rect-out {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+
+/* Inline dialogue — trigger overlay underline (unified across all words) */
+.trigger-overlay {
+  position: relative;
+}
+
+.trigger-overlay::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  bottom: 2px;
+  width: 100%;
+  height: 1px;
+  background: rgba(244, 245, 248, 0.4);
+  transition: background 300ms var(--ease-out);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .trigger-overlay:hover::after {
+    background: rgba(244, 245, 248, 0.8);
+  }
+}
+
+/* Inline dialogue — action link overlay (underlined) */
+.action-link-overlay {
+  display: block;
+  text-decoration: none;
+  border-bottom: 1px solid rgba(244, 245, 248, 0.25);
+  cursor: pointer;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .action-link-overlay:hover {
+    border-bottom-color: rgba(244, 245, 248, 0.5);
+  }
+}
+
+/* Inline dialogue — extra content entrance */
+@keyframes word-enter {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
   }
 }
 
