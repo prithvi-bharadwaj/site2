@@ -25,6 +25,18 @@ const SCRAMBLE: ScrambleConfig = {
   maxDelay: 150,
 };
 
+// Module-level singleton canvas for text measurement — avoids per-layout allocation
+let _measureCtx: CanvasRenderingContext2D | null = null;
+function getMeasureCtx(): CanvasRenderingContext2D | null {
+  if (_measureCtx) return _measureCtx;
+  if (typeof document === "undefined") return null;
+  const ctx = document.createElement("canvas").getContext("2d");
+  if (!ctx) return null;
+  ctx.font = FONT;
+  _measureCtx = ctx;
+  return ctx;
+}
+
 /* ── Types ── */
 
 export interface DialogueSegment {
@@ -181,9 +193,8 @@ function layoutText(
   }
 
   const result = layoutWithLines(prepared, width, LH);
-  const canvas = document.createElement("canvas");
-  const ctx = canvas.getContext("2d")!;
-  ctx.font = FONT;
+  const ctx = getMeasureCtx();
+  if (!ctx) return { words: [], height: LH };
 
   const words: Word[] = [];
   let wi = 0;
@@ -296,14 +307,14 @@ export function InlineDialogue({ segments }: { segments: DialogueSegment[] }) {
     const TICK = 25;
     function step() {
       if (!alive.current) { loopRunning.current = false; return; }
-      let any = false;
+      let active = false;
       for (const [, e] of scrambles.current) {
         if (e.done) continue;
-        if (tickScramble(e.state, TICK, SCRAMBLE)) any = true;
+        if (tickScramble(e.state, TICK, SCRAMBLE)) active = true;
         else e.done = true;
       }
       tick(n => n + 1);
-      if (any) {
+      if (active) {
         setTimeout(step, TICK);
       } else {
         loopRunning.current = false;

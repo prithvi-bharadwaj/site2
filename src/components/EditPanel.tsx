@@ -1,7 +1,5 @@
 "use client";
 
-import { useRef } from "react";
-
 interface EditPanelProps {
   label: string;
   value: string;
@@ -9,8 +7,6 @@ interface EditPanelProps {
 }
 
 export function EditPanel({ label, value, onChange }: EditPanelProps) {
-  const ref = useRef<HTMLTextAreaElement>(null);
-
   // Estimate rows from content length (monospace ~70 chars/row at typical width)
   const rows = Math.max(2, Math.min(8, Math.ceil(value.length / 70)));
 
@@ -20,7 +16,6 @@ export function EditPanel({ label, value, onChange }: EditPanelProps) {
         {label}
       </label>
       <textarea
-        ref={ref}
         rows={rows}
         value={value}
         onChange={(e) => onChange(e.target.value)}

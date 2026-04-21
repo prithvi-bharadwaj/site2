@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { PretextHero } from "@/components/PretextHero";
 import { BackdropRipple } from "@/components/BackdropRipple";
 import { WorkAccordion } from "@/components/WorkAccordion";
