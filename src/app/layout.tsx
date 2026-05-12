@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Be_Vietnam_Pro } from "next/font/google";
 import "./globals.css";
+import { PromptInjection } from "@/components/PromptInjection";
 
 const sans = Be_Vietnam_Pro({
   subsets: ["latin"],
@@ -58,6 +59,7 @@ export default function RootLayout({
         />
       </head>
       <body className="font-sans">
+        <PromptInjection />
         {children}
       </body>
     </html>

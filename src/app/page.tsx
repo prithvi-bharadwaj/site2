@@ -3,46 +3,24 @@
 import { useState, useEffect, useCallback } from "react";
 import { PretextHero } from "@/components/PretextHero";
 import { BackdropRipple } from "@/components/BackdropRipple";
-import { WorkAccordion } from "@/components/WorkAccordion";
-import { LabsGrid } from "@/components/LabsGrid";
-import { GenZToggle } from "@/components/GenZToggle";
+import { LinkList, type LinkListItem } from "@/components/LinkList";
+import { ModeCycle } from "@/components/ModeToggleGroup";
+import { PreviouslyList } from "@/components/PreviouslyList";
 import { SubwaySurfersPip } from "@/components/SubwaySurfersPip";
-import {
-  InlineDialogue,
-  parseDialogue,
-} from "@/components/InlineDialogue";
 import { EditPanel } from "@/components/EditPanel";
-import { ProofMedia, type ProofProps } from "@/components/ProofMedia";
+import { applyMode, type SiteMode } from "@/lib/mode-transforms";
 
 /* ── Default content ── */
 
 const DEFAULTS = {
   greeting: "Hey, I'm Prithvi.",
-  bio: "I keep finding ways to punch above my weight. Convinced the world's largest game publisher I was a studio at 19. Won buildspace out of 30k people. Now building world models for 3d games at Roam in sf.",
-  now: `i\u2019m currently building [roam](roam, an applied AI lab backed by Long Journey Ventures and Streamlined Ventures, as well as angels from OpenAI, Anthropic, and DeepMind, building world models for 3d interactive games and simulations.)[more info](https://roam.lol/info) \u2014 an applied AI lab \u2014 as head of engineering & product.`,
-  skive: `previously, i built skive \u2014 a gaming platform for content creators to make games based on their videos. signed up creators with over 50M following.`,
-  publisher: `spent the rest of college learning 3d + gamedev instead of whatever i was supposed to be studying. as a 19 year old living in india, i convinced the [world\u2019s best game publisher](as a 19 year old living in india, i convinced Voodoo \u2014 i had just googled "best game publisher 2019" and they had billions of downloads. they said they only work with established studios. i had no team, no money. taught myself every role \u2014 design, dev, UA, analytics. made entire games solo. sent them in. rejected. made more. sent more. after about 20 games, they said yes. i pretended to be an established studio the entire time.)[voodoo](#) to work with me. it was [a journey](convinced the world\u2019s best game publisher to work with me. it was a journey \u2014 i would make an entire game, publish it on the store, share reviews, add analytics, pitch every game as a game changer. i didn\u2019t know how to make "great" games so i had to learn on the job \u2014 every game got better with each new idea. turned it into a proper game studio.) but i did turn it into a proper game studio.`,
-  buildspace: `did buildspace\u2019s program called [nights & weekends](did buildspace\u2019s nights & weekends \u2014 a sprint where you build and ship your idea in under 6 weeks. the biggest school in the world for builders, backed by a16z and yc.)[buildspace](https://buildspace.so/raise) \u2014 i [won](did buildspace\u2019s nights & weekends \u2014 i won out of 30,000 people. got a $25k grant and an invite to sf2, their physical campus in sf. the finale was a gameshow-esque livestream where people voted live. it was a movie.)[watch the finale](https://x.com/FarzaTV/status/1719091708775059754) out of 30,000 people who participated.`,
-  college: `watched [billions](watched billions \u2014 a tv series about an ambitious, ruthless billionaire working in nyc \u2014 which inspired me to study finance in college.) which inspired me to specialize in finance at college where i studied business administration. couldn\u2019t stop building on the side. woke up one day, decided to make a game. taught myself to code, published it on the play store. it [blew up](couldn\u2019t stop building on the side. woke up one day, decided to make a game. taught myself to code, published it on the play store. it blew up \u2014 faculty got mad because their sons were addicted to it.).`,
-  agency: `used that exp to start a design agency \u2192 social media agency \u2192 media agency all through highschool. worked with a bunch of luxury clients \u2014 [some were adorable, literally](ran a media agency through highschool. worked with luxury clients \u2014 including 10+ videos for a brand selling teacup-sized puppies and a high end fashion line for dogs.)[foufou puppies](#).`,
-  early: `got my first check from google at 13 for a [youtube channel](got my first check from google at 13 for a youtube channel where i posted clips of me 1v5-ing in competitive csgo, hacks i learned, and 3d animations i made.)[visit channel](#). had a viral video that showed people how to hack passwords, got 200k views before [the video got taken down](got my first check from google at 13 for a youtube channel. had a viral video that showed people how to hack passwords, got 200k views before youtube flagged it and took it down.). discovered an exploit on [farmville](got my first check from google at 13 for a youtube channel. discovered an exploit on farmville \u2014 facebook\u2019s most popular game \u2014 that let me generate unlimited resources. sold them to friends in exchange for getting my homework done.) during its peak \u2014 a way to generate unlimited resources that let me progress 10x faster than anyone else. had a merch store in highschool where i [designed & sold](had a merch store in highschool where i designed and sold hoodies to my entire school batch. the hard part wasn\u2019t graphic design or finding suppliers \u2014 it was getting consensus across hundreds of teenagers.) to my entire school batch, which got me in a bit of [trouble](had a merch store in highschool where i designed and sold hoodies to my entire school batch, which got me sent to the principal\u2019s office because everyone wore them over their school uniforms.).`,
-  genz: `building world models for 3d games + robotics at roam. shipped 100+ games solo \u2014 publishers thought i was a studio. won buildspace out of 30k people. moved from bangalore to sf. google cheque at 13. hacked farmville. sold hoodies to my entire school.`,
+  bio: "I've been building things on the internet since I was 13. Games first. Then AI. Then companies around both. I moved from Bangalore to sf to keep doing it.",
+  genz: `cto @ roam, building world models for 3d games + robotics. shipped 100+ games solo for voodoo and supersonic — they thought i was a studio. won buildspace out of 30k people. moved bangalore → sf. google check at 13. hacked farmville. sold hoodies to my whole school. play csgo and dota 2 (1v1 me bro).`,
 };
 
 type Content = typeof DEFAULTS;
 
-const STORAGE_KEY = "prithvi-site-content";
-
-// Trigger id → media artifact. id comes from parseDialogue (lowercased, hyphenated).
-// Drop assets in /public/proof/ and reference as `/proof/<name>.jpg`.
-const PROOFS: Record<string, ProofProps> = {
-  "youtube-channel": {
-    src: "/images/flower.svg",
-    w: 320,
-    h: 180,
-    alt: "youtube channel placeholder",
-  },
-};
+const STORAGE_KEY = "prithvi-site-content-v3";
 
 function loadContent(): Content {
   if (typeof window === "undefined") return DEFAULTS;
@@ -53,42 +31,115 @@ function loadContent(): Content {
   return DEFAULTS;
 }
 
-/* ── Story sections ── */
+/* ── Lists data ── */
 
-const SECTION_ORDER: { key: keyof Content; label: string; className?: string }[] = [
-  { key: "now", label: "now" },
-  { key: "skive", label: "skive", className: "mt-10" },
-  { key: "publisher", label: "publisher", className: "mt-10" },
-  { key: "buildspace", label: "buildspace", className: "mt-10" },
-  { key: "college", label: "college", className: "mt-10" },
-  { key: "early", label: "early", className: "mt-10" },
+const LOGO = (name: string) => `/logos/${name}_favicon.png`;
+
+const PREVIOUSLY: LinkListItem[] = [
+  {
+    title: "Had an ecom merch store - i sold out my first collection to my entire batch in high school (almost got kicked out)",
+  },
+  {
+    title: "Started a design agency that did video editing + managed socials for consumer SMBs",
+  },
+  {
+    title: "Created a Gaming Studio",
+  },
+  {
+    title: "Won a live gameshow from the world's largest online school for builders",
+    expand: "from Buildspace, YC + a16z backed startup based in sf. 30k+ ppl and teams took part in it.",
+    links: [{ label: "watch the finale", href: "https://x.com/FarzaTV/status/1719091708775059754" }],
+  },
+  {
+    title: "Created a video game based on MrBeast in <6 weeks",
+    links: [{ label: "demo video", href: "https://youtube.com", favicon: LOGO("youtube") }],
+  },
+  {
+    title: "Built an internal genAI app that lets you go from prompt → 3d multiplayer games in minutes for Roam",
+    favicon: LOGO("roam"),
+    links: [{ label: "roam.lol/info", href: "https://roam.lol/info", favicon: LOGO("roam") }],
+  },
+  {
+    title: "Made over 100+ Games for Voodoo and Supersonic",
+    trailingFavicons: [LOGO("voodoo"), LOGO("supersonic")],
+    links: [{ label: "gallery", href: "#" }],
+  },
+  {
+    title: "CTO at Roam - AI lab building generative world models for games backed by Long Journey, Streamlined ventures and angels from the big 4 ai labs (OpenAI, Anthropic, GDM, xAI)",
+    favicon: LOGO("roam"),
+    expandFavicons: [
+      LOGO("longjourney"),
+      LOGO("streamlined"),
+      LOGO("openai"),
+      LOGO("anthropic"),
+      LOGO("deepmind"),
+      LOGO("xai"),
+    ],
+  },
 ];
 
-function StorySections({ content, editMode, onUpdate }: { content: Content; editMode: boolean; onUpdate: (key: keyof Content, val: string) => void }) {
-  return (
-    <>
-      {SECTION_ORDER.map(({ key, label, className }) => {
-        const segments = parseDialogue(content[key]).map((s) =>
-          s.type === "trigger" && s.id && PROOFS[s.id]
-            ? { ...s, extra: <ProofMedia {...PROOFS[s.id]} /> }
-            : s
-        );
-        return (
-          <div key={key} className={className}>
-            {editMode && (
-              <EditPanel
-                label={label}
-                value={content[key]}
-                onChange={(v) => onUpdate(key, v)}
-              />
-            )}
-            <InlineDialogue segments={segments} />
-          </div>
-        );
-      })}
-    </>
-  );
-}
+const MINI_GAMES: LinkListItem[] = [
+  { title: "Word Avalanche", href: "#" },
+];
+
+const SIDE_PROJECTS: LinkListItem[] = [
+  {
+    title: "Reflink — clipboard extension for WisprFlow",
+    favicon: LOGO("wisprflow"),
+    links: [
+      { label: "github", href: "https://github.com", favicon: LOGO("github") },
+      { label: "tweet", href: "https://x.com", favicon: LOGO("x") },
+    ],
+  },
+  {
+    title: "ToDo — personalized todo list app. secret to my efficiency and cure to my context switching",
+    expand: "syncs to obsidian and google cal. lets agents see a log of your work.",
+    links: [
+      { label: "obsidian", href: "https://obsidian.md", favicon: LOGO("obsidian") },
+      { label: "google cal", href: "https://calendar.google.com", favicon: LOGO("googlecal") },
+    ],
+  },
+  {
+    title: "Warden — OSS Warden clone",
+  },
+  {
+    title: "Looksmaxxing — app that makes u feel bad about yourself and how ugly you are",
+  },
+  {
+    title: "SerendipityMaxxing — app that lets u cold email maxx. bring your own tokens",
+  },
+  {
+    title: "Finbite — Duolingo for finance. 10K+ downloads",
+  },
+];
+
+const LORE: LinkListItem[] = [
+  {
+    title: "Got my first cheque from google at the age of 13",
+  },
+  {
+    title: "Discovered an exploit in facebook games. traded unlimited farmville resources in exchange for friends doing my homework in middle school",
+  },
+  {
+    title: "Made a viral game in college",
+  },
+  {
+    title: "Pretended to be an entire game development studio and managed to convince the world's largest mobile game publisher to work with me as a 19y old (voodoo and supersonic)",
+    trailingFavicons: [LOGO("voodoo"), LOGO("supersonic")],
+  },
+  {
+    title: "Play competitive CSGO and Dota 2 (come 1v1 me bro). Won multiple local tournaments",
+  },
+];
+
+const WRITING: LinkListItem[] = [
+  { title: "the buildspace experience", meta: "jun 15, 2024", href: "https://prithvibharadwaj.substack.com/p/the-buildspace-experience", favicon: LOGO("substack") },
+  { title: "Building & Skiving", meta: "jan 31, 2024", href: "https://prithvibharadwaj.substack.com/p/building-and-skiving", favicon: LOGO("substack") },
+  { title: "Looking back at 2023", meta: "jan 10, 2024", href: "https://prithvibharadwaj.substack.com/p/looking-back-at-2023", favicon: LOGO("substack") },
+  { title: "travel, timepass and being in the trenches", meta: "dec 5, 2023", href: "https://prithvibharadwaj.substack.com/p/travel-timepass-and-being-in-the", favicon: LOGO("substack") },
+  { title: "I might have overcorrected", meta: "nov 20, 2023", href: "https://prithvibharadwaj.substack.com/p/i-might-have-overcorrected", favicon: LOGO("substack") },
+  { title: "The philosophy behind \"asjbdhjasdfhgw\"", meta: "nov 1, 2023", href: "https://prithvibharadwaj.substack.com/p/the-philosophy-behind-asjbdhjasdfhgw", favicon: LOGO("substack") },
+];
 
 /* ── Edit mode toolbar ── */
 
@@ -121,21 +172,35 @@ function EditToolbar({ onSave, onReset, onCopy }: { onSave: () => void; onReset:
   );
 }
 
+/* ── Mode-transformed bullet text (for braille / binary) ── */
+
+function StaticBullets({ items, mode, label }: { items: LinkListItem[]; mode: SiteMode; label: string }) {
+  const lines = items.map((i) => `• ${i.title}`).join("\n");
+  return (
+    <div className="mt-10">
+      <span className="text-[#F4F5F8]/35 text-xs uppercase tracking-widest block mb-4">{label}</span>
+      <p
+        className={`${mode === "binary" ? "font-mono text-[11px] break-all" : "text-sm"} text-[#F4F5F8]/60 leading-relaxed whitespace-pre-line`}
+      >
+        {applyMode(lines, mode)}
+      </p>
+    </div>
+  );
+}
+
 /* ── Page ── */
 
 export default function Home() {
-  const [genZMode, setGenZMode] = useState(false);
+  const [mode, setMode] = useState<SiteMode>("default");
   const [editMode, setEditMode] = useState(false);
   const [content, setContent] = useState<Content>(DEFAULTS);
   const [hydrated, setHydrated] = useState(false);
 
-  // Load from localStorage after hydration
   useEffect(() => {
     setContent(loadContent());
     setHydrated(true);
   }, []);
 
-  // Cmd+E toggle
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
       if ((e.metaKey || e.ctrlKey) && e.key === "e") {
@@ -167,12 +232,20 @@ export default function Home() {
     navigator.clipboard.writeText(`const CONTENT = {\n${out}\n};`);
   }, [content]);
 
-  // Don't render content until hydrated to avoid flash
   if (!hydrated) return null;
+
+  const isInteractive = mode === "default";
+  const isGenZ = mode === "genz";
+  const isTransformed = mode === "braille" || mode === "binary";
 
   return (
     <main className="relative min-h-screen">
       <BackdropRipple />
+
+      {/* Single mode cycle switch, fixed top-right */}
+      <div className="fixed top-4 right-4 z-40">
+        <ModeCycle mode={mode} onChange={setMode} />
+      </div>
 
       {editMode && (
         <EditToolbar onSave={save} onReset={reset} onCopy={copyToClipboard} />
@@ -190,42 +263,68 @@ export default function Home() {
               <EditPanel label="bio" value={content.bio} onChange={(v) => update("bio", v)} />
             </div>
           )}
-          <PretextHero greeting={content.greeting} bio={content.bio} />
-        </div>
-
-        {/* Story */}
-        <div className="w-full max-w-2xl mx-auto md:ml-[15vw] lg:ml-[18vw] mt-10 md:mt-14">
-          <div className="text-sm text-[#F4F5F8]/60 leading-relaxed">
+          {isTransformed ? (
             <div className="mb-6">
-              <GenZToggle enabled={genZMode} onChange={setGenZMode} />
+              <h1 className={`${mode === "binary" ? "font-mono text-xs break-all" : "text-2xl"} text-[#F4F5F8]`}>
+                {applyMode(content.greeting, mode)}
+              </h1>
+              <p className={`mt-3 ${mode === "binary" ? "font-mono text-[11px] break-all" : "text-sm"} text-[#F4F5F8]/60 leading-relaxed`}>
+                {applyMode(content.bio, mode)}
+              </p>
             </div>
+          ) : (
+            <PretextHero greeting={content.greeting} bio={content.bio} />
+          )}
+        </div>
 
-            {genZMode ? (
-              <div>
-                <p className="text-[#F4F5F8]/50 text-xs uppercase tracking-wider mb-2">
-                  tldr
-                </p>
-                {editMode && (
-                  <EditPanel label="genz tldr" value={content.genz} onChange={(v) => update("genz", v)} />
-                )}
-                <p>{content.genz}</p>
-                <SubwaySurfersPip />
-              </div>
-            ) : (
-              <div className="space-y-0">
-                <StorySections content={content} editMode={editMode} onUpdate={update} />
-              </div>
+        {/* Previously I — continuation of the bio */}
+        {isInteractive && (
+          <div className="w-full max-w-2xl mx-auto md:ml-[15vw] lg:ml-[18vw] mt-4">
+            <PreviouslyList label="Previously I:" items={PREVIOUSLY} />
+          </div>
+        )}
+
+        {isTransformed && (
+          <div className="w-full max-w-3xl mx-auto md:ml-[15vw] lg:ml-[18vw]">
+            <StaticBullets items={PREVIOUSLY} mode={mode} label="Previously I:" />
+          </div>
+        )}
+
+        {/* GenZ TLDR */}
+        {isGenZ && (
+          <div className="w-full max-w-2xl mx-auto md:ml-[15vw] lg:ml-[18vw] mt-10 text-sm text-[#F4F5F8]/60 leading-relaxed">
+            <p className="text-[#F4F5F8]/50 text-xs uppercase tracking-wider mb-2">tldr</p>
+            {editMode && (
+              <EditPanel label="genz tldr" value={content.genz} onChange={(v) => update("genz", v)} />
             )}
+            <p>{content.genz}</p>
+            <SubwaySurfersPip />
           </div>
-        </div>
+        )}
 
-        {/* Work + Labs */}
-        <div className="w-full max-w-4xl mx-auto md:ml-[15vw] lg:ml-[18vw] mt-16 md:mt-24">
-          <div className="grid grid-cols-1 md:grid-cols-[1fr_2fr] gap-12 md:gap-16">
-            <WorkAccordion />
-            <LabsGrid />
+        {/* Side projects + mini games */}
+        {isInteractive && (
+          <div className="w-full max-w-4xl mx-auto md:ml-[15vw] lg:ml-[18vw] mt-16 md:mt-24 grid grid-cols-1 md:grid-cols-[1fr_2fr] gap-12 md:gap-16">
+            <LinkList label="Mini-games." items={MINI_GAMES} />
+            <LinkList label="Side projects." items={SIDE_PROJECTS} />
           </div>
-        </div>
+        )}
+
+        {/* Lore */}
+        {isInteractive && (
+          <div className="w-full max-w-3xl mx-auto md:ml-[15vw] lg:ml-[18vw] mt-16 md:mt-24">
+            <LinkList label="Lore." items={LORE} variant="prose" />
+          </div>
+        )}
+
+        {/* Writing */}
+        {isInteractive && (
+          <div className="w-full max-w-4xl mx-auto md:ml-[15vw] lg:ml-[18vw] mt-16 md:mt-24 pb-32">
+            <LinkList label="Writing." items={WRITING} />
+          </div>
+        )}
+
+        {!isInteractive && <div className="pb-32" />}
       </div>
     </main>
   );
