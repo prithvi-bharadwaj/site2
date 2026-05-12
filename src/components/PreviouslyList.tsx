@@ -1,0 +1,193 @@
+"use client";
+
+import { useEffect, useRef, useState } from "react";
+import type { LinkListItem } from "./LinkList";
+
+const EASE = "cubic-bezier(0.23, 1, 0.32, 1)";
+
+interface PreviouslyListProps {
+  label: string;
+  items: LinkListItem[];
+}
+
+/**
+ * Continuous-paragraph list. Same font as the bio. Tight line-spacing.
+ * Only items with expand content get hover affordance + cursor pointer.
+ * Words repel from cursor (same effect as InlineDialogue).
+ */
+export function PreviouslyList({ label, items }: PreviouslyListProps) {
+  const ref = useRef<HTMLDivElement>(null);
+  const [open, setOpen] = useState<number | null>(null);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    if (window.matchMedia("(pointer: coarse)").matches) return;
+
+    const R = 70;
+    const F = 5;
+    function onMove(e: MouseEvent) {
+      if (!el) return;
+      const rect = el.getBoundingClientRect();
+      const mx = e.clientX - rect.left;
+      const my = e.clientY - rect.top;
+      for (const w of el.querySelectorAll<HTMLElement>("[data-repel]")) {
+        const wr = w.getBoundingClientRect();
+        const dx = wr.left - rect.left + wr.width / 2 - mx;
+        const dy = wr.top - rect.top + wr.height / 2 - my;
+        const d = Math.sqrt(dx * dx + dy * dy);
+        if (d < R && d > 0) {
+          const t = 1 - d / R;
+          w.style.transform = `translate(${(dx / d) * t * t * F}px, ${(dy / d) * t * t * F}px)`;
+        } else if (w.style.transform) {
+          w.style.transform = "";
+        }
+      }
+    }
+    function onLeave() {
+      if (!el) return;
+      for (const w of el.querySelectorAll<HTMLElement>("[data-repel]")) {
+        w.style.transform = "";
+      }
+    }
+    el.addEventListener("mousemove", onMove);
+    el.addEventListener("mouseleave", onLeave);
+    return () => {
+      el.removeEventListener("mousemove", onMove);
+      el.removeEventListener("mouseleave", onLeave);
+    };
+  }, []);
+
+  return (
+    <div ref={ref} className="text-sm text-[#F4F5F8]/60 leading-relaxed">
+      <p className="mb-1">{label}</p>
+      <ul className="list-none p-0 m-0">
+        {items.map((item, i) => {
+          const expandable =
+            !!item.expand ||
+            (item.links && item.links.length > 0) ||
+            (item.expandFavicons && item.expandFavicons.length > 0);
+          const isOpen = open === i;
+          const words = item.title.split(/(\s+)/);
+
+          return (
+            <li key={i} className="m-0 p-0">
+              <span
+                onClick={expandable ? () => setOpen(isOpen ? null : i) : undefined}
+                className={expandable ? "group cursor-pointer" : ""}
+                style={{ display: "inline" }}
+              >
+                <span
+                  data-repel
+                  className="inline-block text-[#F4F5F8]/30 mr-2"
+                  style={{ transition: `transform 180ms ${EASE}` }}
+                >
+                  —
+                </span>
+                {item.favicon && (
+                  <img
+                    src={item.favicon}
+                    alt=""
+                    width={14}
+                    height={14}
+                    data-repel
+                    className="inline-block align-text-bottom h-3.5 w-3.5 mr-1 rounded-sm opacity-70 group-hover:opacity-100"
+                    style={{ transition: `transform 180ms ${EASE}, opacity 200ms` }}
+                  />
+                )}
+                {words.map((w, wi) =>
+                  /^\s+$/.test(w) ? (
+                    <span key={wi}>{w}</span>
+                  ) : (
+                    <span
+                      key={wi}
+                      data-repel
+                      className={
+                        expandable
+                          ? "inline-block group-hover:text-[#F4F5F8]/90"
+                          : "inline-block"
+                      }
+                      style={{
+                        transition: `transform 180ms ${EASE}, color 200ms`,
+                        ...(expandable
+                          ? { borderBottom: "1px dotted rgba(244,245,248,0.18)", paddingBottom: 1 }
+                          : {}),
+                      }}
+                    >
+                      {w}
+                    </span>
+                  )
+                )}
+                {item.trailingFavicons && item.trailingFavicons.length > 0 && (
+                  <span className="inline-flex items-center gap-1 ml-1.5 align-text-bottom">
+                    {item.trailingFavicons.map((src) => (
+                      <img
+                        key={src}
+                        src={src}
+                        alt=""
+                        width={14}
+                        height={14}
+                        data-repel
+                        className="inline-block h-3.5 w-3.5 rounded-sm opacity-70"
+                        style={{ transition: `transform 180ms ${EASE}` }}
+                      />
+                    ))}
+                  </span>
+                )}
+              </span>
+
+              {expandable && (
+                <div
+                  className="work-detail ml-5"
+                  style={{
+                    maxHeight: isOpen ? 240 : 0,
+                    opacity: isOpen ? 1 : 0,
+                  }}
+                >
+                  <div className="pt-0.5 pb-1 leading-relaxed">
+                    {item.expand && (
+                      <p className="text-xs text-[#F4F5F8]/45">{item.expand}</p>
+                    )}
+                    {item.expandFavicons && item.expandFavicons.length > 0 && (
+                      <div className="mt-1.5 flex flex-wrap items-center gap-2">
+                        {item.expandFavicons.map((src) => (
+                          <img
+                            key={src}
+                            src={src}
+                            alt=""
+                            width={16}
+                            height={16}
+                            className="h-4 w-4 rounded-sm opacity-80"
+                          />
+                        ))}
+                      </div>
+                    )}
+                    {item.links && item.links.length > 0 && (
+                      <div className="mt-1.5 flex flex-wrap gap-x-3 gap-y-1">
+                        {item.links.map((l) => (
+                          <a
+                            key={l.href}
+                            href={l.href}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1 text-[11px] text-[#F4F5F8]/45 hover:text-[#F4F5F8]/80 underline underline-offset-2"
+                          >
+                            {l.favicon && (
+                              <img src={l.favicon} alt="" className="h-3 w-3 rounded-sm" width={12} height={12} />
+                            )}
+                            {l.label} ↗
+                          </a>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+            </li>
+          );
+        })}
+      </ul>
+    </div>
+  );
+}
