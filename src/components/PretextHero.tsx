@@ -39,22 +39,47 @@ const SCRAMBLE_CONFIG: ScrambleConfig = {
 };
 
 function buildSections(greeting: string, bio: string): SectionConfig[] {
-  return [
-    {
-      blocks: [{ text: greeting, type: "accent" }],
-      font: `700 36px ${FONT_FAMILY}`,
-      fontSize: 36,
-      lineHeight: 48,
-      marginBottom: 64,
-    },
-    {
-      blocks: [{ text: bio, type: "body" }],
-      font: `400 14px ${FONT_FAMILY}`,
-      fontSize: 14,
-      lineHeight: 22.4,
-      marginBottom: 0,
-    },
-  ];
+  const commaIdx = greeting.indexOf(",");
+  const sections: SectionConfig[] = [];
+
+  if (commaIdx > -1) {
+    const first = greeting.slice(0, commaIdx + 1);
+    const second = greeting.slice(commaIdx + 1).trim();
+    sections.push({
+      blocks: [{ text: first, type: "heading" }],
+      font: `700 56px ${FONT_FAMILY}`,
+      fontSize: 56,
+      lineHeight: 64,
+      marginBottom: 8,
+    });
+    if (second) {
+      sections.push({
+        blocks: [{ text: second, type: "accent" }],
+        font: `600 32px ${FONT_FAMILY}`,
+        fontSize: 32,
+        lineHeight: 40,
+        marginBottom: 56,
+      });
+    }
+  } else {
+    sections.push({
+      blocks: [{ text: greeting, type: "heading" }],
+      font: `700 56px ${FONT_FAMILY}`,
+      fontSize: 56,
+      lineHeight: 64,
+      marginBottom: 56,
+    });
+  }
+
+  sections.push({
+    blocks: [{ text: bio, type: "body" }],
+    font: `400 17px ${FONT_FAMILY}`,
+    fontSize: 17,
+    lineHeight: 27.2,
+    marginBottom: 0,
+  });
+
+  return sections;
 }
 
 function useReducedMotion(): boolean {
@@ -274,12 +299,20 @@ export function PretextHero({ greeting, bio, className }: PretextHeroProps) {
   }, [displacementConfig]);
 
   if (reducedMotion) {
+    const commaIdx = greeting.indexOf(",");
+    const first = commaIdx > -1 ? greeting.slice(0, commaIdx + 1) : greeting;
+    const second = commaIdx > -1 ? greeting.slice(commaIdx + 1).trim() : "";
     return (
       <div className={className}>
-        <h1 className="text-3xl md:text-4xl font-bold text-[#F4F5F8] mb-16 md:mb-24">
-          {greeting}
+        <h1 className="text-4xl md:text-5xl font-bold text-[#131316] mb-2">
+          {first}
         </h1>
-        <p className="text-sm leading-relaxed max-w-2xl text-[#F4F5F8]/60">{bio}</p>
+        {second && (
+          <p className="text-2xl md:text-3xl font-semibold text-[#131316] mb-14">
+            {second}
+          </p>
+        )}
+        <p className="text-base leading-relaxed max-w-2xl text-[#131316]/60">{bio}</p>
       </div>
     );
   }
@@ -332,18 +365,20 @@ export function PretextHero({ greeting, bio, className }: PretextHeroProps) {
 function getFontSize(word: PositionedWord): number {
   switch (word.block.type) {
     case "heading":
+      return 56;
     case "accent":
-      return 36;
+      return 32;
     default:
-      return 14;
+      return 17;
   }
 }
 
 function getFontWeight(word: PositionedWord): number {
   switch (word.block.type) {
     case "heading":
-    case "accent":
       return 700;
+    case "accent":
+      return 600;
     default:
       return 400;
   }

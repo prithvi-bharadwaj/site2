@@ -62,12 +62,12 @@ export interface HeroLayoutResult {
 
 /** Style defaults per block type (monospace theme) */
 const BLOCK_DEFAULTS: Record<BlockType, { color: string; baseOpacity: number }> = {
-  heading: { color: "#F4F5F8", baseOpacity: 1.0 },
-  accent: { color: "#F4F5F8", baseOpacity: 1.0 },
-  tagline: { color: "#F4F5F8", baseOpacity: 0.8 },
-  body: { color: "#F4F5F8", baseOpacity: 0.6 },
-  label: { color: "#F4F5F8", baseOpacity: 0.35 },
-  link: { color: "#F4F5F8", baseOpacity: 0.5 },
+  heading: { color: "#131316", baseOpacity: 1.0 },
+  accent: { color: "#131316", baseOpacity: 1.0 },
+  tagline: { color: "#131316", baseOpacity: 0.8 },
+  body: { color: "#131316", baseOpacity: 0.6 },
+  label: { color: "#131316", baseOpacity: 0.35 },
+  link: { color: "#131316", baseOpacity: 0.5 },
 };
 
 /**

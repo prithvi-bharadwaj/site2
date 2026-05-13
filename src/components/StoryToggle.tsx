@@ -53,7 +53,7 @@ export function StoryToggle({
   );
 
   return (
-    <div className="text-sm text-[#F4F5F8]/60 leading-relaxed">
+    <div className="text-sm text-[#131316]/60 leading-relaxed">
       {/* Intro paragraph — always visible, seamless with the hero bio */}
       <div className="space-y-4">
         {intro(expandToSection)}
@@ -63,7 +63,7 @@ export function StoryToggle({
           <p>
             <button
               onClick={expand}
-              className="text-[#F4F5F8]/40 hover:text-[#F4F5F8]/70 transition-colors duration-200 cursor-pointer inline"
+              className="text-[#131316]/40 hover:text-[#131316]/70 transition-colors duration-200 cursor-pointer inline"
               style={{
                 background: "none",
                 border: "none",
@@ -86,7 +86,7 @@ export function StoryToggle({
           <p className="mt-12">
             <button
               onClick={collapse}
-              className="text-[#F4F5F8]/30 hover:text-[#F4F5F8]/60 transition-colors duration-200 cursor-pointer text-xs"
+              className="text-[#131316]/30 hover:text-[#131316]/60 transition-colors duration-200 cursor-pointer text-xs"
               style={{
                 background: "none",
                 border: "none",

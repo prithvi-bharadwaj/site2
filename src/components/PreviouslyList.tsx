@@ -1,9 +1,16 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import type { LinkListItem } from "./LinkList";
+import type { BrandLink, LinkListItem } from "./LinkList";
 
 const EASE = "cubic-bezier(0.23, 1, 0.32, 1)";
+
+function matchBrand(word: string, brands?: BrandLink[]): BrandLink | undefined {
+  if (!brands) return undefined;
+  const clean = word.replace(/^[^\w]+|[^\w]+$/g, "").toLowerCase();
+  if (!clean) return undefined;
+  return brands.find((b) => b.name.toLowerCase() === clean);
+}
 
 interface PreviouslyListProps {
   label: string;
@@ -60,7 +67,7 @@ export function PreviouslyList({ label, items }: PreviouslyListProps) {
   }, []);
 
   return (
-    <div ref={ref} className="text-sm text-[#F4F5F8]/60 leading-relaxed">
+    <div ref={ref} className="text-sm text-[#131316]/60 leading-relaxed">
       <p className="mb-1">{label}</p>
       <ul className="list-none p-0 m-0">
         {items.map((item, i) => {
@@ -80,7 +87,7 @@ export function PreviouslyList({ label, items }: PreviouslyListProps) {
               >
                 <span
                   data-repel
-                  className="inline-block text-[#F4F5F8]/30 mr-2"
+                  className="inline-block text-[#131316]/30 mr-2"
                   style={{ transition: `transform 180ms ${EASE}` }}
                 >
                   —
@@ -96,29 +103,52 @@ export function PreviouslyList({ label, items }: PreviouslyListProps) {
                     style={{ transition: `transform 180ms ${EASE}, opacity 200ms` }}
                   />
                 )}
-                {words.map((w, wi) =>
-                  /^\s+$/.test(w) ? (
-                    <span key={wi}>{w}</span>
-                  ) : (
+                {words.map((w, wi) => {
+                  if (/^\s+$/.test(w)) return <span key={wi}>{w}</span>;
+                  const brand = matchBrand(w, item.brandLinks);
+                  if (brand) {
+                    return (
+                      <a
+                        key={wi}
+                        href={brand.href}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        data-repel
+                        onClick={(e) => e.stopPropagation()}
+                        className="brand-link inline-flex items-baseline gap-1 align-baseline"
+                        style={{ transition: `transform 180ms ${EASE}` }}
+                      >
+                        <img
+                          src={brand.favicon}
+                          alt=""
+                          width={14}
+                          height={14}
+                          className="brand-link-favicon inline-block h-3.5 w-3.5 rounded-sm align-text-bottom"
+                        />
+                        <span className="brand-link-text">{w}</span>
+                      </a>
+                    );
+                  }
+                  return (
                     <span
                       key={wi}
                       data-repel
                       className={
                         expandable
-                          ? "inline-block group-hover:text-[#F4F5F8]/90"
+                          ? "inline-block group-hover:text-[#131316]/90"
                           : "inline-block"
                       }
                       style={{
                         transition: `transform 180ms ${EASE}, color 200ms`,
                         ...(expandable
-                          ? { borderBottom: "1px dotted rgba(244,245,248,0.18)", paddingBottom: 1 }
+                          ? { borderBottom: "1px dotted rgba(19, 19, 22,0.18)", paddingBottom: 1 }
                           : {}),
                       }}
                     >
                       {w}
                     </span>
-                  )
-                )}
+                  );
+                })}
                 {item.trailingFavicons && item.trailingFavicons.length > 0 && (
                   <span className="inline-flex items-center gap-1 ml-1.5 align-text-bottom">
                     {item.trailingFavicons.map((src) => (
@@ -147,7 +177,7 @@ export function PreviouslyList({ label, items }: PreviouslyListProps) {
                 >
                   <div className="pt-0.5 pb-1 leading-relaxed">
                     {item.expand && (
-                      <p className="text-xs text-[#F4F5F8]/45">{item.expand}</p>
+                      <p className="text-xs text-[#131316]/45">{item.expand}</p>
                     )}
                     {item.expandFavicons && item.expandFavicons.length > 0 && (
                       <div className="mt-1.5 flex flex-wrap items-center gap-2">
@@ -171,7 +201,7 @@ export function PreviouslyList({ label, items }: PreviouslyListProps) {
                             href={l.href}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="inline-flex items-center gap-1 text-[11px] text-[#F4F5F8]/45 hover:text-[#F4F5F8]/80 underline underline-offset-2"
+                            className="inline-flex items-center gap-1 text-[11px] text-[#131316]/45 hover:text-[#131316]/80 underline underline-offset-2"
                           >
                             {l.favicon && (
                               <img src={l.favicon} alt="" className="h-3 w-3 rounded-sm" width={12} height={12} />

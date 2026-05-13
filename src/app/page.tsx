@@ -4,11 +4,10 @@ import { useState, useEffect, useCallback } from "react";
 import { PretextHero } from "@/components/PretextHero";
 import { BackdropRipple } from "@/components/BackdropRipple";
 import { LinkList, type LinkListItem } from "@/components/LinkList";
-import { ModeCycle } from "@/components/ModeToggleGroup";
+import { GenZToggle } from "@/components/GenZToggle";
 import { PreviouslyList } from "@/components/PreviouslyList";
 import { SubwaySurfersPip } from "@/components/SubwaySurfersPip";
 import { EditPanel } from "@/components/EditPanel";
-import { applyMode, type SiteMode } from "@/lib/mode-transforms";
 
 /* ── Default content ── */
 
@@ -37,36 +36,10 @@ const LOGO = (name: string) => `/logos/${name}_favicon.png`;
 
 const PREVIOUSLY: LinkListItem[] = [
   {
-    title: "Had an ecom merch store - i sold out my first collection to my entire batch in high school (almost got kicked out)",
-  },
-  {
-    title: "Started a design agency that did video editing + managed socials for consumer SMBs",
-  },
-  {
-    title: "Created a Gaming Studio",
-  },
-  {
-    title: "Won a live gameshow from the world's largest online school for builders",
-    expand: "from Buildspace, YC + a16z backed startup based in sf. 30k+ ppl and teams took part in it.",
-    links: [{ label: "watch the finale", href: "https://x.com/FarzaTV/status/1719091708775059754" }],
-  },
-  {
-    title: "Created a video game based on MrBeast in <6 weeks",
-    links: [{ label: "demo video", href: "https://youtube.com", favicon: LOGO("youtube") }],
-  },
-  {
-    title: "Built an internal genAI app that lets you go from prompt → 3d multiplayer games in minutes for Roam",
-    favicon: LOGO("roam"),
-    links: [{ label: "roam.lol/info", href: "https://roam.lol/info", favicon: LOGO("roam") }],
-  },
-  {
-    title: "Made over 100+ Games for Voodoo and Supersonic",
-    trailingFavicons: [LOGO("voodoo"), LOGO("supersonic")],
-    links: [{ label: "gallery", href: "#" }],
-  },
-  {
     title: "CTO at Roam - AI lab building generative world models for games backed by Long Journey, Streamlined ventures and angels from the big 4 ai labs (OpenAI, Anthropic, GDM, xAI)",
-    favicon: LOGO("roam"),
+    brandLinks: [
+      { name: "Roam", href: "https://roam.lol", favicon: LOGO("roam") },
+    ],
     expandFavicons: [
       LOGO("longjourney"),
       LOGO("streamlined"),
@@ -75,6 +48,39 @@ const PREVIOUSLY: LinkListItem[] = [
       LOGO("deepmind"),
       LOGO("xai"),
     ],
+  },
+  {
+    title: "Made over 100+ Games for Voodoo and Supersonic",
+    brandLinks: [
+      { name: "Voodoo", href: "https://www.voodoo.io", favicon: LOGO("voodoo") },
+      { name: "Supersonic", href: "https://www.supersonic.com", favicon: LOGO("supersonic") },
+    ],
+    links: [{ label: "gallery", href: "#" }],
+  },
+  {
+    title: "Built an internal genAI app that lets you go from prompt → 3d multiplayer games in minutes for Roam",
+    brandLinks: [
+      { name: "Roam", href: "https://roam.lol", favicon: LOGO("roam") },
+    ],
+    links: [{ label: "roam.lol/info", href: "https://roam.lol/info", favicon: LOGO("roam") }],
+  },
+  {
+    title: "Created a video game based on MrBeast in <6 weeks",
+    links: [{ label: "demo video", href: "https://youtube.com", favicon: LOGO("youtube") }],
+  },
+  {
+    title: "Won a live gameshow from the world's largest online school for builders",
+    expand: "from Buildspace, YC + a16z backed startup based in sf. 30k+ ppl and teams took part in it.",
+    links: [{ label: "watch the finale", href: "https://x.com/FarzaTV/status/1719091708775059754" }],
+  },
+  {
+    title: "Created a Gaming Studio",
+  },
+  {
+    title: "Started a design agency that did video editing + managed socials for consumer SMBs",
+  },
+  {
+    title: "Had an ecom merch store - i sold out my first collection to my entire batch in high school (almost got kicked out)",
   },
 ];
 
@@ -124,11 +130,18 @@ const LORE: LinkListItem[] = [
     title: "Made a viral game in college",
   },
   {
-    title: "Pretended to be an entire game development studio and managed to convince the world's largest mobile game publisher to work with me as a 19y old (voodoo and supersonic)",
-    trailingFavicons: [LOGO("voodoo"), LOGO("supersonic")],
+    title: "Pretended to be an entire game development studio and managed to convince the world's largest mobile game publisher to work with me as a 19y old (Voodoo and Supersonic)",
+    brandLinks: [
+      { name: "Voodoo", href: "https://www.voodoo.io", favicon: LOGO("voodoo") },
+      { name: "Supersonic", href: "https://www.supersonic.com", favicon: LOGO("supersonic") },
+    ],
   },
   {
     title: "Play competitive CSGO and Dota 2 (come 1v1 me bro). Won multiple local tournaments",
+    brandLinks: [
+      { name: "CSGO", href: "https://store.steampowered.com/app/730/CounterStrike_2/", favicon: "/logos/csgo.svg" },
+      { name: "Dota 2", href: "https://store.steampowered.com/app/570/Dota_2/", favicon: "/logos/dota2.svg" },
+    ],
   },
 ];
 
@@ -141,6 +154,29 @@ const WRITING: LinkListItem[] = [
   { title: "The philosophy behind \"asjbdhjasdfhgw\"", meta: "nov 1, 2023", href: "https://prithvibharadwaj.substack.com/p/the-philosophy-behind-asjbdhjasdfhgw", favicon: LOGO("substack") },
 ];
 
+const TUTORIALS: LinkListItem[] = [
+  {
+    title: "How to use Antigravity in Unity…",
+    meta: "may 2024",
+    href: "https://medium.com/@prithvibofficial/how-to-use-antigravity-in-unity-for-game-development-8da2cbc353cb",
+    favicon: "/logos/medium.svg",
+  },
+  {
+    title: "How to use Cursor AI with Unity",
+    meta: "feb 2024",
+    href: "https://medium.com/@prithvibofficial/how-to-use-cursor-ai-with-unity-a32291f9e852",
+    favicon: "/logos/medium.svg",
+  },
+];
+
+const SOCIALS: { label: string; href: string; favicon: string }[] = [
+  { label: "Instagram", href: "https://instagram.com/prithvibofficial", favicon: "/logos/instagram.svg" },
+  { label: "GitHub", href: "https://github.com/prithvi-bharadwaj", favicon: LOGO("github") },
+  { label: "Twitter", href: "https://x.com/prithvibofficial", favicon: LOGO("x") },
+  { label: "Medium", href: "https://medium.com/@prithvibofficial", favicon: "/logos/medium.svg" },
+  { label: "Substack", href: "https://prithvibharadwaj.substack.com", favicon: LOGO("substack") },
+];
+
 /* ── Edit mode toolbar ── */
 
 function EditToolbar({ onSave, onReset, onCopy }: { onSave: () => void; onReset: () => void; onCopy: () => void }) {
@@ -149,22 +185,22 @@ function EditToolbar({ onSave, onReset, onCopy }: { onSave: () => void; onReset:
       className="fixed top-4 right-4 z-50 flex items-center gap-2"
       style={{ animation: "word-enter 200ms ease-out" }}
     >
-      <span className="text-[10px] text-[#F4F5F8]/30 mr-2">edit mode</span>
+      <span className="text-[10px] text-[#131316]/30 mr-2">edit mode</span>
       <button
         onClick={onSave}
-        className="px-3 py-1 text-xs text-[#131316] bg-[#F4F5F8]/90 hover:bg-[#F4F5F8] rounded-md transition-colors cursor-pointer"
+        className="px-3 py-1 text-xs text-[#FFFFFF] bg-[#131316]/90 hover:bg-[#131316] rounded-md transition-colors cursor-pointer"
       >
         save
       </button>
       <button
         onClick={onCopy}
-        className="px-3 py-1 text-xs text-[#F4F5F8]/60 hover:text-[#F4F5F8] border border-[#F4F5F8]/15 hover:border-[#F4F5F8]/30 rounded-md transition-colors cursor-pointer"
+        className="px-3 py-1 text-xs text-[#131316]/60 hover:text-[#131316] border border-[#131316]/15 hover:border-[#131316]/30 rounded-md transition-colors cursor-pointer"
       >
         copy
       </button>
       <button
         onClick={onReset}
-        className="px-3 py-1 text-xs text-[#F4F5F8]/40 hover:text-[#F4F5F8]/70 rounded-md transition-colors cursor-pointer"
+        className="px-3 py-1 text-xs text-[#131316]/40 hover:text-[#131316]/70 rounded-md transition-colors cursor-pointer"
       >
         reset
       </button>
@@ -172,26 +208,10 @@ function EditToolbar({ onSave, onReset, onCopy }: { onSave: () => void; onReset:
   );
 }
 
-/* ── Mode-transformed bullet text (for braille / binary) ── */
-
-function StaticBullets({ items, mode, label }: { items: LinkListItem[]; mode: SiteMode; label: string }) {
-  const lines = items.map((i) => `• ${i.title}`).join("\n");
-  return (
-    <div className="mt-10">
-      <span className="text-[#F4F5F8]/35 text-xs uppercase tracking-widest block mb-4">{label}</span>
-      <p
-        className={`${mode === "binary" ? "font-mono text-[11px] break-all" : "text-sm"} text-[#F4F5F8]/60 leading-relaxed whitespace-pre-line`}
-      >
-        {applyMode(lines, mode)}
-      </p>
-    </div>
-  );
-}
-
 /* ── Page ── */
 
 export default function Home() {
-  const [mode, setMode] = useState<SiteMode>("default");
+  const [genzMode, setGenzMode] = useState(false);
   const [editMode, setEditMode] = useState(false);
   const [content, setContent] = useState<Content>(DEFAULTS);
   const [hydrated, setHydrated] = useState(false);
@@ -234,17 +254,13 @@ export default function Home() {
 
   if (!hydrated) return null;
 
-  const isInteractive = mode === "default";
-  const isGenZ = mode === "genz";
-  const isTransformed = mode === "braille" || mode === "binary";
-
   return (
     <main className="relative min-h-screen">
       <BackdropRipple />
 
-      {/* Single mode cycle switch, fixed top-right */}
+      {/* Gen Z mode toggle, fixed top-right */}
       <div className="fixed top-4 right-4 z-40">
-        <ModeCycle mode={mode} onChange={setMode} />
+        <GenZToggle enabled={genzMode} onChange={setGenzMode} />
       </div>
 
       {editMode && (
@@ -263,69 +279,73 @@ export default function Home() {
               <EditPanel label="bio" value={content.bio} onChange={(v) => update("bio", v)} />
             </div>
           )}
-          {isTransformed ? (
-            <div className="mb-6">
-              <h1 className={`${mode === "binary" ? "font-mono text-xs break-all" : "text-2xl"} text-[#F4F5F8]`}>
-                {applyMode(content.greeting, mode)}
-              </h1>
-              <p className={`mt-3 ${mode === "binary" ? "font-mono text-[11px] break-all" : "text-sm"} text-[#F4F5F8]/60 leading-relaxed`}>
-                {applyMode(content.bio, mode)}
-              </p>
-            </div>
-          ) : (
-            <PretextHero greeting={content.greeting} bio={content.bio} />
-          )}
+          <PretextHero greeting={content.greeting} bio={content.bio} />
         </div>
 
-        {/* Previously I — continuation of the bio */}
-        {isInteractive && (
-          <div className="w-full max-w-2xl mx-auto md:ml-[15vw] lg:ml-[18vw] mt-4">
-            <PreviouslyList label="Previously I:" items={PREVIOUSLY} />
-          </div>
-        )}
-
-        {isTransformed && (
-          <div className="w-full max-w-3xl mx-auto md:ml-[15vw] lg:ml-[18vw]">
-            <StaticBullets items={PREVIOUSLY} mode={mode} label="Previously I:" />
-          </div>
-        )}
-
-        {/* GenZ TLDR */}
-        {isGenZ && (
-          <div className="w-full max-w-2xl mx-auto md:ml-[15vw] lg:ml-[18vw] mt-10 text-sm text-[#F4F5F8]/60 leading-relaxed">
-            <p className="text-[#F4F5F8]/50 text-xs uppercase tracking-wider mb-2">tldr</p>
+        {/* GenZ TLDR — additive when enabled */}
+        {genzMode && (
+          <div className="w-full max-w-2xl mx-auto md:ml-[15vw] lg:ml-[18vw] mt-10 text-sm text-[#131316]/60 leading-relaxed">
+            <p className="text-[#131316]/50 text-xs uppercase tracking-wider mb-2">tldr</p>
             {editMode && (
               <EditPanel label="genz tldr" value={content.genz} onChange={(v) => update("genz", v)} />
             )}
             <p>{content.genz}</p>
-            <SubwaySurfersPip />
           </div>
         )}
 
-        {/* Side projects + mini games */}
-        {isInteractive && (
-          <div className="w-full max-w-4xl mx-auto md:ml-[15vw] lg:ml-[18vw] mt-16 md:mt-24 grid grid-cols-1 md:grid-cols-[1fr_2fr] gap-12 md:gap-16">
-            <LinkList label="Mini-games." items={MINI_GAMES} />
-            <LinkList label="Side projects." items={SIDE_PROJECTS} />
-          </div>
-        )}
+        {/* Previously I — continuation of the bio */}
+        <div className="w-full max-w-2xl mx-auto md:ml-[15vw] lg:ml-[18vw] mt-4">
+          <PreviouslyList label="Previously I:" items={PREVIOUSLY} />
+        </div>
+
+        {/* Side projects (left) + mini games (right) */}
+        <div className="w-full max-w-4xl mx-auto md:ml-[15vw] lg:ml-[18vw] mt-10 md:mt-14 grid grid-cols-1 md:grid-cols-[2fr_1fr] gap-10 md:gap-14">
+          <LinkList label="Side projects." items={SIDE_PROJECTS} />
+          <LinkList label="Mini-games." items={MINI_GAMES} />
+        </div>
 
         {/* Lore */}
-        {isInteractive && (
-          <div className="w-full max-w-3xl mx-auto md:ml-[15vw] lg:ml-[18vw] mt-16 md:mt-24">
-            <LinkList label="Lore." items={LORE} variant="prose" />
-          </div>
-        )}
+        <div className="w-full max-w-3xl mx-auto md:ml-[15vw] lg:ml-[18vw] mt-10 md:mt-14">
+          <LinkList label="Lore." items={LORE} variant="prose" pointer />
+        </div>
 
-        {/* Writing */}
-        {isInteractive && (
-          <div className="w-full max-w-4xl mx-auto md:ml-[15vw] lg:ml-[18vw] mt-16 md:mt-24 pb-32">
-            <LinkList label="Writing." items={WRITING} />
+        {/* Writing + Tutorials (two columns) */}
+        <div className="w-full max-w-4xl mx-auto md:ml-[15vw] lg:ml-[18vw] mt-10 md:mt-14 grid grid-cols-1 md:grid-cols-[2fr_1fr] gap-10 md:gap-14">
+          <LinkList label="Writing." items={WRITING} pointer />
+          <div className="md:pt-10">
+            <LinkList items={TUTORIALS} pointer />
           </div>
-        )}
+        </div>
 
-        {!isInteractive && <div className="pb-32" />}
+        {/* Socials */}
+        <div className="w-full max-w-4xl mx-auto md:ml-[15vw] lg:ml-[18vw] mt-10 md:mt-14 pb-24">
+          <span className="text-[#131316]/35 text-xs uppercase tracking-widest block mb-4">
+            Find me on.
+          </span>
+          <div className="flex flex-wrap gap-x-5 gap-y-2 text-sm">
+            {SOCIALS.map((s) => (
+              <a
+                key={s.label}
+                href={s.href}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="group inline-flex items-center gap-1.5 text-[#131316]/60 hover:text-[#131316] transition-colors"
+              >
+                <img
+                  src={s.favicon}
+                  alt=""
+                  width={14}
+                  height={14}
+                  className="h-3.5 w-3.5 rounded-sm opacity-70 group-hover:opacity-100 transition-opacity"
+                />
+                <span className="hover-underline">{s.label}</span>
+              </a>
+            ))}
+          </div>
+        </div>
       </div>
+
+      {genzMode && <SubwaySurfersPip />}
     </main>
   );
 }
