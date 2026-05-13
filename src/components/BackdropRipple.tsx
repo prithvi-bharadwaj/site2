@@ -122,7 +122,7 @@ export function BackdropRipple() {
       for (const p of grid) {
         const a = DOT_BASE + proxAlpha(p.x, p.y, LIGHT_R, DOT_PEAK);
         if (a < 0.001) continue;
-        ctx.fillStyle = `rgba(244,245,248,${a})`;
+        ctx.fillStyle = `rgba(19, 19, 22,${a})`;
         ctx.fillRect(p.x - DOT_R, p.y - DOT_R, DOT_R * 2, DOT_R * 2);
       }
     }
@@ -149,7 +149,7 @@ export function BackdropRipple() {
         if (a < 0.001) continue;
         // Emitted particles slow down
         if (p.emit) { p.vx *= 0.98; p.vy *= 0.98; }
-        ctx.fillStyle = `rgba(244,245,248,${a})`;
+        ctx.fillStyle = `rgba(19, 19, 22,${a})`;
         ctx.beginPath();
         ctx.arc(p.x, p.y, p.s, 0, 6.283);
         ctx.fill();
@@ -166,8 +166,8 @@ export function BackdropRipple() {
         const a = (Math.sin(tick * 0.04 + i * 1.9) * 0.5 + 0.5) * 0.018;
         const sz = 15 + Math.sin(seed) * 12;
         const g = ctx.createRadialGradient(px, py, 0, px, py, sz);
-        g.addColorStop(0, `rgba(244,245,248,${a})`);
-        g.addColorStop(1, "rgba(244,245,248,0)");
+        g.addColorStop(0, `rgba(19, 19, 22,${a})`);
+        g.addColorStop(1, "rgba(19, 19, 22,0)");
         ctx.fillStyle = g;
         ctx.fillRect(px - sz, py - sz, sz * 2, sz * 2);
       }

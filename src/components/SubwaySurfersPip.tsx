@@ -20,8 +20,8 @@ export function SubwaySurfersPip() {
     <div
       className="fixed bottom-4 right-4 z-50 overflow-hidden rounded-xl shadow-2xl"
       style={{
-        width: 160,
-        height: 284,
+        width: 280,
+        height: 498,
         opacity: mounted ? 1 : 0,
         transform: mounted ? "translateY(0)" : "translateY(20px)",
         transition: "opacity 300ms ease-out, transform 300ms ease-out",

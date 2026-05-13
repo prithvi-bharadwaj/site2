@@ -98,11 +98,11 @@ export function StorySection({ id, title, children }: StorySectionProps) {
       }}
     >
       {title && (
-        <h3 className="text-sm font-bold text-[#F4F5F8] mb-3">
+        <h3 className="text-sm font-bold text-[#131316] mb-3">
           {titleRevealed ? title : titleScramble}
         </h3>
       )}
-      <div className="text-sm text-[#F4F5F8]/60 leading-relaxed space-y-3">
+      <div className="text-sm text-[#131316]/60 leading-relaxed space-y-3">
         {inView ? (
           <ScrambleRevealChildren>{children}</ScrambleRevealChildren>
         ) : (

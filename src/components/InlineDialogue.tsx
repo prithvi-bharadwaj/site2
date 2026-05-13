@@ -471,7 +471,7 @@ export function InlineDialogue({ segments }: { segments: DialogueSegment[] }) {
                 position: "absolute",
                 left: w.x,
                 top: w.y,
-                color: "#F4F5F8",
+                color: "#131316",
                 opacity: visible ? (isTrigger ? 0.9 : 0.6) : 0,
                 fontSize: 14,
                 fontWeight: 400,
@@ -480,7 +480,7 @@ export function InlineDialogue({ segments }: { segments: DialogueSegment[] }) {
                 pointerEvents: "none",
                 transition: `${POS_T}, opacity 200ms ease-out${!isTrigger ? `, transform 180ms ${EASE}` : ""}`,
                 ...(isTrigger ? {
-                  borderBottom: "1px dotted rgba(244,245,248,0.3)",
+                  borderBottom: "1px dotted rgba(19, 19, 22,0.3)",
                   paddingBottom: 1,
                 } : {}),
               }}
@@ -546,7 +546,7 @@ export function InlineDialogue({ segments }: { segments: DialogueSegment[] }) {
             href={activeSeg.action.href}
             target="_blank"
             rel="noopener noreferrer"
-            className="text-xs text-[#F4F5F8]/50 hover:text-[#F4F5F8]/80 transition-colors underline underline-offset-2"
+            className="text-xs text-[#131316]/50 hover:text-[#131316]/80 transition-colors underline underline-offset-2"
           >
             {activeSeg.action.label} →
           </a>

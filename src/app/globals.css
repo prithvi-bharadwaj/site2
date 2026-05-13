@@ -2,6 +2,14 @@
 
 @theme {
   --font-sans: "Be Vietnam Pro", ui-sans-serif, system-ui, sans-serif;
+  --text-xs: 0.9rem;
+  --text-sm: 1.05rem;
+  --text-base: 1.2rem;
+  --text-lg: 1.35rem;
+  --text-xl: 1.5rem;
+  --text-2xl: 1.8rem;
+  --text-3xl: 2.25rem;
+  --text-4xl: 2.7rem;
 }
 
 html,
@@ -10,8 +18,8 @@ body {
   padding: 0;
   width: 100%;
   height: 100%;
-  background: #131316;
-  color: #F4F5F8;
+  background: #FFFFFF;
+  color: #131316;
 }
 
 body::before {
@@ -40,7 +48,43 @@ main a {
 }
 
 main a:hover {
-  color: #fff;
+  color: #2563eb;
+}
+
+/* Inline brand chip: favicon + linked name (e.g. Roam, Voodoo). */
+.brand-link {
+  position: relative;
+  text-decoration: none;
+  /* Don't inherit the global a:hover color — handled per-element below. */
+}
+
+.brand-link-favicon {
+  opacity: 0.8;
+  transform-origin: center;
+  transition: transform 200ms var(--ease-out), opacity 200ms var(--ease-out);
+}
+
+.brand-link-text {
+  transition: color 200ms var(--ease-out), text-decoration-color 200ms var(--ease-out);
+  text-decoration: none;
+}
+
+.brand-link:hover .brand-link-favicon {
+  transform: scale(1.25);
+  opacity: 1;
+}
+
+.brand-link:hover .brand-link-text {
+  color: #2563eb;
+  text-decoration: underline;
+  text-decoration-color: #2563eb;
+  text-underline-offset: 3px;
+}
+
+/* Suppress the line-wide hover-underline sweep when a brand-link inside is the hover target. */
+.hover-underline:has(.brand-link:hover)::after {
+  width: 0 !important;
+  opacity: 0 !important;
 }
 
 /* Animated underline on hover — center-out */
@@ -208,7 +252,7 @@ a.project-item {
 
 @media (hover: hover) and (pointer: fine) {
   .work-item:hover {
-    background-color: rgba(244, 245, 248, 0.02);
+    background-color: rgba(19, 19, 22, 0.02);
   }
 }
 
@@ -264,13 +308,13 @@ a.project-item {
   bottom: 2px;
   width: 100%;
   height: 1px;
-  background: rgba(244, 245, 248, 0.4);
+  background: rgba(19, 19, 22, 0.4);
   transition: background 300ms var(--ease-out);
 }
 
 @media (hover: hover) and (pointer: fine) {
   .trigger-overlay:hover::after {
-    background: rgba(244, 245, 248, 0.8);
+    background: rgba(19, 19, 22, 0.8);
   }
 }
 
@@ -278,13 +322,13 @@ a.project-item {
 .action-link-overlay {
   display: block;
   text-decoration: none;
-  border-bottom: 1px solid rgba(244, 245, 248, 0.25);
+  border-bottom: 1px solid rgba(19, 19, 22, 0.25);
   cursor: pointer;
 }
 
 @media (hover: hover) and (pointer: fine) {
   .action-link-overlay:hover {
-    border-bottom-color: rgba(244, 245, 248, 0.5);
+    border-bottom-color: rgba(19, 19, 22, 0.5);
   }
 }
 
