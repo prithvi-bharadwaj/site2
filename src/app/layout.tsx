@@ -10,12 +10,14 @@ const sans = Be_Vietnam_Pro({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL("https://prithvibharadwaj.com"),
   title: "Prithvi",
   description: "Developer, creator, explorer.",
   openGraph: {
     title: "Prithvi",
     description: "Developer, creator, explorer.",
     type: "website",
+    url: "https://prithvibharadwaj.com",
   },
   twitter: {
     card: "summary_large_image",
@@ -50,7 +52,7 @@ export default function RootLayout({
               "@context": "https://schema.org",
               "@type": "Person",
               name: "Prithvi",
-              url: "https://prithvi.me",
+              url: "https://prithvibharadwaj.com",
               jobTitle: "Software Developer",
               description: "Developer, creator, explorer.",
               sameAs: [],
