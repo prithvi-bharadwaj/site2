@@ -1,12 +1,13 @@
 import type { Metadata, Viewport } from "next";
-import { Be_Vietnam_Pro } from "next/font/google";
+import { Inter } from "next/font/google";
 import "./globals.css";
 import { PromptInjection } from "@/components/PromptInjection";
+import { HoverCard } from "@/components/HoverCard";
 
-const sans = Be_Vietnam_Pro({
+const sans = Inter({
   subsets: ["latin"],
-  weight: ["400", "500", "700"],
-  variable: "--font-sans",
+  weight: ["300", "400", "500"],
+  variable: "--font-fallback",
 });
 
 export const metadata: Metadata = {
@@ -63,6 +64,7 @@ export default function RootLayout({
       <body className="font-sans">
         <PromptInjection />
         {children}
+        <HoverCard />
       </body>
     </html>
   );

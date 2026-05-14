@@ -38,7 +38,12 @@ const PREVIOUSLY: LinkListItem[] = [
   {
     title: "CTO at Roam - AI lab building generative world models for games backed by Long Journey, Streamlined ventures and angels from the big 4 ai labs (OpenAI, Anthropic, GDM, xAI)",
     brandLinks: [
-      { name: "Roam", href: "https://roam.lol", favicon: LOGO("roam") },
+      {
+        name: "Roam",
+        href: "https://roam.lol",
+        favicon: LOGO("roam"),
+        media: { type: "image", src: "https://picsum.photos/seed/roam/560/350" },
+      },
     ],
     expandFavicons: [
       LOGO("longjourney"),
@@ -52,15 +57,30 @@ const PREVIOUSLY: LinkListItem[] = [
   {
     title: "Made over 100+ Games for Voodoo and Supersonic",
     brandLinks: [
-      { name: "Voodoo", href: "https://www.voodoo.io", favicon: LOGO("voodoo") },
-      { name: "Supersonic", href: "https://www.supersonic.com", favicon: LOGO("supersonic") },
+      {
+        name: "Voodoo",
+        href: "https://www.voodoo.io",
+        favicon: LOGO("voodoo"),
+        media: { type: "image", src: "https://picsum.photos/seed/voodoo/560/350" },
+      },
+      {
+        name: "Supersonic",
+        href: "https://www.supersonic.com",
+        favicon: LOGO("supersonic"),
+        media: { type: "image", src: "https://picsum.photos/seed/supersonic/560/350" },
+      },
     ],
     links: [{ label: "gallery", href: "#" }],
   },
   {
     title: "Built an internal genAI app that lets you go from prompt → 3d multiplayer games in minutes for Roam",
     brandLinks: [
-      { name: "Roam", href: "https://roam.lol", favicon: LOGO("roam") },
+      {
+        name: "Roam",
+        href: "https://roam.lol",
+        favicon: LOGO("roam"),
+        media: { type: "image", src: "https://picsum.photos/seed/roam-genai/560/350" },
+      },
     ],
     links: [{ label: "roam.lol/info", href: "https://roam.lol/info", favicon: LOGO("roam") }],
   },
@@ -132,8 +152,18 @@ const LORE: LinkListItem[] = [
   {
     title: "Pretended to be an entire game development studio and managed to convince the world's largest mobile game publisher to work with me as a 19y old (Voodoo and Supersonic)",
     brandLinks: [
-      { name: "Voodoo", href: "https://www.voodoo.io", favicon: LOGO("voodoo") },
-      { name: "Supersonic", href: "https://www.supersonic.com", favicon: LOGO("supersonic") },
+      {
+        name: "Voodoo",
+        href: "https://www.voodoo.io",
+        favicon: LOGO("voodoo"),
+        media: { type: "image", src: "https://picsum.photos/seed/voodoo-studio/560/350" },
+      },
+      {
+        name: "Supersonic",
+        href: "https://www.supersonic.com",
+        favicon: LOGO("supersonic"),
+        media: { type: "image", src: "https://picsum.photos/seed/supersonic-studio/560/350" },
+      },
     ],
   },
   {

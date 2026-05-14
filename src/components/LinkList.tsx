@@ -1,11 +1,14 @@
 "use client";
 
 import { useEffect, useState, type ReactNode } from "react";
+import { emitShow, emitMove, emitHide, type HoverCardMedia } from "@/lib/hover-card-bus";
 
 export interface BrandLink {
   name: string;
   href: string;
   favicon: string;
+  /** Optional hover-preview media shown next to the cursor. */
+  media?: HoverCardMedia;
 }
 
 export interface LinkListItem {
@@ -51,6 +54,7 @@ function renderTitleWithBrands(title: string, brands?: BrandLink[]): ReactNode {
       (b) => b.name.toLowerCase() === part.toLowerCase()
     );
     if (brand) {
+      const media = brand.media;
       return (
         <a
           key={i}
@@ -58,6 +62,15 @@ function renderTitleWithBrands(title: string, brands?: BrandLink[]): ReactNode {
           target="_blank"
           rel="noopener noreferrer"
           onClick={(e) => e.stopPropagation()}
+          onPointerEnter={(e) => {
+            if (media && e.pointerType === "mouse") emitShow({ media, x: e.clientX, y: e.clientY });
+          }}
+          onPointerMove={(e) => {
+            if (media && e.pointerType === "mouse") emitMove({ x: e.clientX, y: e.clientY });
+          }}
+          onPointerLeave={(e) => {
+            if (media && e.pointerType === "mouse") emitHide();
+          }}
           className="brand-link inline-flex items-baseline gap-1"
         >
           <img
