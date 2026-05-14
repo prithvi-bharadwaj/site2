@@ -5,3 +5,4 @@ skill-runs.jsonl
 .DS_Store
 .gstack/
 .claude/
+.vercel
