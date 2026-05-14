@@ -14,7 +14,6 @@ import { EditPanel } from "@/components/EditPanel";
 const DEFAULTS = {
   greeting: "Hey, I'm Prithvi.",
   bio: "I've been building things on the internet since I was 13. Games first. Then AI. Then companies around both. I moved from Bangalore to sf to keep doing it.",
-  genz: `cto @ roam, building world models for 3d games + robotics. shipped 100+ games solo for voodoo and supersonic — they thought i was a studio. won buildspace out of 30k people. moved bangalore → sf. google check at 13. hacked farmville. sold hoodies to my whole school. play csgo and dota 2 (1v1 me bro).`,
 };
 
 type Content = typeof DEFAULTS;
@@ -258,8 +257,7 @@ export default function Home() {
     <main className="relative min-h-screen">
       <BackdropRipple />
 
-      {/* Gen Z mode toggle, fixed top-right */}
-      <div className="fixed top-4 right-4 z-40">
+      <div className={`fixed top-4 right-4 z-40 ${genzMode ? "hidden md:block" : ""}`}>
         <GenZToggle enabled={genzMode} onChange={setGenzMode} />
       </div>
 
@@ -268,7 +266,7 @@ export default function Home() {
       )}
 
       <div
-        className="relative px-8 md:px-0 pt-[18vh] md:pt-[22vh]"
+        className={`relative px-8 md:px-0 ${genzMode ? "pt-[calc(40vh+2rem)]" : "pt-[18vh]"} md:pt-[22vh]`}
         style={{ zIndex: 1 }}
       >
         {/* Hero */}
@@ -281,17 +279,6 @@ export default function Home() {
           )}
           <PretextHero greeting={content.greeting} bio={content.bio} />
         </div>
-
-        {/* GenZ TLDR — additive when enabled */}
-        {genzMode && (
-          <div className="w-full max-w-2xl mx-auto md:ml-[15vw] lg:ml-[18vw] mt-10 text-sm text-[#131316]/60 leading-relaxed">
-            <p className="text-[#131316]/50 text-xs uppercase tracking-wider mb-2">tldr</p>
-            {editMode && (
-              <EditPanel label="genz tldr" value={content.genz} onChange={(v) => update("genz", v)} />
-            )}
-            <p>{content.genz}</p>
-          </div>
-        )}
 
         {/* Previously I — continuation of the bio */}
         <div className="w-full max-w-2xl mx-auto md:ml-[15vw] lg:ml-[18vw] mt-4">
@@ -345,7 +332,7 @@ export default function Home() {
         </div>
       </div>
 
-      {genzMode && <SubwaySurfersPip />}
+      {genzMode && <SubwaySurfersPip onDismiss={() => setGenzMode(false)} />}
     </main>
   );
 }

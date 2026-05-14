@@ -3,34 +3,48 @@
 import { useState, useEffect } from "react";
 
 const VIDEO_ID = "z8aiT2lsuQc";
+const EXIT_MS = 280;
 
-export function SubwaySurfersPip() {
-  const [dismissed, setDismissed] = useState(false);
+interface SubwaySurfersPipProps {
+  onDismiss: () => void;
+}
+
+export function SubwaySurfersPip({ onDismiss }: SubwaySurfersPipProps) {
   const [mounted, setMounted] = useState(false);
+  const [exiting, setExiting] = useState(false);
 
   useEffect(() => {
-    // Slight delay so the PIP slides in after toggle
     const t = setTimeout(() => setMounted(true), 200);
     return () => clearTimeout(t);
   }, []);
 
-  if (dismissed) return null;
+  const handleDismiss = () => {
+    if (exiting) return;
+    setExiting(true);
+    setTimeout(onDismiss, EXIT_MS);
+  };
+
+  const visible = mounted && !exiting;
 
   return (
     <div
-      className="fixed bottom-4 right-4 z-50 overflow-hidden rounded-xl shadow-2xl"
+      className="
+        fixed z-50 overflow-hidden
+        top-0 left-0 right-0 h-[40vh]
+        md:top-auto md:left-auto md:bottom-4 md:right-4
+        md:h-[498px] md:w-[280px] md:rounded-xl md:shadow-2xl
+      "
       style={{
-        width: 280,
-        height: 498,
-        opacity: mounted ? 1 : 0,
-        transform: mounted ? "translateY(0)" : "translateY(20px)",
-        transition: "opacity 300ms ease-out, transform 300ms ease-out",
+        opacity: visible ? 1 : 0,
+        transform: visible ? "translateY(0) scale(1)" : "translateY(-12px) scale(0.96)",
+        transition: `opacity ${EXIT_MS}ms ease-out, transform ${EXIT_MS}ms ease-out`,
       }}
     >
       <button
-        onClick={() => setDismissed(true)}
-        className="absolute right-1.5 top-1.5 z-10 flex h-5 w-5 cursor-pointer items-center justify-center rounded-full text-xs text-white/70 transition-colors hover:text-white"
-        style={{ background: "rgba(0,0,0,0.5)", border: "none" }}
+        onClick={handleDismiss}
+        aria-label="turn off gen z mode"
+        className="absolute right-2 top-2 z-10 flex h-7 w-7 cursor-pointer items-center justify-center rounded-full text-sm text-white/80 transition-colors hover:text-white md:right-1.5 md:top-1.5 md:h-5 md:w-5 md:text-xs md:text-white/70"
+        style={{ background: "rgba(0,0,0,0.55)", border: "none" }}
       >
         ×
       </button>
