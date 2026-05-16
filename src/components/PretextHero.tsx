@@ -29,7 +29,7 @@ interface PretextHeroProps {
   className?: string;
 }
 
-const FONT_FAMILY = '"Be Vietnam Pro", sans-serif';
+const FONT_FAMILY = '-apple-system, BlinkMacSystemFont, "SF Pro Display", "Inter", "Segoe UI", system-ui, sans-serif';
 
 const SCRAMBLE_CONFIG: ScrambleConfig = {
   scrambleProbability: 0.65,

@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import type { BrandLink, LinkListItem } from "./LinkList";
+import { emitShow, emitMove, emitHide } from "@/lib/hover-card-bus";
 
 const EASE = "cubic-bezier(0.23, 1, 0.32, 1)";
 
@@ -107,6 +108,7 @@ export function PreviouslyList({ label, items }: PreviouslyListProps) {
                   if (/^\s+$/.test(w)) return <span key={wi}>{w}</span>;
                   const brand = matchBrand(w, item.brandLinks);
                   if (brand) {
+                    const media = brand.media;
                     return (
                       <a
                         key={wi}
@@ -115,6 +117,15 @@ export function PreviouslyList({ label, items }: PreviouslyListProps) {
                         rel="noopener noreferrer"
                         data-repel
                         onClick={(e) => e.stopPropagation()}
+                        onPointerEnter={(e) => {
+                          if (media && e.pointerType === "mouse") emitShow({ media, x: e.clientX, y: e.clientY });
+                        }}
+                        onPointerMove={(e) => {
+                          if (media && e.pointerType === "mouse") emitMove({ x: e.clientX, y: e.clientY });
+                        }}
+                        onPointerLeave={(e) => {
+                          if (media && e.pointerType === "mouse") emitHide();
+                        }}
                         className="brand-link inline-flex items-baseline gap-1 align-baseline"
                         style={{ transition: `transform 180ms ${EASE}` }}
                       >
