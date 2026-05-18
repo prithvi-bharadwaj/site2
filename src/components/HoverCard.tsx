@@ -3,8 +3,8 @@
 import { useEffect, useRef, useState } from "react";
 import { onShow, onMove, onHide, type HoverCardMedia } from "@/lib/hover-card-bus";
 
-const CARD_WIDTH = 280;
-const CARD_HEIGHT = 175;
+const CARD_WIDTH = 296;
+const CARD_HEIGHT = 230;
 const OFFSET_X = 16;
 const OFFSET_Y = 16;
 
@@ -95,6 +95,7 @@ export function HoverCard() {
           />
         )}
       </div>
+      {media?.caption && <div className="hover-card-caption">{media.caption}</div>}
     </div>
   );
 }

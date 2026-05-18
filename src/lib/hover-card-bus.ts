@@ -3,10 +3,15 @@
  * Uses CustomEvent on window so there's no React context plumbing required.
  */
 
+interface HoverCardMediaBase {
+  /** Optional caption shown below the preview. */
+  caption?: string;
+}
+
 export type HoverCardMedia =
-  | { type: "image"; src: string }
-  | { type: "video"; src: string; poster?: string }
-  | { type: "youtube"; id: string };
+  | (HoverCardMediaBase & { type: "image"; src: string })
+  | (HoverCardMediaBase & { type: "video"; src: string; poster?: string })
+  | (HoverCardMediaBase & { type: "youtube"; id: string });
 
 export interface HoverCardShowDetail {
   media: HoverCardMedia;
