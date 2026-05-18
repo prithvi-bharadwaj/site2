@@ -380,23 +380,25 @@ a.project-item {
   outline: none;
 }
 
-/* Hover-preview card — single fixed-position portal that follows the cursor */
+/* Hover-preview card — single fixed-position portal that follows the cursor.
+   Only opacity transitions; transform is set per-frame from JS and must not lag. */
 .hover-card {
   position: fixed;
   top: 0;
   left: 0;
-  width: 280px;
+  width: 296px;
   pointer-events: none;
   opacity: 0;
-  transform: translateY(4px);
-  transition: opacity 180ms var(--ease-out), transform 180ms var(--ease-out);
+  transition: opacity 140ms var(--ease-out);
   z-index: 90;
-  filter: drop-shadow(0 14px 20px rgba(0, 0, 0, 0.16));
+  background: #ffffff;
+  border-radius: 6px;
+  padding: 8px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06), 0 14px 28px rgba(0, 0, 0, 0.12);
 }
 
 .hover-card.visible {
   opacity: 1;
-  transform: translateY(0);
 }
 
 .hover-card-media {
@@ -405,7 +407,15 @@ a.project-item {
   height: 175px;
   overflow: hidden;
   background: #f5f5f5;
-  border-radius: 2px;
+  border-radius: 3px;
+}
+
+.hover-card-caption {
+  padding: 8px 4px 2px;
+  font-size: 11px;
+  line-height: 1.4;
+  color: rgba(19, 19, 22, 0.6);
+  letter-spacing: 0.005em;
 }
 
 .hover-card-img,

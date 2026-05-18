@@ -33,6 +33,7 @@ function loadContent(): Content {
 /* ── Lists data ── */
 
 const LOGO = (name: string) => `/logos/${name}_favicon.png`;
+const SHOT = (name: string) => `/screenshots/${name}.png`;
 
 const PREVIOUSLY: LinkListItem[] = [
   {
@@ -42,7 +43,11 @@ const PREVIOUSLY: LinkListItem[] = [
         name: "Roam",
         href: "https://roam.lol",
         favicon: LOGO("roam"),
-        media: { type: "image", src: "https://picsum.photos/seed/roam/560/350" },
+        media: {
+          type: "image",
+          src: SHOT("roam"),
+          caption: "roam.lol — generative world models for games",
+        },
       },
     ],
     expandFavicons: [
@@ -61,13 +66,21 @@ const PREVIOUSLY: LinkListItem[] = [
         name: "Voodoo",
         href: "https://www.voodoo.io",
         favicon: LOGO("voodoo"),
-        media: { type: "image", src: "https://picsum.photos/seed/voodoo/560/350" },
+        media: {
+          type: "image",
+          src: SHOT("voodoo"),
+          caption: "voodoo.io — world's largest hyper-casual game publisher",
+        },
       },
       {
         name: "Supersonic",
         href: "https://www.supersonic.com",
         favicon: LOGO("supersonic"),
-        media: { type: "image", src: "https://picsum.photos/seed/supersonic/560/350" },
+        media: {
+          type: "image",
+          src: SHOT("supersonic"),
+          caption: "supersonic.com — Unity's mobile game publishing arm",
+        },
       },
     ],
     links: [{ label: "gallery", href: "#" }],
@@ -79,7 +92,11 @@ const PREVIOUSLY: LinkListItem[] = [
         name: "Roam",
         href: "https://roam.lol",
         favicon: LOGO("roam"),
-        media: { type: "image", src: "https://picsum.photos/seed/roam-genai/560/350" },
+        media: {
+          type: "image",
+          src: SHOT("roam-info"),
+          caption: "roam.lol/info — prompt → 3d multiplayer game in minutes",
+        },
       },
     ],
     links: [{ label: "roam.lol/info", href: "https://roam.lol/info", favicon: LOGO("roam") }],
@@ -156,13 +173,21 @@ const LORE: LinkListItem[] = [
         name: "Voodoo",
         href: "https://www.voodoo.io",
         favicon: LOGO("voodoo"),
-        media: { type: "image", src: "https://picsum.photos/seed/voodoo-studio/560/350" },
+        media: {
+          type: "image",
+          src: SHOT("voodoo"),
+          caption: "voodoo.io — world's largest hyper-casual game publisher",
+        },
       },
       {
         name: "Supersonic",
         href: "https://www.supersonic.com",
         favicon: LOGO("supersonic"),
-        media: { type: "image", src: "https://picsum.photos/seed/supersonic-studio/560/350" },
+        media: {
+          type: "image",
+          src: SHOT("supersonic"),
+          caption: "supersonic.com — Unity's mobile game publishing arm",
+        },
       },
     ],
   },

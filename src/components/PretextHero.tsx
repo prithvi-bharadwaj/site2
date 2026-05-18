@@ -38,6 +38,9 @@ const SCRAMBLE_CONFIG: ScrambleConfig = {
   maxDelay: 400,
 };
 
+const BODY_FONT_SIZE = 13;
+const BODY_LINE_HEIGHT = 21;
+
 function buildSections(greeting: string, bio: string): SectionConfig[] {
   const commaIdx = greeting.indexOf(",");
   const sections: SectionConfig[] = [];
@@ -47,35 +50,35 @@ function buildSections(greeting: string, bio: string): SectionConfig[] {
     const second = greeting.slice(commaIdx + 1).trim();
     sections.push({
       blocks: [{ text: first, type: "heading" }],
-      font: `700 56px ${FONT_FAMILY}`,
-      fontSize: 56,
-      lineHeight: 64,
-      marginBottom: 8,
+      font: `400 ${BODY_FONT_SIZE}px ${FONT_FAMILY}`,
+      fontSize: BODY_FONT_SIZE,
+      lineHeight: BODY_LINE_HEIGHT,
+      marginBottom: 4,
     });
     if (second) {
       sections.push({
         blocks: [{ text: second, type: "accent" }],
-        font: `600 32px ${FONT_FAMILY}`,
-        fontSize: 32,
-        lineHeight: 40,
-        marginBottom: 56,
+        font: `400 ${BODY_FONT_SIZE}px ${FONT_FAMILY}`,
+        fontSize: BODY_FONT_SIZE,
+        lineHeight: BODY_LINE_HEIGHT,
+        marginBottom: 16,
       });
     }
   } else {
     sections.push({
       blocks: [{ text: greeting, type: "heading" }],
-      font: `700 56px ${FONT_FAMILY}`,
-      fontSize: 56,
-      lineHeight: 64,
-      marginBottom: 56,
+      font: `400 ${BODY_FONT_SIZE}px ${FONT_FAMILY}`,
+      fontSize: BODY_FONT_SIZE,
+      lineHeight: BODY_LINE_HEIGHT,
+      marginBottom: 16,
     });
   }
 
   sections.push({
     blocks: [{ text: bio, type: "body" }],
-    font: `400 17px ${FONT_FAMILY}`,
-    fontSize: 17,
-    lineHeight: 27.2,
+    font: `400 ${BODY_FONT_SIZE}px ${FONT_FAMILY}`,
+    fontSize: BODY_FONT_SIZE,
+    lineHeight: BODY_LINE_HEIGHT,
     marginBottom: 0,
   });
 
@@ -303,16 +306,10 @@ export function PretextHero({ greeting, bio, className }: PretextHeroProps) {
     const first = commaIdx > -1 ? greeting.slice(0, commaIdx + 1) : greeting;
     const second = commaIdx > -1 ? greeting.slice(commaIdx + 1).trim() : "";
     return (
-      <div className={className}>
-        <h1 className="text-4xl md:text-5xl font-bold text-[#131316] mb-2">
-          {first}
-        </h1>
-        {second && (
-          <p className="text-2xl md:text-3xl font-semibold text-[#131316] mb-14">
-            {second}
-          </p>
-        )}
-        <p className="text-base leading-relaxed max-w-2xl text-[#131316]/60">{bio}</p>
+      <div className={`text-sm text-[#131316]/60 leading-relaxed max-w-2xl ${className ?? ""}`}>
+        <p className="mb-1 text-[#131316]">{first}</p>
+        {second && <p className="mb-4 text-[#131316]">{second}</p>}
+        <p>{bio}</p>
       </div>
     );
   }
@@ -362,24 +359,10 @@ export function PretextHero({ greeting, bio, className }: PretextHeroProps) {
   );
 }
 
-function getFontSize(word: PositionedWord): number {
-  switch (word.block.type) {
-    case "heading":
-      return 56;
-    case "accent":
-      return 32;
-    default:
-      return 17;
-  }
+function getFontSize(_word: PositionedWord): number {
+  return BODY_FONT_SIZE;
 }
 
-function getFontWeight(word: PositionedWord): number {
-  switch (word.block.type) {
-    case "heading":
-      return 700;
-    case "accent":
-      return 600;
-    default:
-      return 400;
-  }
+function getFontWeight(_word: PositionedWord): number {
+  return 400;
 }
