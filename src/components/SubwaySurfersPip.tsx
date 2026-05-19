@@ -2,7 +2,8 @@
 
 import { useState, useEffect } from "react";
 
-const VIDEO_ID = "z8aiT2lsuQc";
+const VIDEO_ID = "QPW3XwBoQlw";
+const START_SECONDS = 1;
 
 export function SubwaySurfersPip() {
   const [dismissed, setDismissed] = useState(false);
@@ -36,7 +37,7 @@ export function SubwaySurfersPip() {
       </button>
 
       <iframe
-        src={`https://www.youtube.com/embed/${VIDEO_ID}?autoplay=1&mute=1&loop=1&controls=0&playlist=${VIDEO_ID}&playsinline=1`}
+        src={`https://www.youtube.com/embed/${VIDEO_ID}?autoplay=1&mute=1&loop=1&controls=0&playlist=${VIDEO_ID}&playsinline=1&start=${START_SECONDS}`}
         className="h-full w-full"
         allow="autoplay; encrypted-media"
         style={{ border: "none", pointerEvents: "none" }}

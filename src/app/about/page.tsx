@@ -1,11 +1,11 @@
 import { PageShell } from "@/components/PageShell";
 
 export const metadata = {
-  title: "About — Prithvi",
-  description: "Developer and creative coder. I build things at the intersection of code and craft — from WebGL renderers to interactive tools.",
+  title: "About - Prithvi",
+  description: "Developer and creative coder. I build things at the intersection of code and craft - from WebGL renderers to interactive tools.",
   openGraph: {
-    title: "About — Prithvi",
-    description: "Developer and creative coder. I build things at the intersection of code and craft — from WebGL renderers to interactive tools.",
+    title: "About - Prithvi",
+    description: "Developer and creative coder. I build things at the intersection of code and craft - from WebGL renderers to interactive tools.",
     type: "website",
   },
 };
@@ -18,13 +18,13 @@ export default function AboutPage() {
           [ who am i ]
         </p>
         <p data-animate className="text-white/70 text-sm leading-relaxed mb-3">
-          I build things. Software, mostly — but the impulse is the same whether
+          I build things. Software, mostly - but the impulse is the same whether
           it&apos;s a game, a tool, or something that has no practical use but feels
           right to make. I&apos;m drawn to the intersection of code and craft: places
           where the technical and the aesthetic are impossible to separate.
         </p>
         <p data-animate className="text-white/70 text-sm leading-relaxed mb-3">
-          I spend a lot of time thinking about systems — how they break, how they
+          I spend a lot of time thinking about systems - how they break, how they
           surprise you, and what happens when you push them past their intended
           edges. Some of my favorite work lives in that margin.
         </p>
@@ -44,7 +44,7 @@ export default function AboutPage() {
             "systems design + emergent complexity",
             "creative coding + generative art",
             "game design + interactive narrative",
-            "music — electronic, ambient, noise",
+            "music - electronic, ambient, noise",
             "rendering pipelines + WebGL",
             "tools that get out of your way",
           ].map((item) => (
@@ -72,7 +72,7 @@ export default function AboutPage() {
           one thing that probably shouldn&apos;t have worked but did.
         </p>
         <p data-animate className="text-white/70 text-sm leading-relaxed">
-          Currently focused on creative and interactive work — the kind of
+          Currently focused on creative and interactive work - the kind of
           software that has a point of view.
         </p>
       </section>

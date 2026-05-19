@@ -1,11 +1,11 @@
 import { PageShell } from "@/components/PageShell";
 
 export const metadata = {
-  title: "Projects — Prithvi",
-  description: "A collection of things I've built — WebGL renderers, procedural tools, browser-based audio sequencers, and other experiments.",
+  title: "Projects - Prithvi",
+  description: "A collection of things I've built - WebGL renderers, procedural tools, browser-based audio sequencers, and other experiments.",
   openGraph: {
-    title: "Projects — Prithvi",
-    description: "A collection of things I've built — WebGL renderers, procedural tools, browser-based audio sequencers, and other experiments.",
+    title: "Projects - Prithvi",
+    description: "A collection of things I've built - WebGL renderers, procedural tools, browser-based audio sequencers, and other experiments.",
     type: "website",
   },
 };
@@ -97,7 +97,7 @@ export default function ProjectsPage() {
   return (
     <PageShell title="projects">
       <p data-animate className="text-white/40 text-sm mb-8">
-        things i&apos;ve built — some shipped, some experiments, some both
+        things i&apos;ve built - some shipped, some experiments, some both
       </p>
       {projects.map((project) => (
         <ProjectCard key={project.title} project={project} />

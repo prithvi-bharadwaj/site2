@@ -11,14 +11,35 @@ export interface BrandLink {
   media?: HoverCardMedia;
 }
 
+export interface InlineLink {
+  /** Phrase inside the title that becomes a dotted-underline link. */
+  phrase: string;
+  href: string;
+  /** Optional hover-preview media shown next to the cursor. */
+  media?: HoverCardMedia;
+}
+
+export interface TrailingIcon {
+  name: string;
+  href: string;
+  /** Brand slug for inline SVG via <BrandIcon> (e.g. "openai", "anthropic"). */
+  slug?: string;
+  /** Fallback raster favicon when no slug is registered. */
+  favicon?: string;
+}
+
 export interface LinkListItem {
   title: string;
   href?: string;
   favicon?: string;
   /** Favicons rendered inline after the title text (for sentences mentioning multiple brands). */
   trailingFavicons?: string[];
+  /** Greyscale clickable icons rendered inline after the title text. */
+  trailingIcons?: TrailingIcon[];
   /** Inline brand chips: matching tokens in `title` render as favicon + linked name. */
   brandLinks?: BrandLink[];
+  /** Multi-word phrases inside `title` that render as dotted-underline links. */
+  inlineLinks?: InlineLink[];
   meta?: string;
   expand?: string;
   /** Extra favicons shown only when the item is expanded. */
@@ -76,9 +97,9 @@ function renderTitleWithBrands(title: string, brands?: BrandLink[]): ReactNode {
           <img
             src={brand.favicon}
             alt=""
-            width={14}
-            height={14}
-            className="brand-link-favicon inline-block h-3.5 w-3.5 rounded-sm align-text-bottom"
+            width={11}
+            height={11}
+            className="brand-link-favicon inline-block h-[0.7rem] w-[0.7rem] rounded-sm align-[-0.15em]"
           />
           <span className="brand-link-text">{part}</span>
         </a>
@@ -129,28 +150,28 @@ export function LinkList({ label, items, columns = 1, variant = "compact", point
               }`}
             >
               {pointer && (
-                <span className="text-[#131316]/30 mr-1.5">—</span>
+                <span className="text-[#131316]/30 mr-1.5">-</span>
               )}
               {item.favicon && (
                 <img
                   src={item.favicon}
                   alt=""
-                  className="h-3.5 w-3.5 rounded-sm opacity-70 group-hover:opacity-100 transition-opacity inline-block align-text-bottom mr-1.5"
-                  width={14}
-                  height={14}
+                  className="h-[0.7rem] w-[0.7rem] rounded-sm opacity-70 group-hover:opacity-100 transition-opacity inline-block align-[-0.15em] mr-1.5"
+                  width={11}
+                  height={11}
                 />
               )}
               {renderTitleWithBrands(item.title, item.brandLinks)}
               {item.trailingFavicons && item.trailingFavicons.length > 0 && (
-                <span className="inline-flex items-center gap-1 ml-1.5 align-text-bottom">
+                <span className="inline-flex items-center gap-1 ml-1.5 align-[-0.15em]">
                   {item.trailingFavicons.map((src) => (
                     <img
                       key={src}
                       src={src}
                       alt=""
-                      className="h-3.5 w-3.5 rounded-sm opacity-70 group-hover:opacity-100 transition-opacity inline-block"
-                      width={14}
-                      height={14}
+                      className="h-[0.7rem] w-[0.7rem] rounded-sm opacity-70 group-hover:opacity-100 transition-opacity inline-block"
+                      width={11}
+                      height={11}
                     />
                   ))}
                 </span>

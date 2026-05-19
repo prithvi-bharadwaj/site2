@@ -38,10 +38,18 @@ const SCRAMBLE_CONFIG: ScrambleConfig = {
   maxDelay: 400,
 };
 
-const BODY_FONT_SIZE = 13;
-const BODY_LINE_HEIGHT = 21;
+// Match Tailwind text-sm (0.8125rem) at the body's font-weight 300 + line-height 1.62.
+const BODY_FONT_REM = 0.8125;
+const BODY_FONT_WEIGHT = 300;
+const BODY_LINE_HEIGHT_RATIO = 1.62;
 
-function buildSections(greeting: string, bio: string): SectionConfig[] {
+function rootFontPx(): number {
+  if (typeof window === "undefined") return 16;
+  return parseFloat(getComputedStyle(document.documentElement).fontSize) || 16;
+}
+
+function buildSections(greeting: string, bio: string, fontPx: number, linePx: number): SectionConfig[] {
+  const fontShorthand = `${BODY_FONT_WEIGHT} ${fontPx}px ${FONT_FAMILY}`;
   const commaIdx = greeting.indexOf(",");
   const sections: SectionConfig[] = [];
 
@@ -49,36 +57,36 @@ function buildSections(greeting: string, bio: string): SectionConfig[] {
     const first = greeting.slice(0, commaIdx + 1);
     const second = greeting.slice(commaIdx + 1).trim();
     sections.push({
-      blocks: [{ text: first, type: "heading" }],
-      font: `400 ${BODY_FONT_SIZE}px ${FONT_FAMILY}`,
-      fontSize: BODY_FONT_SIZE,
-      lineHeight: BODY_LINE_HEIGHT,
+      blocks: [{ text: first, type: "heading", baseOpacity: 0.6 }],
+      font: fontShorthand,
+      fontSize: fontPx,
+      lineHeight: linePx,
       marginBottom: 4,
     });
     if (second) {
       sections.push({
-        blocks: [{ text: second, type: "accent" }],
-        font: `400 ${BODY_FONT_SIZE}px ${FONT_FAMILY}`,
-        fontSize: BODY_FONT_SIZE,
-        lineHeight: BODY_LINE_HEIGHT,
+        blocks: [{ text: second, type: "accent", baseOpacity: 0.6 }],
+        font: fontShorthand,
+        fontSize: fontPx,
+        lineHeight: linePx,
         marginBottom: 16,
       });
     }
   } else {
     sections.push({
-      blocks: [{ text: greeting, type: "heading" }],
-      font: `400 ${BODY_FONT_SIZE}px ${FONT_FAMILY}`,
-      fontSize: BODY_FONT_SIZE,
-      lineHeight: BODY_LINE_HEIGHT,
+      blocks: [{ text: greeting, type: "heading", baseOpacity: 0.6 }],
+      font: fontShorthand,
+      fontSize: fontPx,
+      lineHeight: linePx,
       marginBottom: 16,
     });
   }
 
   sections.push({
     blocks: [{ text: bio, type: "body" }],
-    font: `400 ${BODY_FONT_SIZE}px ${FONT_FAMILY}`,
-    fontSize: BODY_FONT_SIZE,
-    lineHeight: BODY_LINE_HEIGHT,
+    font: fontShorthand,
+    fontSize: fontPx,
+    lineHeight: linePx,
     marginBottom: 0,
   });
 
@@ -189,12 +197,17 @@ export function PretextHero({ greeting, bio, className }: PretextHeroProps) {
     maxDisplacement: isMobile ? 20 : 30,
   };
 
+  const fontPxRef = useRef(BODY_FONT_REM * 16);
+
   const computeLayout = useCallback(() => {
     const container = containerRef.current;
     if (!container) return;
     const containerWidth = container.clientWidth;
     if (containerWidth <= 0) return;
-    const sections = buildSections(greeting, bio);
+    const fontPx = BODY_FONT_REM * rootFontPx();
+    const linePx = fontPx * BODY_LINE_HEIGHT_RATIO;
+    fontPxRef.current = fontPx;
+    const sections = buildSections(greeting, bio, fontPx, linePx);
     const result = layoutHero({ sections, containerWidth });
     setLayout(result);
   }, [greeting, bio]);
@@ -341,8 +354,8 @@ export function PretextHero({ greeting, bio, className }: PretextHeroProps) {
               top: word.y,
               color: word.block.color,
               opacity: isVisible ? word.block.baseOpacity : 0,
-              fontSize: getFontSize(word),
-              fontWeight: getFontWeight(word),
+              fontSize: fontPxRef.current,
+              fontWeight: BODY_FONT_WEIGHT,
               fontFamily: FONT_FAMILY,
               whiteSpace: "pre",
               willChange: coarsePointer ? undefined : "transform, opacity",
@@ -359,10 +372,3 @@ export function PretextHero({ greeting, bio, className }: PretextHeroProps) {
   );
 }
 
-function getFontSize(_word: PositionedWord): number {
-  return BODY_FONT_SIZE;
-}
-
-function getFontWeight(_word: PositionedWord): number {
-  return 400;
-}
