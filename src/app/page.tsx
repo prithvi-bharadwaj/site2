@@ -14,7 +14,7 @@ import { EditPanel } from "@/components/EditPanel";
 const DEFAULTS = {
   greeting: "Hey, I'm Prithvi.",
   bio: "I've been building things on the internet since I was 13. Games first. Then AI. Then companies around both. I moved from Bangalore to sf to keep doing it.",
-  genz: `cto @ roam, building world models for 3d games + robotics. shipped 100+ games solo for voodoo and supersonic - they thought i was a studio. won buildspace out of 30k people. moved bangalore → sf. google check at 13. hacked farmville. sold hoodies to my whole school. play csgo and dota 2 (1v1 me bro).`,
+  genz: `head of engineering @ roam, building world models for 3d games + robotics. shipped 100+ games solo for voodoo and supersonic - they thought i was a studio. won buildspace out of 30k people. moved bangalore → sf. google check at 13. hacked farmville. sold hoodies to my whole school. play csgo and dota 2 (1v1 me bro).`,
 };
 
 type Content = typeof DEFAULTS;
@@ -37,7 +37,7 @@ const SHOT = (name: string) => `/screenshots/${name}.png`;
 
 const PREVIOUSLY: LinkListItem[] = [
   {
-    title: "CTO at Roam - AI lab building generative world models for games. Backed by Long Journey, Streamlined ventures and angels from",
+    title: "Head of Engineering at Roam - AI lab building generative world models for games. Raised $4.5M from Long Journey Ventures, Streamlined Ventures and angels from",
     brandLinks: [
       {
         name: "Roam",
@@ -58,7 +58,7 @@ const PREVIOUSLY: LinkListItem[] = [
     ],
   },
   {
-    title: "Made over 100+ Games for Voodoo and Supersonic",
+    title: "Made over 100+ Games for Voodoo and Supersonic - 200K+ cumulative downloads",
     brandLinks: [
       {
         name: "Voodoo",
@@ -111,7 +111,7 @@ const PREVIOUSLY: LinkListItem[] = [
     ],
   },
   {
-    title: "I bootstrapped my own game studio at 19",
+    title: "I bootstrapped my own game studio at 19 - profitable, 10+ employees at peak, $100K+ revenue",
     inlineLinks: [
       {
         phrase: "game studio",
@@ -160,7 +160,22 @@ const SIDE_PROJECTS: LinkListItem[] = [
     title: "SerendipityMaxxing - app that lets u cold email maxx. bring your own tokens",
   },
   {
-    title: "Finbite - Duolingo for finance. 10K+ downloads",
+    title: "Antigravity IDE for Unity - integrates Google's Antigravity IDE with Unity for AI-assisted game dev",
+    links: [
+      { label: "github", href: "https://github.com/prithvi-bharadwaj/Antigravity-IDE", favicon: LOGO("github") },
+    ],
+  },
+  {
+    title: "Finbite - Duolingo for finance. 10K+ downloads, partnered with local schools for financial literacy curriculum",
+  },
+];
+
+const ACHIEVEMENTS: LinkListItem[] = [
+  {
+    title: "1st place, Google DeepMind × Stanford AI-Generated Game Contest (Apr 2026) - hosted by GDG Stanford, sponsored by DeepMind. Won for Voxel Demolish",
+    inlineLinks: [
+      { phrase: "Voxel Demolish", href: "https://youtube.com/shorts/E4fyqr_semE" },
+    ],
   },
 ];
 
@@ -359,6 +374,11 @@ export default function Home() {
         {/* Previously I — continuation of the bio */}
         <div className="w-full max-w-2xl mx-auto md:ml-[15vw] lg:ml-[18vw] mt-4">
           <PreviouslyList label="Previously:" items={PREVIOUSLY} />
+        </div>
+
+        {/* Achievements */}
+        <div className="w-full max-w-2xl mx-auto md:ml-[15vw] lg:ml-[18vw] mt-10 md:mt-14">
+          <LinkList label="Achievements." items={ACHIEVEMENTS} variant="prose" pointer />
         </div>
 
         {/* Side projects (left) + mini games (right) */}
