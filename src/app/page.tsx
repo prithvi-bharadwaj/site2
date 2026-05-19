@@ -219,7 +219,7 @@ const WRITING: LinkListItem[] = [
 
 const TUTORIALS: LinkListItem[] = [
   {
-    title: "How to use Antigravity in Unity…",
+    title: "Antigravity IDE for unity",
     meta: "may 2024",
     href: "https://medium.com/@prithvibofficial/how-to-use-antigravity-in-unity-for-game-development-8da2cbc353cb",
     favicon: "/logos/medium.svg",
