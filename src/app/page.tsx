@@ -14,7 +14,7 @@ import { EditPanel } from "@/components/EditPanel";
 const DEFAULTS = {
   greeting: "Hey, I'm Prithvi.",
   bio: "I've been building things on the internet since I was 13. Games first. Then AI. Then companies around both. I moved from Bangalore to sf to keep doing it.",
-  genz: `cto @ roam, building world models for 3d games + robotics. shipped 100+ games solo for voodoo and supersonic — they thought i was a studio. won buildspace out of 30k people. moved bangalore → sf. google check at 13. hacked farmville. sold hoodies to my whole school. play csgo and dota 2 (1v1 me bro).`,
+  genz: `cto @ roam, building world models for 3d games + robotics. shipped 100+ games solo for voodoo and supersonic - they thought i was a studio. won buildspace out of 30k people. moved bangalore → sf. google check at 13. hacked farmville. sold hoodies to my whole school. play csgo and dota 2 (1v1 me bro).`,
 };
 
 type Content = typeof DEFAULTS;
@@ -37,7 +37,7 @@ const SHOT = (name: string) => `/screenshots/${name}.png`;
 
 const PREVIOUSLY: LinkListItem[] = [
   {
-    title: "CTO at Roam - AI lab building generative world models for games backed by Long Journey, Streamlined ventures and angels from the big 4 ai labs (OpenAI, Anthropic, GDM, xAI)",
+    title: "CTO at Roam - AI lab building generative world models for games. Backed by Long Journey, Streamlined ventures and angels from",
     brandLinks: [
       {
         name: "Roam",
@@ -46,17 +46,15 @@ const PREVIOUSLY: LinkListItem[] = [
         media: {
           type: "image",
           src: SHOT("roam"),
-          caption: "roam.lol — generative world models for games",
+          caption: "roam.lol - generative world models for games",
         },
       },
     ],
-    expandFavicons: [
-      LOGO("longjourney"),
-      LOGO("streamlined"),
-      LOGO("openai"),
-      LOGO("anthropic"),
-      LOGO("deepmind"),
-      LOGO("xai"),
+    trailingIcons: [
+      { name: "OpenAI", href: "https://openai.com", slug: "openai" },
+      { name: "Anthropic", href: "https://anthropic.com", slug: "anthropic" },
+      { name: "Google DeepMind", href: "https://deepmind.google", slug: "deepmind" },
+      { name: "xAI", href: "https://x.ai", slug: "xai" },
     ],
   },
   {
@@ -69,7 +67,7 @@ const PREVIOUSLY: LinkListItem[] = [
         media: {
           type: "image",
           src: SHOT("voodoo"),
-          caption: "voodoo.io — world's largest hyper-casual game publisher",
+          caption: "voodoo.io - world's largest hyper-casual game publisher",
         },
       },
       {
@@ -79,7 +77,7 @@ const PREVIOUSLY: LinkListItem[] = [
         media: {
           type: "image",
           src: SHOT("supersonic"),
-          caption: "supersonic.com — Unity's mobile game publishing arm",
+          caption: "supersonic.com - Unity's mobile game publishing arm",
         },
       },
     ],
@@ -95,7 +93,7 @@ const PREVIOUSLY: LinkListItem[] = [
         media: {
           type: "image",
           src: SHOT("roam-info"),
-          caption: "roam.lol/info — prompt → 3d multiplayer game in minutes",
+          caption: "roam.lol/info - prompt → 3d multiplayer game in minutes",
         },
       },
     ],
@@ -103,15 +101,28 @@ const PREVIOUSLY: LinkListItem[] = [
   },
   {
     title: "Created a video game based on MrBeast in <6 weeks",
-    links: [{ label: "demo video", href: "https://youtube.com", favicon: LOGO("youtube") }],
+    inlineLinks: [{ phrase: "video game", href: "https://youtube.com" }],
   },
   {
-    title: "Won a live gameshow from the world's largest online school for builders",
-    expand: "from Buildspace, YC + a16z backed startup based in sf. 30k+ ppl and teams took part in it.",
-    links: [{ label: "watch the finale", href: "https://x.com/FarzaTV/status/1719091708775059754" }],
+    title: "Won a live game show from Buildspace - the world's largest online school for builders",
+    inlineLinks: [
+      { phrase: "live game show", href: "https://x.com/FarzaTV/status/1719091708775059754" },
+      { phrase: "Buildspace", href: "https://buildspace.so/" },
+    ],
   },
   {
-    title: "Created a Gaming Studio",
+    title: "I bootstrapped my own game studio at 19",
+    inlineLinks: [
+      {
+        phrase: "game studio",
+        href: "https://www.skive.in",
+        media: {
+          type: "image",
+          src: SHOT("skive"),
+          caption: "skive.in - the game studio i bootstrapped at 19",
+        },
+      },
+    ],
   },
   {
     title: "Started a design agency that did video editing + managed socials for consumer SMBs",
@@ -127,7 +138,7 @@ const MINI_GAMES: LinkListItem[] = [
 
 const SIDE_PROJECTS: LinkListItem[] = [
   {
-    title: "Reflink — clipboard extension for WisprFlow",
+    title: "Reflink - clipboard extension for WisprFlow",
     favicon: LOGO("wisprflow"),
     links: [
       { label: "github", href: "https://github.com", favicon: LOGO("github") },
@@ -135,7 +146,7 @@ const SIDE_PROJECTS: LinkListItem[] = [
     ],
   },
   {
-    title: "ToDo — personalized todo list app. secret to my efficiency and cure to my context switching",
+    title: "Personal Agent OS that executes your todo list via apple menu bar",
     expand: "syncs to obsidian and google cal. lets agents see a log of your work.",
     links: [
       { label: "obsidian", href: "https://obsidian.md", favicon: LOGO("obsidian") },
@@ -143,16 +154,13 @@ const SIDE_PROJECTS: LinkListItem[] = [
     ],
   },
   {
-    title: "Warden — OSS Warden clone",
+    title: "Warden - OSS Warden clone",
   },
   {
-    title: "Looksmaxxing — app that makes u feel bad about yourself and how ugly you are",
+    title: "SerendipityMaxxing - app that lets u cold email maxx. bring your own tokens",
   },
   {
-    title: "SerendipityMaxxing — app that lets u cold email maxx. bring your own tokens",
-  },
-  {
-    title: "Finbite — Duolingo for finance. 10K+ downloads",
+    title: "Finbite - Duolingo for finance. 10K+ downloads",
   },
 ];
 
@@ -176,7 +184,7 @@ const LORE: LinkListItem[] = [
         media: {
           type: "image",
           src: SHOT("voodoo"),
-          caption: "voodoo.io — world's largest hyper-casual game publisher",
+          caption: "voodoo.io - world's largest hyper-casual game publisher",
         },
       },
       {
@@ -186,7 +194,7 @@ const LORE: LinkListItem[] = [
         media: {
           type: "image",
           src: SHOT("supersonic"),
-          caption: "supersonic.com — Unity's mobile game publishing arm",
+          caption: "supersonic.com - Unity's mobile game publishing arm",
         },
       },
     ],
@@ -350,7 +358,7 @@ export default function Home() {
 
         {/* Previously I — continuation of the bio */}
         <div className="w-full max-w-2xl mx-auto md:ml-[15vw] lg:ml-[18vw] mt-4">
-          <PreviouslyList label="Previously I:" items={PREVIOUSLY} />
+          <PreviouslyList label="Previously:" items={PREVIOUSLY} />
         </div>
 
         {/* Side projects (left) + mini games (right) */}
@@ -389,9 +397,9 @@ export default function Home() {
                 <img
                   src={s.favicon}
                   alt=""
-                  width={14}
-                  height={14}
-                  className="h-3.5 w-3.5 rounded-sm opacity-70 group-hover:opacity-100 transition-opacity"
+                  width={11}
+                  height={11}
+                  className="h-[0.7rem] w-[0.7rem] rounded-sm opacity-70 group-hover:opacity-100 transition-opacity"
                 />
                 <span className="hover-underline">{s.label}</span>
               </a>

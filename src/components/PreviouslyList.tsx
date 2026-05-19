@@ -1,16 +1,40 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import type { BrandLink, LinkListItem } from "./LinkList";
+import type { BrandLink, InlineLink, LinkListItem } from "./LinkList";
+import { BrandIcon, hasBrandIcon } from "./BrandIcon";
 import { emitShow, emitMove, emitHide } from "@/lib/hover-card-bus";
 
 const EASE = "cubic-bezier(0.23, 1, 0.32, 1)";
+const DOTTED = "1px dotted rgba(19, 19, 22, 0.35)";
 
-function matchBrand(word: string, brands?: BrandLink[]): BrandLink | undefined {
-  if (!brands) return undefined;
-  const clean = word.replace(/^[^\w]+|[^\w]+$/g, "").toLowerCase();
-  if (!clean) return undefined;
-  return brands.find((b) => b.name.toLowerCase() === clean);
+function escapeRegex(s: string) {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+type Segment =
+  | { kind: "plain"; text: string }
+  | { kind: "brand"; text: string; brand: BrandLink }
+  | { kind: "inline"; text: string; link: InlineLink };
+
+function tokenize(title: string, brands?: BrandLink[], inline?: InlineLink[]): Segment[] {
+  const patterns: { kind: "brand" | "inline"; match: string; payload: BrandLink | InlineLink }[] = [
+    ...(inline ?? []).map((l) => ({ kind: "inline" as const, match: l.phrase, payload: l })),
+    ...(brands ?? []).map((b) => ({ kind: "brand" as const, match: b.name, payload: b })),
+  ].sort((a, b) => b.match.length - a.match.length);
+
+  if (patterns.length === 0) return [{ kind: "plain", text: title }];
+
+  const regex = new RegExp(`(${patterns.map((p) => escapeRegex(p.match)).join("|")})`, "gi");
+  return title
+    .split(regex)
+    .filter((part) => part.length > 0)
+    .map<Segment>((part) => {
+      const hit = patterns.find((p) => p.match.toLowerCase() === part.toLowerCase());
+      if (!hit) return { kind: "plain", text: part };
+      if (hit.kind === "brand") return { kind: "brand", text: part, brand: hit.payload as BrandLink };
+      return { kind: "inline", text: part, link: hit.payload as InlineLink };
+    });
 }
 
 interface PreviouslyListProps {
@@ -77,7 +101,7 @@ export function PreviouslyList({ label, items }: PreviouslyListProps) {
             (item.links && item.links.length > 0) ||
             (item.expandFavicons && item.expandFavicons.length > 0);
           const isOpen = open === i;
-          const words = item.title.split(/(\s+)/);
+          const segments = tokenize(item.title, item.brandLinks, item.inlineLinks);
 
           return (
             <li key={i} className="m-0 p-0">
@@ -91,28 +115,26 @@ export function PreviouslyList({ label, items }: PreviouslyListProps) {
                   className="inline-block text-[#131316]/30 mr-2"
                   style={{ transition: `transform 180ms ${EASE}` }}
                 >
-                  —
+                  -
                 </span>
                 {item.favicon && (
                   <img
                     src={item.favicon}
                     alt=""
-                    width={14}
-                    height={14}
+                    width={11}
+                    height={11}
                     data-repel
-                    className="inline-block align-text-bottom h-3.5 w-3.5 mr-1 rounded-sm opacity-70 group-hover:opacity-100"
+                    className="inline-block align-[-0.15em] h-[0.7rem] w-[0.7rem] mr-1 rounded-sm opacity-70 group-hover:opacity-100"
                     style={{ transition: `transform 180ms ${EASE}, opacity 200ms` }}
                   />
                 )}
-                {words.map((w, wi) => {
-                  if (/^\s+$/.test(w)) return <span key={wi}>{w}</span>;
-                  const brand = matchBrand(w, item.brandLinks);
-                  if (brand) {
-                    const media = brand.media;
+                {segments.map((seg, si) => {
+                  if (seg.kind === "brand") {
+                    const media = seg.brand.media;
                     return (
                       <a
-                        key={wi}
-                        href={brand.href}
+                        key={si}
+                        href={seg.brand.href}
                         target="_blank"
                         rel="noopener noreferrer"
                         data-repel
@@ -130,47 +152,123 @@ export function PreviouslyList({ label, items }: PreviouslyListProps) {
                         style={{ transition: `transform 180ms ${EASE}` }}
                       >
                         <img
-                          src={brand.favicon}
+                          src={seg.brand.favicon}
                           alt=""
-                          width={14}
-                          height={14}
-                          className="brand-link-favicon inline-block h-3.5 w-3.5 rounded-sm align-text-bottom"
+                          width={11}
+                          height={11}
+                          className="brand-link-favicon inline-block h-[0.7rem] w-[0.7rem] rounded-sm align-[-0.15em]"
                         />
-                        <span className="brand-link-text">{w}</span>
+                        <span
+                          className="brand-link-text"
+                          style={{ borderBottom: DOTTED, paddingBottom: 1 }}
+                        >
+                          {seg.text}
+                        </span>
                       </a>
                     );
                   }
-                  return (
-                    <span
-                      key={wi}
-                      data-repel
-                      className={
-                        expandable
-                          ? "inline-block group-hover:text-[#131316]/90"
-                          : "inline-block"
-                      }
-                      style={{
-                        transition: `transform 180ms ${EASE}, color 200ms`,
-                        ...(expandable
-                          ? { borderBottom: "1px dotted rgba(19, 19, 22,0.18)", paddingBottom: 1 }
-                          : {}),
-                      }}
-                    >
-                      {w}
-                    </span>
-                  );
+                  if (seg.kind === "inline") {
+                    const segWords = seg.text.split(/(\s+)/);
+                    const media = seg.link.media;
+                    return (
+                      <a
+                        key={si}
+                        href={seg.link.href}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        onClick={(e) => e.stopPropagation()}
+                        onPointerEnter={(e) => {
+                          if (media && e.pointerType === "mouse") emitShow({ media, x: e.clientX, y: e.clientY });
+                        }}
+                        onPointerMove={(e) => {
+                          if (media && e.pointerType === "mouse") emitMove({ x: e.clientX, y: e.clientY });
+                        }}
+                        onPointerLeave={(e) => {
+                          if (media && e.pointerType === "mouse") emitHide();
+                        }}
+                        className="inline-baseline text-[#131316]/75 hover:text-[#131316]"
+                        style={{ textDecoration: "none" }}
+                      >
+                        {segWords.map((w, wi) => {
+                          if (/^\s+$/.test(w)) return <span key={wi}>{w}</span>;
+                          return (
+                            <span
+                              key={wi}
+                              data-repel
+                              className="inline-block"
+                              style={{
+                                transition: `transform 180ms ${EASE}, color 200ms`,
+                                borderBottom: DOTTED,
+                                paddingBottom: 1,
+                              }}
+                            >
+                              {w}
+                            </span>
+                          );
+                        })}
+                      </a>
+                    );
+                  }
+                  // plain
+                  const segWords = seg.text.split(/(\s+)/);
+                  return segWords.map((w, wi) => {
+                    if (/^\s+$/.test(w)) return <span key={`${si}-${wi}`}>{w}</span>;
+                    return (
+                      <span
+                        key={`${si}-${wi}`}
+                        data-repel
+                        className="inline-block"
+                        style={{ transition: `transform 180ms ${EASE}, color 200ms` }}
+                      >
+                        {w}
+                      </span>
+                    );
+                  });
                 })}
+                {item.trailingIcons && item.trailingIcons.length > 0 && (
+                  <span className="inline-flex items-center gap-2 ml-2 align-[-0.15em]">
+                    {item.trailingIcons.map((icon) => {
+                      const useSvg = icon.slug && hasBrandIcon(icon.slug);
+                      return (
+                        <a
+                          key={icon.href}
+                          href={icon.href}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          onClick={(e) => e.stopPropagation()}
+                          title={icon.name}
+                          data-repel
+                          className="inline-block text-[#131316]/55 hover:text-[#131316]"
+                          style={{ transition: `transform 180ms ${EASE}, color 200ms, opacity 200ms` }}
+                        >
+                          {useSvg ? (
+                            <BrandIcon slug={icon.slug!} size={14} title={icon.name} className="inline-block align-[-0.15em]" />
+                          ) : icon.favicon ? (
+                            <img
+                              src={icon.favicon}
+                              alt={icon.name}
+                              width={11}
+                              height={11}
+                              className="h-[0.7rem] w-[0.7rem] rounded-sm opacity-70 hover:opacity-100 align-[-0.15em]"
+                              style={{ filter: "grayscale(1)" }}
+                            />
+                          ) : null}
+                        </a>
+                      );
+                    })}
+                  </span>
+                )}
                 {item.trailingFavicons && item.trailingFavicons.length > 0 && (
-                  <span className="inline-flex items-center gap-1 ml-1.5 align-text-bottom">
+                  <span className="inline-flex items-center gap-1 ml-1.5 align-[-0.15em]">
                     {item.trailingFavicons.map((src) => (
                       <img
                         key={src}
                         src={src}
                         alt=""
-                        width={14}
-                        height={14}
+                        width={11}
+                        height={11}
                         data-repel
-                        className="inline-block h-3.5 w-3.5 rounded-sm opacity-70"
+                        className="inline-block h-[0.7rem] w-[0.7rem] rounded-sm opacity-70"
                         style={{ transition: `transform 180ms ${EASE}` }}
                       />
                     ))}

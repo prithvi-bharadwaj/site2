@@ -1,11 +1,11 @@
 import { PageShell } from "@/components/PageShell";
 
 export const metadata = {
-  title: "Writing — Prithvi",
-  description: "Occasional notes on building things — WebGL, creative coding, systems design, and finishing what you start.",
+  title: "Writing - Prithvi",
+  description: "Occasional notes on building things - WebGL, creative coding, systems design, and finishing what you start.",
   openGraph: {
-    title: "Writing — Prithvi",
-    description: "Occasional notes on building things — WebGL, creative coding, systems design, and finishing what you start.",
+    title: "Writing - Prithvi",
+    description: "Occasional notes on building things - WebGL, creative coding, systems design, and finishing what you start.",
     type: "website",
   },
 };
@@ -27,7 +27,7 @@ const entries: Entry[] = [
   },
   {
     date: "2026-01",
-    title: "WebGL isn't scary — the coordinate systems are",
+    title: "WebGL isn't scary - the coordinate systems are",
     excerpt:
       "Every time I start a new WebGL project I spend the first hour confused about why nothing is appearing on screen. It's never the shader. It's the clip space, or the texture orientation, or the projection matrix. Here's what I've internalized so far.",
     href: "#",
@@ -43,7 +43,7 @@ const entries: Entry[] = [
     date: "2025-09",
     title: "Noise functions as design material",
     excerpt:
-      "Perlin noise, simplex noise, curl noise — these are usually taught as tricks for terrain or fire effects. But they're more general than that. Any time you want something that feels alive rather than random, noise is worth thinking about.",
+      "Perlin noise, simplex noise, curl noise - these are usually taught as tricks for terrain or fire effects. But they're more general than that. Any time you want something that feels alive rather than random, noise is worth thinking about.",
     href: "#",
   },
   {

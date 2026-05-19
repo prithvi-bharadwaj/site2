@@ -13,6 +13,10 @@
   --text-4xl: 2.25rem;
 }
 
+html {
+  font-size: 125%;
+}
+
 html,
 body {
   margin: 0;
