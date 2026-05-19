@@ -134,7 +134,7 @@ export function LinkList({ label, items, columns = 1, variant = "compact", point
       <div
         className={`grid grid-cols-1 ${
           columns === 2 ? "sm:grid-cols-2" : ""
-        } ${variant === "prose" ? "gap-x-12 gap-y-4" : "gap-x-12 gap-y-2"} text-sm`}
+        } ${variant === "prose" ? "gap-x-12 gap-y-2" : "gap-x-12 gap-y-2"} text-sm`}
       >
         {items.map((item, i) => {
           const expandable =
@@ -145,9 +145,7 @@ export function LinkList({ label, items, columns = 1, variant = "compact", point
 
           const titleNode = (
             <span
-              className={`hover-underline text-[#131316]/60 group-hover:text-[#131316] transition-colors duration-200 inline ${
-                variant === "prose" ? "leading-relaxed" : "leading-snug"
-              }`}
+              className={`hover-underline text-[#131316]/60 group-hover:text-[#131316] transition-colors duration-200 inline leading-snug`}
             >
               {pointer && (
                 <span className="text-[#131316]/30 mr-1.5">-</span>
@@ -179,10 +177,7 @@ export function LinkList({ label, items, columns = 1, variant = "compact", point
             </span>
           );
 
-          const wrapperClass =
-            variant === "prose"
-              ? "group block leading-relaxed"
-              : "group block leading-snug";
+          const wrapperClass = "group block leading-snug";
 
           return (
             <div key={item.title}>
