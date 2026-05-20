@@ -8,6 +8,7 @@ import { GenZToggle } from "@/components/GenZToggle";
 import { PreviouslyList } from "@/components/PreviouslyList";
 import { SubwaySurfersPip } from "@/components/SubwaySurfersPip";
 import { EditPanel } from "@/components/EditPanel";
+import { BgVideo } from "@/components/BgVideo";
 
 /* ── Default content ── */
 
@@ -344,6 +345,8 @@ export default function Home() {
       {editMode && (
         <EditToolbar onSave={save} onReset={reset} onCopy={copyToClipboard} />
       )}
+
+      <BgVideo />
 
       <div
         className="relative px-8 md:px-0 pt-[18vh] md:pt-[22vh]"
