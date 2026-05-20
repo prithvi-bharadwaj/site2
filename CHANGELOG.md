@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.1.3.0] - 2026-05-20
+
+### Added
+- Looping watercolor video at the bottom-right of the homepage (`BgVideo` component, `/videos/bg.mp4`)
+- Radial-gradient mask feathers the video's cream backdrop into the page so there's no visible seam
+
+### Changed
+- Site background moved from `body` to `html` so `BgVideo` can sit at `z-index: -1` between the page bg and the existing noise overlay
+- `body::before` noise overlay now renders above the video
+
 ## [0.1.2.0] - 2026-03-30
 
 ### Changed
