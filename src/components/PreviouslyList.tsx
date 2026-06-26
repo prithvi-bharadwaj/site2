@@ -115,7 +115,7 @@ export function PreviouslyList({ label, items }: PreviouslyListProps) {
                   className="inline-block text-[#131316]/30 mr-2"
                   style={{ transition: `transform 180ms ${EASE}` }}
                 >
-                  -
+                  ·
                 </span>
                 {item.favicon && (
                   <img

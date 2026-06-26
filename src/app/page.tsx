@@ -59,6 +59,12 @@ const PREVIOUSLY: LinkListItem[] = [
     ],
   },
   {
+    title: "1st place, Google DeepMind × Stanford AI-Generated Game Contest (Apr 2026) - hosted by GDG Stanford, sponsored by DeepMind. Won for Voxel Demolish",
+    inlineLinks: [
+      { phrase: "Voxel Demolish", href: "https://youtube.com/shorts/E4fyqr_semE" },
+    ],
+  },
+  {
     title: "Made over 100+ Games for Voodoo and Supersonic - 200K+ cumulative downloads",
     brandLinks: [
       {
@@ -82,7 +88,6 @@ const PREVIOUSLY: LinkListItem[] = [
         },
       },
     ],
-    links: [{ label: "gallery", href: "#" }],
   },
   {
     title: "Built an internal genAI app that lets you go from prompt → 3d multiplayer games in minutes for Roam",
@@ -102,7 +107,6 @@ const PREVIOUSLY: LinkListItem[] = [
   },
   {
     title: "Created a video game based on MrBeast in <6 weeks",
-    inlineLinks: [{ phrase: "video game", href: "https://youtube.com" }],
   },
   {
     title: "Won a live game show from Buildspace - the world's largest online school for builders",
@@ -130,53 +134,6 @@ const PREVIOUSLY: LinkListItem[] = [
   },
   {
     title: "Had an ecom merch store - i sold out my first collection to my entire batch in high school (almost got kicked out)",
-  },
-];
-
-const MINI_GAMES: LinkListItem[] = [
-  { title: "Word Avalanche", href: "#" },
-];
-
-const SIDE_PROJECTS: LinkListItem[] = [
-  {
-    title: "Reflink - clipboard extension for WisprFlow",
-    favicon: LOGO("wisprflow"),
-    links: [
-      { label: "github", href: "https://github.com", favicon: LOGO("github") },
-      { label: "tweet", href: "https://x.com", favicon: LOGO("x") },
-    ],
-  },
-  {
-    title: "Personal Agent OS that executes your todo list via apple menu bar",
-    expand: "syncs to obsidian and google cal. lets agents see a log of your work.",
-    links: [
-      { label: "obsidian", href: "https://obsidian.md", favicon: LOGO("obsidian") },
-      { label: "google cal", href: "https://calendar.google.com", favicon: LOGO("googlecal") },
-    ],
-  },
-  {
-    title: "Warden - OSS Warden clone",
-  },
-  {
-    title: "SerendipityMaxxing - app that lets u cold email maxx. bring your own tokens",
-  },
-  {
-    title: "Antigravity IDE for Unity - integrates Google's Antigravity IDE with Unity for AI-assisted game dev",
-    links: [
-      { label: "github", href: "https://github.com/prithvi-bharadwaj/Antigravity-IDE", favicon: LOGO("github") },
-    ],
-  },
-  {
-    title: "Finbite - Duolingo for finance. 10K+ downloads, partnered with local schools for financial literacy curriculum",
-  },
-];
-
-const ACHIEVEMENTS: LinkListItem[] = [
-  {
-    title: "1st place, Google DeepMind × Stanford AI-Generated Game Contest (Apr 2026) - hosted by GDG Stanford, sponsored by DeepMind. Won for Voxel Demolish",
-    inlineLinks: [
-      { phrase: "Voxel Demolish", href: "https://youtube.com/shorts/E4fyqr_semE" },
-    ],
   },
 ];
 
@@ -231,21 +188,8 @@ const WRITING: LinkListItem[] = [
   { title: "travel, timepass and being in the trenches", meta: "dec 5, 2023", href: "https://prithvibharadwaj.substack.com/p/travel-timepass-and-being-in-the", favicon: LOGO("substack") },
   { title: "I might have overcorrected", meta: "nov 20, 2023", href: "https://prithvibharadwaj.substack.com/p/i-might-have-overcorrected", favicon: LOGO("substack") },
   { title: "The philosophy behind \"asjbdhjasdfhgw\"", meta: "nov 1, 2023", href: "https://prithvibharadwaj.substack.com/p/the-philosophy-behind-asjbdhjasdfhgw", favicon: LOGO("substack") },
-];
-
-const TUTORIALS: LinkListItem[] = [
-  {
-    title: "Antigravity IDE for unity",
-    meta: "may 2024",
-    href: "https://medium.com/@prithvibofficial/how-to-use-antigravity-in-unity-for-game-development-8da2cbc353cb",
-    favicon: "/logos/medium.svg",
-  },
-  {
-    title: "How to use Cursor AI with Unity",
-    meta: "feb 2024",
-    href: "https://medium.com/@prithvibofficial/how-to-use-cursor-ai-with-unity-a32291f9e852",
-    favicon: "/logos/medium.svg",
-  },
+  { title: "Antigravity IDE for unity", meta: "may 2024", href: "https://medium.com/@prithvibofficial/how-to-use-antigravity-in-unity-for-game-development-8da2cbc353cb", favicon: "/logos/medium.svg" },
+  { title: "How to use Cursor AI with Unity", meta: "feb 2024", href: "https://medium.com/@prithvibofficial/how-to-use-cursor-ai-with-unity-a32291f9e852", favicon: "/logos/medium.svg" },
 ];
 
 const SOCIALS: { label: string; href: string; favicon: string }[] = [
@@ -353,7 +297,7 @@ export default function Home() {
         style={{ zIndex: 1 }}
       >
         {/* Hero */}
-        <div className="w-full max-w-2xl mx-auto md:ml-[15vw] lg:ml-[18vw]">
+        <div className="w-full max-w-[min(42rem,78vw)] mx-auto md:ml-[15vw] lg:ml-[18vw]">
           {editMode && (
             <div className="mb-4">
               <EditPanel label="greeting" value={content.greeting} onChange={(v) => update("greeting", v)} />
@@ -365,7 +309,7 @@ export default function Home() {
 
         {/* GenZ TLDR — additive when enabled */}
         {genzMode && (
-          <div className="w-full max-w-2xl mx-auto md:ml-[15vw] lg:ml-[18vw] mt-10 text-sm text-[#131316]/60 leading-relaxed">
+          <div className="w-full max-w-[min(42rem,78vw)] mx-auto md:ml-[15vw] lg:ml-[18vw] mt-10 text-sm text-[#131316]/60 leading-relaxed">
             <p className="text-[#131316]/50 text-xs uppercase tracking-wider mb-2">tldr</p>
             {editMode && (
               <EditPanel label="genz tldr" value={content.genz} onChange={(v) => update("genz", v)} />
@@ -375,36 +319,22 @@ export default function Home() {
         )}
 
         {/* Previously I — continuation of the bio */}
-        <div className="w-full max-w-2xl mx-auto md:ml-[15vw] lg:ml-[18vw] mt-4">
+        <div className="w-full max-w-[min(42rem,78vw)] mx-auto md:ml-[15vw] lg:ml-[18vw] mt-4">
           <PreviouslyList label="Previously:" items={PREVIOUSLY} />
         </div>
 
-        {/* Achievements */}
-        <div className="w-full max-w-2xl mx-auto md:ml-[15vw] lg:ml-[18vw] mt-10 md:mt-14">
-          <LinkList label="Achievements." items={ACHIEVEMENTS} variant="prose" pointer />
-        </div>
-
-        {/* Side projects (left) + mini games (right) */}
-        <div className="w-full max-w-4xl mx-auto md:ml-[15vw] lg:ml-[18vw] mt-10 md:mt-14 grid grid-cols-1 md:grid-cols-[2fr_1fr] gap-10 md:gap-14">
-          <LinkList label="Side projects." items={SIDE_PROJECTS} />
-          <LinkList label="Mini-games." items={MINI_GAMES} />
-        </div>
-
         {/* Lore */}
-        <div className="w-full max-w-3xl mx-auto md:ml-[15vw] lg:ml-[18vw] mt-10 md:mt-14">
+        <div className="w-full max-w-[min(48rem,78vw)] mx-auto md:ml-[15vw] lg:ml-[18vw] mt-10 md:mt-14">
           <LinkList label="Lore." items={LORE} variant="prose" pointer />
         </div>
 
-        {/* Writing + Tutorials (two columns) */}
-        <div className="w-full max-w-4xl mx-auto md:ml-[15vw] lg:ml-[18vw] mt-10 md:mt-14 grid grid-cols-1 md:grid-cols-[2fr_1fr] gap-10 md:gap-14">
+        {/* Writing */}
+        <div className="w-full max-w-[min(42rem,78vw)] mx-auto md:ml-[15vw] lg:ml-[18vw] mt-10 md:mt-14">
           <LinkList label="Writing." items={WRITING} pointer />
-          <div className="md:pt-10">
-            <LinkList items={TUTORIALS} pointer />
-          </div>
         </div>
 
         {/* Socials */}
-        <div className="w-full max-w-4xl mx-auto md:ml-[15vw] lg:ml-[18vw] mt-10 md:mt-14 pb-24">
+        <div className="w-full max-w-[min(56rem,78vw)] mx-auto md:ml-[15vw] lg:ml-[18vw] mt-10 md:mt-14 pb-24">
           <span className="text-[#131316]/35 text-xs uppercase tracking-widest block mb-4">
             Find me on.
           </span>
