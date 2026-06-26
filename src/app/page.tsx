@@ -297,7 +297,7 @@ export default function Home() {
         style={{ zIndex: 1 }}
       >
         {/* Hero */}
-        <div className="w-full max-w-2xl mx-auto md:ml-[15vw] lg:ml-[18vw]">
+        <div className="w-full max-w-[min(42rem,78vw)] mx-auto md:ml-[15vw] lg:ml-[18vw]">
           {editMode && (
             <div className="mb-4">
               <EditPanel label="greeting" value={content.greeting} onChange={(v) => update("greeting", v)} />
@@ -309,7 +309,7 @@ export default function Home() {
 
         {/* GenZ TLDR — additive when enabled */}
         {genzMode && (
-          <div className="w-full max-w-2xl mx-auto md:ml-[15vw] lg:ml-[18vw] mt-10 text-sm text-[#131316]/60 leading-relaxed">
+          <div className="w-full max-w-[min(42rem,78vw)] mx-auto md:ml-[15vw] lg:ml-[18vw] mt-10 text-sm text-[#131316]/60 leading-relaxed">
             <p className="text-[#131316]/50 text-xs uppercase tracking-wider mb-2">tldr</p>
             {editMode && (
               <EditPanel label="genz tldr" value={content.genz} onChange={(v) => update("genz", v)} />
@@ -319,22 +319,22 @@ export default function Home() {
         )}
 
         {/* Previously I — continuation of the bio */}
-        <div className="w-full max-w-2xl mx-auto md:ml-[15vw] lg:ml-[18vw] mt-4">
+        <div className="w-full max-w-[min(42rem,78vw)] mx-auto md:ml-[15vw] lg:ml-[18vw] mt-4">
           <PreviouslyList label="Previously:" items={PREVIOUSLY} />
         </div>
 
         {/* Lore */}
-        <div className="w-full max-w-3xl mx-auto md:ml-[15vw] lg:ml-[18vw] mt-10 md:mt-14">
+        <div className="w-full max-w-[min(48rem,78vw)] mx-auto md:ml-[15vw] lg:ml-[18vw] mt-10 md:mt-14">
           <LinkList label="Lore." items={LORE} variant="prose" pointer />
         </div>
 
         {/* Writing */}
-        <div className="w-full max-w-2xl mx-auto md:ml-[15vw] lg:ml-[18vw] mt-10 md:mt-14">
+        <div className="w-full max-w-[min(42rem,78vw)] mx-auto md:ml-[15vw] lg:ml-[18vw] mt-10 md:mt-14">
           <LinkList label="Writing." items={WRITING} pointer />
         </div>
 
         {/* Socials */}
-        <div className="w-full max-w-4xl mx-auto md:ml-[15vw] lg:ml-[18vw] mt-10 md:mt-14 pb-24">
+        <div className="w-full max-w-[min(56rem,78vw)] mx-auto md:ml-[15vw] lg:ml-[18vw] mt-10 md:mt-14 pb-24">
           <span className="text-[#131316]/35 text-xs uppercase tracking-widest block mb-4">
             Find me on.
           </span>
