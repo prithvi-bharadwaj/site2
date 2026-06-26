@@ -148,7 +148,7 @@ export function LinkList({ label, items, columns = 1, variant = "compact", point
               className={`hover-underline text-[#131316]/60 group-hover:text-[#131316] transition-colors duration-200 inline leading-snug`}
             >
               {pointer && (
-                <span className="text-[#131316]/30 mr-1.5">-</span>
+                <span className="text-[#131316]/30 mr-1.5">·</span>
               )}
               {item.favicon && (
                 <img
