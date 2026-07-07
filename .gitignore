@@ -6,3 +6,7 @@ skill-runs.jsonl
 .gstack/
 .claude/
 .vercel
+
+# recruiting/lead lists must never be committed to this public repo
+docs/ai-eng-hiring/
+docs/*contacts*
