@@ -237,11 +237,9 @@ export default function Home() {
   const [genzMode, setGenzMode] = useState(false);
   const [editMode, setEditMode] = useState(false);
   const [content, setContent] = useState<Content>(DEFAULTS);
-  const [hydrated, setHydrated] = useState(false);
 
   useEffect(() => {
     setContent(loadContent());
-    setHydrated(true);
   }, []);
 
   useEffect(() => {
@@ -274,8 +272,6 @@ export default function Home() {
       .join("\n");
     navigator.clipboard.writeText(`const CONTENT = {\n${out}\n};`);
   }, [content]);
-
-  if (!hydrated) return null;
 
   return (
     <main className="relative min-h-screen">
