@@ -2,6 +2,24 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.1.4.0] - 2026-07-08
+
+### Added
+- GitHub Actions CI (`.github/workflows/ci.yml`): every push/PR gates on `tsc --noEmit`, `vitest run`, and `next build`
+- Regression tests: homepage server-render (`test/home-ssr.test.tsx`) and prompt-injection accessibility (`test/prompt-injection.test.tsx`)
+- `plans/` — advisor audit findings and executor-ready implementation plans (improve run, 2026-07-07)
+
+### Changed
+- Homepage content now ships in the initial HTML — removed the `if (!hydrated) return null` gate in `page.tsx`, so search engines, link previews, and raw-HTML scrapers see the bio, Previously, Lore, and Writing sections (verified via curl against a production build)
+
+### Fixed
+- Prompt-injection easter egg no longer read aloud by screen readers (`aria-hidden="false"` → `"true"`; still present in raw HTML for LLM scrapers)
+- Pinch-zoom re-enabled on mobile (removed `maximumScale: 1` / `userScalable: false` — WCAG 1.4.4)
+
+### Removed
+- 12 dead components, 2 dead lib modules, and 4 test files pinning them (2,710 lines) left behind by the WebGL/particle/soulwire redesigns — live page imports are untouched
+- Recruiting contact lists (`docs/ai-eng-hiring/`, `docs/claw-code-stargazers-contacts.*`) — PII (emails + scored candidate rankings of ~3,400 people) removed from this public repo, with `.gitignore` guards; data backed up locally
+
 ## [0.1.3.0] - 2026-05-20
 
 ### Added

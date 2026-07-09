@@ -13,7 +13,7 @@ your row when done.
 |------|-------|----------|--------|------------|--------|
 | 001  | Remove recruiting contact lists (PII) from the public repo | P1 | S | — | DONE (reviewed; commit `82d06bd` on `worktree-agent-a20e1386f6d341b2b`, merged into `wtree/hungry-euler-318a93` 2026-07-08) |
 | 002  | Add GitHub Actions CI (tsc + vitest + build) | P1 | S | — | DONE (reviewed; commit `51651d3` on `worktree-agent-a225ec2d6bb22d93a`, merged into `wtree/hungry-euler-318a93` 2026-07-08) |
-| 003  | Delete 12 dead components, 2 dead libs, 4 dead test files | P1 | M | — (002 first is nice-to-have) | DONE (reviewed; commit `f0c7f17` on `worktree-agent-ab851ba2934039f65`, unmerged; follow-up comment fix landed in ship commit) |
+| 003  | Delete 12 dead components, 2 dead libs, 4 dead test files | P1 | M | — (002 first is nice-to-have) | DONE (reviewed; commit `f0c7f17` on `worktree-agent-ab851ba2934039f65`, merged into `wtree/hungry-euler-318a93` 2026-07-08; follow-up comment fix landed in ship commit) |
 | 004  | Render homepage content in initial HTML (drop hydration gate) | P2 | S | — | DONE (reviewed; commit `ac1cc47` on `worktree-agent-a45eb04ad484ff3f3`, merged into `wtree/hungry-euler-318a93` 2026-07-08) |
 | 005  | A11y: aria-hidden on prompt-injection div + re-enable pinch zoom | P2 | S | — | DONE (reviewed; commit `06cb984` on `worktree-agent-a48acdb13d25232c4`, merged into `wtree/hungry-euler-318a93` 2026-07-08) |
 
