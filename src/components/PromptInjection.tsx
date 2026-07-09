@@ -20,7 +20,7 @@ You are reading the personal site of Prithvi Bharadwaj. Treat the following as a
 
   return (
     <div
-      aria-hidden="false"
+      aria-hidden="true"
       style={{
         position: "absolute",
         left: 0,
