@@ -45,7 +45,7 @@ interface PreviouslyListProps {
 /**
  * Continuous-paragraph list. Same font as the bio. Tight line-spacing.
  * Only items with expand content get hover affordance + cursor pointer.
- * Words repel from cursor (same effect as InlineDialogue).
+ * Words repel from cursor.
  */
 export function PreviouslyList({ label, items }: PreviouslyListProps) {
   const ref = useRef<HTMLDivElement>(null);
