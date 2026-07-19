@@ -9,6 +9,8 @@ export function GenZToggle({ enabled, onChange }: GenZToggleProps) {
   return (
     <button
       onClick={() => onChange(!enabled)}
+      role="switch"
+      aria-checked={enabled}
       className="group flex cursor-pointer items-center gap-3 transition-colors duration-200"
       style={{
         background: "none",

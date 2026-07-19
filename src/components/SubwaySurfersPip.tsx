@@ -19,10 +19,8 @@ export function SubwaySurfersPip() {
 
   return (
     <div
-      className="fixed bottom-4 right-4 z-50 overflow-hidden rounded-xl shadow-2xl"
+      className="pointer-events-none fixed bottom-4 right-4 z-50 h-[285px] w-[160px] overflow-hidden rounded-xl shadow-2xl md:h-[498px] md:w-[280px]"
       style={{
-        width: 280,
-        height: 498,
         opacity: mounted ? 1 : 0,
         transform: mounted ? "translateY(0)" : "translateY(20px)",
         transition: "opacity 300ms ease-out, transform 300ms ease-out",
@@ -30,7 +28,7 @@ export function SubwaySurfersPip() {
     >
       <button
         onClick={() => setDismissed(true)}
-        className="absolute right-1.5 top-1.5 z-10 flex h-5 w-5 cursor-pointer items-center justify-center rounded-full text-xs text-white/70 transition-colors hover:text-white"
+        className="pointer-events-auto absolute right-1.5 top-1.5 z-10 flex h-5 w-5 cursor-pointer items-center justify-center rounded-full text-xs text-white/70 transition-colors hover:text-white"
         style={{ background: "rgba(0,0,0,0.5)", border: "none" }}
       >
         ×

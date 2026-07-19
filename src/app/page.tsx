@@ -23,6 +23,7 @@ const STORAGE_KEY = "prithvi-site-content-v4";
 function loadContent(): Content {
   if (typeof window === "undefined") return DEFAULTS;
   try {
+    localStorage.removeItem("prithvi-site-content-v3");
     const stored = localStorage.getItem(STORAGE_KEY);
     if (stored) return { ...DEFAULTS, ...JSON.parse(stored) };
   } catch { /* ignore */ }

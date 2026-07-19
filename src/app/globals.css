@@ -180,12 +180,12 @@ a.project-item {
   }
 }
 
-/* Pretext hero — positioned word elements */
+/* Pretext hero — positioned word elements.
+   will-change is set inline (fine pointers only) so coarse-pointer devices skip the layer promotion. */
 .pretext-word {
   position: absolute;
   white-space: pre;
   pointer-events: none;
-  will-change: transform, opacity;
 }
 
 .pretext-link {

@@ -40,7 +40,8 @@ function buildSections(greeting: string, bio: string, fontPx: number, linePx: nu
 
   return [
     {
-      blocks: [{ text: greeting, type: "heading" }],
+      // 0.95 matches displacement maxOpacity — at 1.0 the cursor-repel would dim the greeting
+      blocks: [{ text: greeting, type: "heading", baseOpacity: 0.95 }],
       font: headingShorthand,
       fontSize: headingPx,
       lineHeight: headingPx * BODY_LINE_HEIGHT_RATIO,
@@ -92,8 +93,6 @@ export function PretextHero({ greeting, bio, className }: PretextHeroProps) {
   const rafRef = useRef<number>(0);
   const animatingRef = useRef(false);
 
-  
-
   const isMobile = typeof window !== "undefined" && window.innerWidth < 768;
   const displacementConfig: DisplacementConfig = {
     ...DEFAULT_DISPLACEMENT_CONFIG,
@@ -143,13 +142,12 @@ export function PretextHero({ greeting, bio, className }: PretextHeroProps) {
     };
   }, [reducedMotion, computeLayout]);
 
-  // Sync displaced elements + size fog canvas
+  // Sync displaced elements to the computed layout
   useEffect(() => {
     if (!layout) return;
     displacedRef.current = layout.words.map((w) =>
       createDisplacedElement(w.x, w.y, w.width, w.height, w.block.baseOpacity ?? 0.5)
     );
-    
   }, [layout]);
 
   // Bind displaced elements to DOM
@@ -219,7 +217,8 @@ export function PretextHero({ greeting, bio, className }: PretextHeroProps) {
   if (reducedMotion) {
     return (
       <div className={`text-sm text-[#131316]/60 leading-relaxed max-w-2xl ${className ?? ""}`}>
-        <p className="mb-4 text-lg text-[#131316]">{greeting}</p>
+        {/* mb-[16px] matches the canvas path's marginBottom: 16 (rem units inflate at the 125% root) */}
+        <p className="mb-[16px] text-lg text-[#131316]">{greeting}</p>
         <p>{bio}</p>
       </div>
     );
