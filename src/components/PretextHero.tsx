@@ -4,7 +4,6 @@ import { useRef, useEffect, useState, useCallback } from "react";
 import {
   layoutHero,
   type SectionConfig,
-  type PositionedWord,
   type HeroLayoutResult,
 } from "@/lib/pretext-layout";
 import {
@@ -14,14 +13,6 @@ import {
   type DisplacementConfig,
   DEFAULT_DISPLACEMENT_CONFIG,
 } from "@/lib/displacement-physics";
-import {
-  createScrambleState,
-  tickScramble,
-  getScrambleText,
-  hasScrambleStarted,
-  type ScrambleState,
-  type ScrambleConfig,
-} from "@/lib/text-scramble";
 
 interface PretextHeroProps {
   greeting: string;
@@ -30,13 +21,6 @@ interface PretextHeroProps {
 }
 
 const FONT_FAMILY = '-apple-system, BlinkMacSystemFont, "SF Pro Display", "Inter", "Segoe UI", system-ui, sans-serif';
-
-const SCRAMBLE_CONFIG: ScrambleConfig = {
-  scrambleProbability: 0.65,
-  binaryDuration: 125,
-  asciiDuration: 175,
-  maxDelay: 400,
-};
 
 // Match Tailwind text-sm (0.8125rem) at the body's font-weight 300 + line-height 1.62.
 const BODY_FONT_REM = 0.8125;
@@ -94,65 +78,6 @@ function useCoarsePointer(): boolean {
     return () => mq.removeEventListener("change", handler);
   }, []);
   return coarse;
-}
-
-interface ScrambleFrame {
-  texts: string[];
-  /** Per-word: has this word's scramble started yet? (delay expired) */
-  started: boolean[];
-}
-
-/**
- * Hook: manages scramble decode with integrated left-to-right reveal.
- * Words start invisible. When a word's scramble delay expires and it begins
- * showing binary, that's when it fades in — combining typing + scramble.
- */
-function useScramble(words: PositionedWord[] | null, reducedMotion: boolean) {
-  const statesRef = useRef<ScrambleState[]>([]);
-  const startedRef = useRef(false);
-  const [frame, setFrame] = useState<ScrambleFrame>({ texts: [], started: [] });
-
-  // Track whether words are ready (triggers effect re-run)
-  const wordsReady = (words?.length ?? 0) > 0;
-
-  // Init states once when words arrive (render-phase ref write)
-  if (wordsReady && statesRef.current.length === 0 && !reducedMotion) {
-    statesRef.current = words!.map((w, i) =>
-      createScrambleState(w.text, i, words!.length, SCRAMBLE_CONFIG)
-    );
-  }
-
-  useEffect(() => {
-    const states = statesRef.current;
-    if (states.length === 0 || reducedMotion || startedRef.current) return;
-    startedRef.current = true;
-
-    setFrame({
-      texts: states.map((s) => getScrambleText(s)),
-      started: states.map((s) => hasScrambleStarted(s)),
-    });
-
-    const TICK = 30;
-
-    function step() {
-      let anyActive = false;
-      for (const s of states) {
-        if (tickScramble(s, TICK, SCRAMBLE_CONFIG)) anyActive = true;
-      }
-      setFrame({
-        texts: states.map((s) => getScrambleText(s)),
-        started: states.map((s) => hasScrambleStarted(s)),
-      });
-      if (anyActive) {
-        setTimeout(step, TICK);
-      }
-    }
-
-    // Start after a microtask to survive Strict Mode double-invoke
-    Promise.resolve().then(() => setTimeout(step, TICK));
-  }, [reducedMotion, wordsReady]);
-
-  return frame;
 }
 
 export function PretextHero({ greeting, bio, className }: PretextHeroProps) {
@@ -217,12 +142,6 @@ export function PretextHero({ greeting, bio, className }: PretextHeroProps) {
       clearTimeout(timeout);
     };
   }, [reducedMotion, computeLayout]);
-
-  // Scramble + integrated left-to-right reveal
-  const { texts: scrambleTexts, started: scrambleStarted } = useScramble(
-    layout?.words ?? null,
-    reducedMotion
-  );
 
   // Sync displaced elements + size fog canvas
   useEffect(() => {
@@ -318,35 +237,29 @@ export function PretextHero({ greeting, bio, className }: PretextHeroProps) {
         <p>{bio}</p>
       </div>
 
-      {layout?.words.map((word, i) => {
-        const displayText = scrambleTexts[i] ?? word.text;
-        const isVisible = scrambleStarted[i] ?? false;
-
-        return (
-          <span
-            key={word.key}
-            data-pretext-idx={i}
-            className="pretext-word"
-            style={{
-              position: "absolute",
-              left: word.x,
-              top: word.y,
-              color: word.block.color,
-              opacity: isVisible ? word.block.baseOpacity : 0,
-              fontSize: word.block.type === "heading" ? headingPxRef.current : fontPxRef.current,
-              fontWeight: BODY_FONT_WEIGHT,
-              fontFamily: FONT_FAMILY,
-              whiteSpace: "pre",
-              willChange: coarsePointer ? undefined : "transform, opacity",
-              pointerEvents: "none",
-              transition: "opacity 250ms ease-out",
-            }}
-            aria-hidden="true"
-          >
-            {displayText}
-          </span>
-        );
-      })}
+      {layout?.words.map((word, i) => (
+        <span
+          key={word.key}
+          data-pretext-idx={i}
+          className="pretext-word"
+          style={{
+            position: "absolute",
+            left: word.x,
+            top: word.y,
+            color: word.block.color,
+            opacity: word.block.baseOpacity,
+            fontSize: word.block.type === "heading" ? headingPxRef.current : fontPxRef.current,
+            fontWeight: BODY_FONT_WEIGHT,
+            fontFamily: FONT_FAMILY,
+            whiteSpace: "pre",
+            willChange: coarsePointer ? undefined : "transform, opacity",
+            pointerEvents: "none",
+          }}
+          aria-hidden="true"
+        >
+          {word.text}
+        </span>
+      ))}
     </div>
   );
 }

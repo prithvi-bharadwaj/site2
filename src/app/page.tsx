@@ -2,13 +2,11 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { PretextHero } from "@/components/PretextHero";
-import { BackdropRipple } from "@/components/BackdropRipple";
 import { LinkList, type LinkListItem } from "@/components/LinkList";
 import { GenZToggle } from "@/components/GenZToggle";
 import { PreviouslyList } from "@/components/PreviouslyList";
 import { SubwaySurfersPip } from "@/components/SubwaySurfersPip";
 import { EditPanel } from "@/components/EditPanel";
-import { BgVideo } from "@/components/BgVideo";
 
 /* ── Default content ── */
 
@@ -267,18 +265,9 @@ export default function Home() {
 
   return (
     <main className="relative min-h-screen">
-      <BackdropRipple />
-
-      {/* Gen Z mode toggle, fixed top-right */}
-      <div className="fixed top-4 right-4 z-40">
-        <GenZToggle enabled={genzMode} onChange={setGenzMode} />
-      </div>
-
       {editMode && (
         <EditToolbar onSave={save} onReset={reset} onCopy={copyToClipboard} />
       )}
-
-      <BgVideo />
 
       <div
         className="relative px-8 md:px-0 pt-[18vh] md:pt-[22vh]"
