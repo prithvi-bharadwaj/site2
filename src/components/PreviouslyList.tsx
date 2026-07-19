@@ -93,7 +93,9 @@ export function PreviouslyList({ label, items }: PreviouslyListProps) {
 
   return (
     <div ref={ref} className="text-sm text-[#131316]/60 leading-relaxed">
-      <p className="mb-1">{label}</p>
+      <span className="text-[#131316]/35 text-xs uppercase tracking-widest block mb-6">
+        {label}
+      </span>
       <ul className="list-none p-0 m-0">
         {items.map((item, i) => {
           const expandable =

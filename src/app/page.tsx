@@ -284,13 +284,13 @@ export default function Home() {
           <PretextHero greeting={content.greeting} bio={content.bio} />
         </div>
 
-        {/* Previously I — continuation of the bio */}
-        <div className="w-full max-w-[min(42rem,78vw)] mx-auto md:ml-[15vw] lg:ml-[18vw] mt-4">
-          <PreviouslyList label="Previously:" items={PREVIOUSLY} />
+        {/* Previously */}
+        <div className="w-full max-w-[min(42rem,78vw)] mx-auto md:ml-[15vw] lg:ml-[18vw] mt-10 md:mt-14">
+          <PreviouslyList label="Previously." items={PREVIOUSLY} />
         </div>
 
         {/* Lore */}
-        <div className="w-full max-w-[min(48rem,78vw)] mx-auto md:ml-[15vw] lg:ml-[18vw] mt-10 md:mt-14">
+        <div className="w-full max-w-[min(42rem,78vw)] mx-auto md:ml-[15vw] lg:ml-[18vw] mt-10 md:mt-14">
           <LinkList label="Lore." items={LORE} variant="prose" pointer />
         </div>
 
@@ -300,8 +300,8 @@ export default function Home() {
         </div>
 
         {/* Socials */}
-        <div className="w-full max-w-[min(56rem,78vw)] mx-auto md:ml-[15vw] lg:ml-[18vw] mt-10 md:mt-14 pb-24">
-          <span className="text-[#131316]/35 text-xs uppercase tracking-widest block mb-4">
+        <div className="w-full max-w-[min(42rem,78vw)] mx-auto md:ml-[15vw] lg:ml-[18vw] mt-10 md:mt-14 pb-24">
+          <span className="text-[#131316]/35 text-xs uppercase tracking-widest block mb-6">
             Find me on.
           </span>
           <div className="flex flex-wrap gap-x-5 gap-y-2 text-sm">
