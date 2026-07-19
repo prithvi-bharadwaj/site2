@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.1.4.0] - 2026-07-19
+
+### Added
+- Collapsible `Accordion` component wrapping the Side projects, Mini-games, and Lore sections (animated grid-rows expand, `aria-expanded`/`aria-controls`, `inert` on collapsed content) with unit tests
+- New pixel-art favicon: white "P" on the site-blue `#2563eb` tile, served via the App Router `src/app/icon.svg` convention
+
+### Removed
+- `public/favicon.ico` and the explicit `metadata.icons` entry in `layout.tsx` (replaced by `icon.svg`)
+
 ## [0.1.3.0] - 2026-05-20
 
 ### Added
