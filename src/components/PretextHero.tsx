@@ -40,6 +40,8 @@ const SCRAMBLE_CONFIG: ScrambleConfig = {
 
 // Match Tailwind text-sm (0.8125rem) at the body's font-weight 300 + line-height 1.62.
 const BODY_FONT_REM = 0.8125;
+// Greeting sits one step up (text-lg) at full opacity — the page's single focal point.
+const HEADING_FONT_REM = 1.125;
 const BODY_FONT_WEIGHT = 300;
 const BODY_LINE_HEIGHT_RATIO = 1.62;
 
@@ -48,49 +50,26 @@ function rootFontPx(): number {
   return parseFloat(getComputedStyle(document.documentElement).fontSize) || 16;
 }
 
-function buildSections(greeting: string, bio: string, fontPx: number, linePx: number): SectionConfig[] {
+function buildSections(greeting: string, bio: string, fontPx: number, linePx: number, headingPx: number): SectionConfig[] {
   const fontShorthand = `${BODY_FONT_WEIGHT} ${fontPx}px ${FONT_FAMILY}`;
-  const commaIdx = greeting.indexOf(",");
-  const sections: SectionConfig[] = [];
+  const headingShorthand = `${BODY_FONT_WEIGHT} ${headingPx}px ${FONT_FAMILY}`;
 
-  if (commaIdx > -1) {
-    const first = greeting.slice(0, commaIdx + 1);
-    const second = greeting.slice(commaIdx + 1).trim();
-    sections.push({
-      blocks: [{ text: first, type: "heading", baseOpacity: 0.6 }],
-      font: fontShorthand,
-      fontSize: fontPx,
-      lineHeight: linePx,
-      marginBottom: 4,
-    });
-    if (second) {
-      sections.push({
-        blocks: [{ text: second, type: "accent", baseOpacity: 0.6 }],
-        font: fontShorthand,
-        fontSize: fontPx,
-        lineHeight: linePx,
-        marginBottom: 16,
-      });
-    }
-  } else {
-    sections.push({
-      blocks: [{ text: greeting, type: "heading", baseOpacity: 0.6 }],
-      font: fontShorthand,
-      fontSize: fontPx,
-      lineHeight: linePx,
+  return [
+    {
+      blocks: [{ text: greeting, type: "heading" }],
+      font: headingShorthand,
+      fontSize: headingPx,
+      lineHeight: headingPx * BODY_LINE_HEIGHT_RATIO,
       marginBottom: 16,
-    });
-  }
-
-  sections.push({
-    blocks: [{ text: bio, type: "body" }],
-    font: fontShorthand,
-    fontSize: fontPx,
-    lineHeight: linePx,
-    marginBottom: 0,
-  });
-
-  return sections;
+    },
+    {
+      blocks: [{ text: bio, type: "body" }],
+      font: fontShorthand,
+      fontSize: fontPx,
+      lineHeight: linePx,
+      marginBottom: 0,
+    },
+  ];
 }
 
 function useReducedMotion(): boolean {
@@ -198,16 +177,20 @@ export function PretextHero({ greeting, bio, className }: PretextHeroProps) {
   };
 
   const fontPxRef = useRef(BODY_FONT_REM * 16);
+  const headingPxRef = useRef(HEADING_FONT_REM * 16);
 
   const computeLayout = useCallback(() => {
     const container = containerRef.current;
     if (!container) return;
     const containerWidth = container.clientWidth;
     if (containerWidth <= 0) return;
-    const fontPx = BODY_FONT_REM * rootFontPx();
+    const rootPx = rootFontPx();
+    const fontPx = BODY_FONT_REM * rootPx;
+    const headingPx = HEADING_FONT_REM * rootPx;
     const linePx = fontPx * BODY_LINE_HEIGHT_RATIO;
     fontPxRef.current = fontPx;
-    const sections = buildSections(greeting, bio, fontPx, linePx);
+    headingPxRef.current = headingPx;
+    const sections = buildSections(greeting, bio, fontPx, linePx, headingPx);
     const result = layoutHero({ sections, containerWidth });
     setLayout(result);
   }, [greeting, bio]);
@@ -315,13 +298,9 @@ export function PretextHero({ greeting, bio, className }: PretextHeroProps) {
   }, [displacementConfig]);
 
   if (reducedMotion) {
-    const commaIdx = greeting.indexOf(",");
-    const first = commaIdx > -1 ? greeting.slice(0, commaIdx + 1) : greeting;
-    const second = commaIdx > -1 ? greeting.slice(commaIdx + 1).trim() : "";
     return (
       <div className={`text-sm text-[#131316]/60 leading-relaxed max-w-2xl ${className ?? ""}`}>
-        <p className="mb-1 text-[#131316]">{first}</p>
-        {second && <p className="mb-4 text-[#131316]">{second}</p>}
+        <p className="mb-4 text-lg text-[#131316]">{greeting}</p>
         <p>{bio}</p>
       </div>
     );
@@ -354,7 +333,7 @@ export function PretextHero({ greeting, bio, className }: PretextHeroProps) {
               top: word.y,
               color: word.block.color,
               opacity: isVisible ? word.block.baseOpacity : 0,
-              fontSize: fontPxRef.current,
+              fontSize: word.block.type === "heading" ? headingPxRef.current : fontPxRef.current,
               fontWeight: BODY_FONT_WEIGHT,
               fontFamily: FONT_FAMILY,
               whiteSpace: "pre",
