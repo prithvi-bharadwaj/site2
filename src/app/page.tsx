@@ -128,7 +128,7 @@ const LORE: LinkListItem[] = [
     title: "Found an exploit in Facebook games - traded unlimited Farmville resources for friends doing my homework in middle school",
   },
   {
-    title: "Pretended to be an entire game studio and convinced Voodoo and Supersonic to work with me at 19",
+    title: "Convinced Voodoo and Supersonic they'd signed an entire game studio at 19 - it was just me, doing the code, art, animation, sound and game design",
     brandLinks: [
       {
         name: "Voodoo",
