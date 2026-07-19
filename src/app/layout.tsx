@@ -26,7 +26,7 @@ export const metadata: Metadata = {
     description: "Developer, creator, explorer.",
   },
   icons: {
-    icon: "/favicon.ico",
+    icon: "/icon.svg",
   },
 };
 
