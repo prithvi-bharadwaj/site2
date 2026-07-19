@@ -25,9 +25,6 @@ export const metadata: Metadata = {
     title: "Prithvi",
     description: "Developer, creator, explorer.",
   },
-  icons: {
-    icon: "/favicon.ico",
-  },
 };
 
 export const viewport: Viewport = {
