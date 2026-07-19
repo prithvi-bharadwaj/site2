@@ -57,7 +57,18 @@ const PREVIOUSLY: LinkListItem[] = [
     ],
   },
   {
-    title: "Made 100+ games for Voodoo and Supersonic - 200K+ downloads",
+    title: "Bootstrapped my own game studio at 19 - made 100+ games for Voodoo and Supersonic, 200K+ downloads, $100K+ revenue",
+    inlineLinks: [
+      {
+        phrase: "game studio",
+        href: "https://www.skive.in",
+        media: {
+          type: "image",
+          src: SHOT("skive"),
+          caption: "skive.in",
+        },
+      },
+    ],
     brandLinks: [
       {
         name: "Voodoo",
@@ -105,20 +116,6 @@ const PREVIOUSLY: LinkListItem[] = [
     inlineLinks: [
       { phrase: "live game show", href: "https://x.com/FarzaTV/status/1719091708775059754" },
       { phrase: "Buildspace", href: "https://buildspace.so/" },
-    ],
-  },
-  {
-    title: "Bootstrapped my own game studio at 19 - profitable, 10+ employees at peak, $100K+ revenue",
-    inlineLinks: [
-      {
-        phrase: "game studio",
-        href: "https://www.skive.in",
-        media: {
-          type: "image",
-          src: SHOT("skive"),
-          caption: "skive.in",
-        },
-      },
     ],
   },
 ];
