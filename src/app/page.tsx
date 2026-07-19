@@ -284,17 +284,6 @@ export default function Home() {
           <PretextHero greeting={content.greeting} bio={content.bio} />
         </div>
 
-        {/* GenZ TLDR — additive when enabled */}
-        {genzMode && (
-          <div className="w-full max-w-[min(42rem,78vw)] mx-auto md:ml-[15vw] lg:ml-[18vw] mt-10 text-sm text-[#131316]/60 leading-relaxed">
-            <p className="text-[#131316]/50 text-xs uppercase tracking-wider mb-2">tldr</p>
-            {editMode && (
-              <EditPanel label="genz tldr" value={content.genz} onChange={(v) => update("genz", v)} />
-            )}
-            <p>{content.genz}</p>
-          </div>
-        )}
-
         {/* Previously I — continuation of the bio */}
         <div className="w-full max-w-[min(42rem,78vw)] mx-auto md:ml-[15vw] lg:ml-[18vw] mt-4">
           <PreviouslyList label="Previously:" items={PREVIOUSLY} />
@@ -335,6 +324,20 @@ export default function Home() {
               </a>
             ))}
           </div>
+
+          {/* Gen z mode — footer easter egg */}
+          <div className="mt-10">
+            <GenZToggle enabled={genzMode} onChange={setGenzMode} />
+          </div>
+          {genzMode && (
+            <div className="mt-4 text-sm text-[#131316]/60 leading-relaxed">
+              <p className="text-[#131316]/50 text-xs uppercase tracking-wider mb-2">tldr</p>
+              {editMode && (
+                <EditPanel label="genz tldr" value={content.genz} onChange={(v) => update("genz", v)} />
+              )}
+              <p>{content.genz}</p>
+            </div>
+          )}
         </div>
       </div>
 
