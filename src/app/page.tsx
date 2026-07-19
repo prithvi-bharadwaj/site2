@@ -9,6 +9,7 @@ import { PreviouslyList } from "@/components/PreviouslyList";
 import { SubwaySurfersPip } from "@/components/SubwaySurfersPip";
 import { EditPanel } from "@/components/EditPanel";
 import { BgVideo } from "@/components/BgVideo";
+import { Accordion } from "@/components/Accordion";
 
 /* ── Default content ── */
 
@@ -384,15 +385,17 @@ export default function Home() {
           <LinkList label="Achievements." items={ACHIEVEMENTS} variant="prose" pointer />
         </div>
 
-        {/* Side projects (left) + mini games (right) */}
-        <div className="w-full max-w-4xl mx-auto md:ml-[15vw] lg:ml-[18vw] mt-10 md:mt-14 grid grid-cols-1 md:grid-cols-[2fr_1fr] gap-10 md:gap-14">
-          <LinkList label="Side projects." items={SIDE_PROJECTS} />
-          <LinkList label="Mini-games." items={MINI_GAMES} />
-        </div>
-
-        {/* Lore */}
-        <div className="w-full max-w-3xl mx-auto md:ml-[15vw] lg:ml-[18vw] mt-10 md:mt-14">
-          <LinkList label="Lore." items={LORE} variant="prose" pointer />
+        {/* Collapsible sections — Side projects, Mini-games, Lore */}
+        <div className="w-full max-w-3xl mx-auto md:ml-[15vw] lg:ml-[18vw] mt-10 md:mt-14 space-y-6">
+          <Accordion label="Side projects.">
+            <LinkList items={SIDE_PROJECTS} />
+          </Accordion>
+          <Accordion label="Mini-games.">
+            <LinkList items={MINI_GAMES} />
+          </Accordion>
+          <Accordion label="Lore.">
+            <LinkList items={LORE} variant="prose" pointer />
+          </Accordion>
         </div>
 
         {/* Writing + Tutorials (two columns) */}
