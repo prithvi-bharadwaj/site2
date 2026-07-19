@@ -14,13 +14,13 @@ import { BgVideo } from "@/components/BgVideo";
 
 const DEFAULTS = {
   greeting: "Hey, I'm Prithvi.",
-  bio: "I've been building things on the internet since I was 13. Games first. Then AI. Then companies around both. I moved from Bangalore to sf to keep doing it.",
+  bio: "I've been building things on the internet since I was 13. Games first. Then AI. Then companies around both. I moved from Bangalore to SF to keep doing it.",
   genz: `head of engineering @ roam, building world models for 3d games + robotics. shipped 100+ games solo for voodoo and supersonic - they thought i was a studio. won buildspace out of 30k people. moved bangalore → sf. google check at 13. hacked farmville. sold hoodies to my whole school. play csgo and dota 2 (1v1 me bro).`,
 };
 
 type Content = typeof DEFAULTS;
 
-const STORAGE_KEY = "prithvi-site-content-v3";
+const STORAGE_KEY = "prithvi-site-content-v4";
 
 function loadContent(): Content {
   if (typeof window === "undefined") return DEFAULTS;
@@ -38,7 +38,7 @@ const SHOT = (name: string) => `/screenshots/${name}.png`;
 
 const PREVIOUSLY: LinkListItem[] = [
   {
-    title: "Head of Engineering at Roam - AI lab building generative world models for games. Raised $4.5M from Long Journey Ventures, Streamlined Ventures and angels from",
+    title: "Head of Engineering at Roam - AI lab building generative world models for games. Raised $4.5M from Long Journey Ventures, Streamlined Ventures and angels from OpenAI, Anthropic, DeepMind and xAI",
     brandLinks: [
       {
         name: "Roam",
@@ -51,21 +51,15 @@ const PREVIOUSLY: LinkListItem[] = [
         },
       },
     ],
-    trailingIcons: [
-      { name: "OpenAI", href: "https://openai.com", slug: "openai" },
-      { name: "Anthropic", href: "https://anthropic.com", slug: "anthropic" },
-      { name: "Google DeepMind", href: "https://deepmind.google", slug: "deepmind" },
-      { name: "xAI", href: "https://x.ai", slug: "xai" },
-    ],
   },
   {
-    title: "1st place, Google DeepMind × Stanford AI-Generated Game Contest (Apr 2026) - hosted by GDG Stanford, sponsored by DeepMind. Won for Voxel Demolish",
+    title: "1st place, Google DeepMind × Stanford AI-Generated Game Contest (Apr 2026) - for Voxel Demolish",
     inlineLinks: [
       { phrase: "Voxel Demolish", href: "https://youtube.com/shorts/E4fyqr_semE" },
     ],
   },
   {
-    title: "Made over 100+ Games for Voodoo and Supersonic - 200K+ cumulative downloads",
+    title: "Made 100+ games for Voodoo and Supersonic - 200K+ downloads",
     brandLinks: [
       {
         name: "Voodoo",
@@ -74,7 +68,7 @@ const PREVIOUSLY: LinkListItem[] = [
         media: {
           type: "image",
           src: SHOT("voodoo"),
-          caption: "voodoo.io - world's largest hyper-casual game publisher",
+          caption: "voodoo.io",
         },
       },
       {
@@ -84,13 +78,13 @@ const PREVIOUSLY: LinkListItem[] = [
         media: {
           type: "image",
           src: SHOT("supersonic"),
-          caption: "supersonic.com - Unity's mobile game publishing arm",
+          caption: "supersonic.com",
         },
       },
     ],
   },
   {
-    title: "Built an internal genAI app that lets you go from prompt → 3d multiplayer games in minutes for Roam",
+    title: "Built an internal genAI app for Roam - prompt → 3d multiplayer game in minutes",
     brandLinks: [
       {
         name: "Roam",
@@ -99,7 +93,7 @@ const PREVIOUSLY: LinkListItem[] = [
         media: {
           type: "image",
           src: SHOT("roam-info"),
-          caption: "roam.lol/info - prompt → 3d multiplayer game in minutes",
+          caption: "roam.lol/info",
         },
       },
     ],
@@ -109,14 +103,14 @@ const PREVIOUSLY: LinkListItem[] = [
     title: "Created a video game based on MrBeast in <6 weeks",
   },
   {
-    title: "Won a live game show from Buildspace - the world's largest online school for builders",
+    title: "Won a live game show from Buildspace",
     inlineLinks: [
       { phrase: "live game show", href: "https://x.com/FarzaTV/status/1719091708775059754" },
       { phrase: "Buildspace", href: "https://buildspace.so/" },
     ],
   },
   {
-    title: "I bootstrapped my own game studio at 19 - profitable, 10+ employees at peak, $100K+ revenue",
+    title: "Bootstrapped my own game studio at 19 - profitable, 10+ employees at peak, $100K+ revenue",
     inlineLinks: [
       {
         phrase: "game studio",
@@ -124,31 +118,22 @@ const PREVIOUSLY: LinkListItem[] = [
         media: {
           type: "image",
           src: SHOT("skive"),
-          caption: "skive.in - the game studio i bootstrapped at 19",
+          caption: "skive.in",
         },
       },
     ],
-  },
-  {
-    title: "Started a design agency that did video editing + managed socials for consumer SMBs",
-  },
-  {
-    title: "Had an ecom merch store - i sold out my first collection to my entire batch in high school (almost got kicked out)",
   },
 ];
 
 const LORE: LinkListItem[] = [
   {
-    title: "Got my first cheque from google at the age of 13",
+    title: "Got my first cheque from Google at 13",
   },
   {
-    title: "Discovered an exploit in facebook games. traded unlimited farmville resources in exchange for friends doing my homework in middle school",
+    title: "Found an exploit in Facebook games - traded unlimited Farmville resources for friends doing my homework in middle school",
   },
   {
-    title: "Made a viral game in college",
-  },
-  {
-    title: "Pretended to be an entire game development studio and managed to convince the world's largest mobile game publisher to work with me as a 19y old (Voodoo and Supersonic)",
+    title: "Pretended to be an entire game studio and convinced Voodoo and Supersonic to work with me at 19",
     brandLinks: [
       {
         name: "Voodoo",
@@ -157,7 +142,7 @@ const LORE: LinkListItem[] = [
         media: {
           type: "image",
           src: SHOT("voodoo"),
-          caption: "voodoo.io - world's largest hyper-casual game publisher",
+          caption: "voodoo.io",
         },
       },
       {
@@ -167,13 +152,16 @@ const LORE: LinkListItem[] = [
         media: {
           type: "image",
           src: SHOT("supersonic"),
-          caption: "supersonic.com - Unity's mobile game publishing arm",
+          caption: "supersonic.com",
         },
       },
     ],
   },
   {
-    title: "Play competitive CSGO and Dota 2 (come 1v1 me bro). Won multiple local tournaments",
+    title: "Sold out my first merch collection to my entire batch in high school - almost got kicked out",
+  },
+  {
+    title: "Play competitive CSGO and Dota 2 - won multiple local tournaments",
     brandLinks: [
       { name: "CSGO", href: "https://store.steampowered.com/app/730/CounterStrike_2/", favicon: "/logos/csgo.svg" },
       { name: "Dota 2", href: "https://store.steampowered.com/app/570/Dota_2/", favicon: "/logos/dota2.svg" },
@@ -182,14 +170,14 @@ const LORE: LinkListItem[] = [
 ];
 
 const WRITING: LinkListItem[] = [
-  { title: "the buildspace experience", meta: "jun 15, 2024", href: "https://prithvibharadwaj.substack.com/p/the-buildspace-experience", favicon: LOGO("substack") },
-  { title: "Building & Skiving", meta: "jan 31, 2024", href: "https://prithvibharadwaj.substack.com/p/building-and-skiving", favicon: LOGO("substack") },
-  { title: "Looking back at 2023", meta: "jan 10, 2024", href: "https://prithvibharadwaj.substack.com/p/looking-back-at-2023", favicon: LOGO("substack") },
-  { title: "travel, timepass and being in the trenches", meta: "dec 5, 2023", href: "https://prithvibharadwaj.substack.com/p/travel-timepass-and-being-in-the", favicon: LOGO("substack") },
-  { title: "I might have overcorrected", meta: "nov 20, 2023", href: "https://prithvibharadwaj.substack.com/p/i-might-have-overcorrected", favicon: LOGO("substack") },
-  { title: "The philosophy behind \"asjbdhjasdfhgw\"", meta: "nov 1, 2023", href: "https://prithvibharadwaj.substack.com/p/the-philosophy-behind-asjbdhjasdfhgw", favicon: LOGO("substack") },
-  { title: "Antigravity IDE for unity", meta: "may 2024", href: "https://medium.com/@prithvibofficial/how-to-use-antigravity-in-unity-for-game-development-8da2cbc353cb", favicon: "/logos/medium.svg" },
-  { title: "How to use Cursor AI with Unity", meta: "feb 2024", href: "https://medium.com/@prithvibofficial/how-to-use-cursor-ai-with-unity-a32291f9e852", favicon: "/logos/medium.svg" },
+  { title: "the buildspace experience", meta: "jun 2024", href: "https://prithvibharadwaj.substack.com/p/the-buildspace-experience", favicon: LOGO("substack") },
+  { title: "antigravity IDE for unity", meta: "may 2024", href: "https://medium.com/@prithvibofficial/how-to-use-antigravity-in-unity-for-game-development-8da2cbc353cb", favicon: "/logos/medium.svg" },
+  { title: "how to use cursor AI with unity", meta: "feb 2024", href: "https://medium.com/@prithvibofficial/how-to-use-cursor-ai-with-unity-a32291f9e852", favicon: "/logos/medium.svg" },
+  { title: "building & skiving", meta: "jan 2024", href: "https://prithvibharadwaj.substack.com/p/building-and-skiving", favicon: LOGO("substack") },
+  { title: "looking back at 2023", meta: "jan 2024", href: "https://prithvibharadwaj.substack.com/p/looking-back-at-2023", favicon: LOGO("substack") },
+  { title: "travel, timepass and being in the trenches", meta: "dec 2023", href: "https://prithvibharadwaj.substack.com/p/travel-timepass-and-being-in-the", favicon: LOGO("substack") },
+  { title: "i might have overcorrected", meta: "nov 2023", href: "https://prithvibharadwaj.substack.com/p/i-might-have-overcorrected", favicon: LOGO("substack") },
+  { title: "the philosophy behind \"asjbdhjasdfhgw\"", meta: "nov 2023", href: "https://prithvibharadwaj.substack.com/p/the-philosophy-behind-asjbdhjasdfhgw", favicon: LOGO("substack") },
 ];
 
 const SOCIALS: { label: string; href: string; favicon: string }[] = [
