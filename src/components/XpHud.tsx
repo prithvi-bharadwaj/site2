@@ -3,9 +3,11 @@
 import { useState } from "react";
 import {
   ACHIEVEMENTS,
-  GENZ_UNLOCK_XP,
+  SOCIAL_UNLOCK_XP,
   TOTALS,
+  levelFor,
   resetXp,
+  unlockedAchievements,
   useXp,
   type XpState,
 } from "@/lib/xp";
@@ -15,15 +17,19 @@ function count(s: XpState, prefix: string) {
 }
 
 /**
- * Tiny fixed xp counter, bottom right. Invisible until the visitor earns
- * their first xp - the site stays minimal for anyone who never discovers it.
- * Clicking it opens the achievement drawer.
+ * Persistent xp tracker, bottom right: level name, xp progress bar toward
+ * the next level, and achievements discovered. Clicking it opens the drawer
+ * with per-section progress, the achievement list, and how xp is earned.
  */
 export function XpHud() {
   const xp = useXp();
   const [open, setOpen] = useState(false);
 
-  if (xp.total === 0) return null;
+  const level = levelFor(xp.total);
+  const pct = level.next
+    ? Math.round(((xp.total - level.min) / (level.next.min - level.min)) * 100)
+    : 100;
+  const unlocked = unlockedAchievements(xp).length;
 
   const progress = [
     { label: "proof", n: count(xp, "proof:"), total: TOTALS.proof },
@@ -35,10 +41,10 @@ export function XpHud() {
     <div className="fixed bottom-4 right-4 z-[70] flex flex-col items-end">
       {open && (
         <div
-          className="mb-2 w-60 rounded-lg border border-(--ink)/10 bg-(--bg) p-4 shadow-lg"
+          className="mb-2 w-64 rounded-lg border border-(--ink)/10 bg-(--bg) p-4 shadow-lg"
           style={{ animation: "word-enter 200ms ease-out" }}
         >
-          <div className="mb-3 flex items-baseline justify-between">
+          <div className="mb-1 flex items-baseline justify-between">
             <span className="text-xs uppercase tracking-widest text-(--ink)/35">
               Progress
             </span>
@@ -46,7 +52,13 @@ export function XpHud() {
               {progress.map((p) => `${p.label} ${p.n}/${p.total}`).join(" · ")}
             </span>
           </div>
+          <p className="mb-3 text-[10px] leading-snug text-(--ink)/40">
+            earn xp: hover the proof, open the lore, read the writing
+          </p>
 
+          <span className="mb-1.5 block text-[10px] uppercase tracking-widest text-(--ink)/35">
+            achievements · {unlocked}/{ACHIEVEMENTS.length}
+          </span>
           <ul className="m-0 list-none space-y-1.5 p-0">
             {ACHIEVEMENTS.map((a) => {
               const done = a.done(xp);
@@ -68,9 +80,9 @@ export function XpHud() {
           </ul>
 
           <div className="mt-3 border-t border-(--ink)/8 pt-2 text-[10px] text-(--ink)/40">
-            {xp.total >= GENZ_UNLOCK_XP
-              ? "unlocked: gen z mode (footer)"
-              : `${GENZ_UNLOCK_XP} xp unlocks something in the footer`}
+            {xp.total >= SOCIAL_UNLOCK_XP
+              ? "contact links unlocked"
+              : `contact links unlock at ${SOCIAL_UNLOCK_XP} xp`}
           </div>
 
           <button
@@ -89,10 +101,21 @@ export function XpHud() {
         onClick={() => setOpen((p) => !p)}
         aria-expanded={open}
         title="progress"
-        className="cursor-pointer text-xs tabular-nums text-(--ink)/40 transition-colors hover:text-(--ink)/80"
-        style={{ animation: "word-enter 300ms ease-out" }}
+        className="group cursor-pointer rounded-md px-2 py-1.5 transition-colors hover:bg-(--ink)/4"
       >
-        {xp.total} xp
+        <span className="flex items-baseline gap-2 text-[11px] tabular-nums text-(--ink)/45 transition-colors group-hover:text-(--ink)/80">
+          <span>
+            lv{level.index} {level.name}
+          </span>
+          <span>{xp.total} xp</span>
+          <span>★ {unlocked}/{ACHIEVEMENTS.length}</span>
+        </span>
+        <span className="mt-1 block h-[3px] w-44 overflow-hidden rounded-full bg-(--ink)/10">
+          <span
+            className="block h-full rounded-full bg-(--ink)/55 transition-[width] duration-500"
+            style={{ width: `${pct}%` }}
+          />
+        </span>
       </button>
     </div>
   );

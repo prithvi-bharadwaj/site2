@@ -56,8 +56,8 @@ export function XpFx() {
       {particles.map((p) => (
         <span
           key={p.id}
-          className={`absolute tabular-nums whitespace-nowrap ${
-            p.big ? "text-[11px] text-(--ink)/90" : "text-[10px] text-(--ink)/60"
+          className={`absolute tabular-nums whitespace-nowrap font-medium ${
+            p.big ? "text-sm text-(--ink)/95" : "text-[13px] text-(--ink)/85"
           }`}
           style={{
             left: p.x,

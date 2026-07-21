@@ -6,6 +6,8 @@ import {
   inspectEnd,
   inspectStart,
   onXpFx,
+  onXpToast,
+  levelFor,
   resetXp,
   unlockedAchievements,
   useXp,
@@ -73,12 +75,22 @@ describe("xp store", () => {
     expect(names).toContain("Proof of Work");
   });
 
-  it("announces newly unlocked achievements via fx", () => {
+  it("announces newly unlocked achievements via toast", () => {
     const seen: string[] = [];
-    const off = onXpFx((d) => seen.push(d.text));
+    const off = onXpToast((d) => seen.push(`${d.kind}:${d.title}`));
     act(() => award("genz:on", 5));
     off();
-    expect(seen).toContain("★ Did Not Touch Grass");
+    expect(seen).toContain("achievement:Did Not Touch Grass");
     expect(ACHIEVEMENTS.find((a) => a.id === "did-not-touch-grass")!.done(currentState())).toBe(true);
+  });
+
+  it("maps xp totals to levels", () => {
+    expect(levelFor(0).name).toBe("stranger");
+    expect(levelFor(4).index).toBe(0);
+    expect(levelFor(5).name).toBe("visitor");
+    expect(levelFor(12).name).toBe("acquaintance");
+    expect(levelFor(100).name).toBe("real one");
+    expect(levelFor(100).next).toBeNull();
+    expect(levelFor(6).next!.min).toBe(12);
   });
 });

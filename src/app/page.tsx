@@ -12,7 +12,8 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 import { EditPanel } from "@/components/EditPanel";
 import { XpFx } from "@/components/XpFx";
 import { XpHud } from "@/components/XpHud";
-import { GENZ_UNLOCK_XP, award, useXp } from "@/lib/xp";
+import { XpToasts } from "@/components/XpToasts";
+import { SOCIAL_UNLOCK_XP, award, emitXpToast, useXp } from "@/lib/xp";
 
 /* ── Default content ── */
 
@@ -249,10 +250,13 @@ const WRITING: LinkListItem[] = [
   { title: "the philosophy behind \"asjbdhjasdfhgw\"", meta: "nov 2023", href: "https://prithvibharadwaj.substack.com/p/the-philosophy-behind-asjbdhjasdfhgw", favicon: LOGO("substack") },
 ];
 
-const SOCIALS: { label: string; href: string; favicon: string }[] = [
-  { label: "Instagram", href: "https://instagram.com/prithvibofficial", favicon: "/logos/instagram.svg" },
+// `contact: true` links are locked until the visitor earns SOCIAL_UNLOCK_XP -
+// they have to get to know Prithvi before they can reach out.
+const SOCIALS: { label: string; href: string; favicon: string; contact?: boolean }[] = [
+  { label: "Instagram", href: "https://instagram.com/prithvibofficial", favicon: "/logos/instagram.svg", contact: true },
+  { label: "LinkedIn", href: "https://www.linkedin.com/in/prithvibofficial", favicon: "/logos/linkedin.svg", contact: true },
+  { label: "Twitter", href: "https://x.com/prithvibofficial", favicon: LOGO("x"), contact: true },
   { label: "GitHub", href: "https://github.com/prithvi-bharadwaj", favicon: LOGO("github") },
-  { label: "Twitter", href: "https://x.com/prithvibofficial", favicon: LOGO("x") },
   { label: "Medium", href: "https://medium.com/@prithvibofficial", favicon: "/logos/medium.svg" },
   { label: "Substack", href: "https://prithvibharadwaj.substack.com", favicon: LOGO("substack") },
 ];
@@ -340,6 +344,7 @@ export default function Home() {
       <CursorTrail />
       <XpFx />
       <XpHud />
+      <XpToasts />
       <ThemeToggle />
       {editMode && (
         <EditToolbar onSave={save} onReset={reset} onCopy={copyToClipboard} />
@@ -386,31 +391,56 @@ export default function Home() {
             <WiggleWords text="Find me on." />
           </span>
           <div className="flex flex-wrap gap-x-5 gap-y-2 text-sm">
-            {SOCIALS.map((s) => (
-              <a
-                key={s.label}
-                href={s.href}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="group inline-flex items-center gap-1.5 text-(--ink)/60 hover:text-(--ink) transition-colors"
-              >
-                <img
-                  src={s.favicon}
-                  alt=""
-                  width={11}
-                  height={11}
-                  className="h-[0.7rem] w-[0.7rem] rounded-sm opacity-70 group-hover:opacity-100 transition-opacity"
-                />
-                <span className="hover-underline">{s.label}</span>
-              </a>
-            ))}
+            {SOCIALS.map((s) =>
+              s.contact && xp.total < SOCIAL_UNLOCK_XP ? (
+                <button
+                  key={s.label}
+                  onClick={() =>
+                    emitXpToast({
+                      title: "get to know me first",
+                      body: `Spend time on the site before you reach out. Hover the proof, open the lore, read the writing. Contact links unlock at ${SOCIAL_UNLOCK_XP} xp.`,
+                      kind: "info",
+                    })
+                  }
+                  title={`unlocks at ${SOCIAL_UNLOCK_XP} xp`}
+                  className="group inline-flex cursor-pointer items-center gap-1.5 text-(--ink)/40 transition-colors hover:text-(--ink)/60"
+                >
+                  <img
+                    src={s.favicon}
+                    alt=""
+                    width={11}
+                    height={11}
+                    className="h-[0.7rem] w-[0.7rem] rounded-sm opacity-40"
+                    style={{ filter: "grayscale(1)" }}
+                  />
+                  <span className="select-none blur-[3px]">{s.label}</span>
+                  <span className="text-[10px] opacity-60">🔒</span>
+                </button>
+              ) : (
+                <a
+                  key={s.label}
+                  href={s.href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="group inline-flex items-center gap-1.5 text-(--ink)/60 hover:text-(--ink) transition-colors"
+                >
+                  <img
+                    src={s.favicon}
+                    alt=""
+                    width={11}
+                    height={11}
+                    className="h-[0.7rem] w-[0.7rem] rounded-sm opacity-70 group-hover:opacity-100 transition-opacity"
+                  />
+                  <span className="hover-underline">{s.label}</span>
+                </a>
+              )
+            )}
           </div>
 
           {/* Gen z mode - footer easter egg */}
           <div className="mt-10">
             <GenZToggle
               enabled={genzMode}
-              locked={!genzMode && xp.total < GENZ_UNLOCK_XP}
               onChange={(v) => {
                 setGenzMode(v);
                 if (v) award("genz:on", 5);

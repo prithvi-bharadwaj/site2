@@ -13,8 +13,31 @@ import type { HoverCardMedia } from "./hover-card-bus";
 
 const STORAGE_KEY = "prithvi-xp-v1";
 const FX_EVENT = "xp:fx";
+const TOAST_EVENT = "xp:toast";
 
-export const GENZ_UNLOCK_XP = 15;
+/** Contact links (instagram, twitter, linkedin) unlock at this xp. */
+export const SOCIAL_UNLOCK_XP = 12;
+
+export interface Level {
+  name: string;
+  min: number;
+}
+
+export const LEVELS: Level[] = [
+  { name: "stranger", min: 0 },
+  { name: "visitor", min: 5 },
+  { name: "acquaintance", min: 12 },
+  { name: "friend", min: 22 },
+  { name: "real one", min: 35 },
+];
+
+export function levelFor(total: number): Level & { index: number; next: Level | null } {
+  let index = 0;
+  for (let i = 0; i < LEVELS.length; i++) {
+    if (total >= LEVELS[i].min) index = i;
+  }
+  return { index, ...LEVELS[index], next: LEVELS[index + 1] ?? null };
+}
 
 /** How many discoverables exist per kind - used for progress + achievements. */
 export const TOTALS = { proof: 8, lore: 4, writing: 8 };
@@ -28,6 +51,12 @@ export interface XpState {
 export interface XpFxDetail {
   text: string;
   big?: boolean;
+}
+
+export interface XpToastDetail {
+  title: string;
+  body: string;
+  kind: "achievement" | "info";
 }
 
 const EMPTY: XpState = { total: 0, earned: {} };
@@ -72,6 +101,17 @@ export function onXpFx(listener: (detail: XpFxDetail) => void) {
   return () => window.removeEventListener(FX_EVENT, handler);
 }
 
+export function emitXpToast(detail: XpToastDetail) {
+  if (typeof window === "undefined") return;
+  window.dispatchEvent(new CustomEvent<XpToastDetail>(TOAST_EVENT, { detail }));
+}
+
+export function onXpToast(listener: (detail: XpToastDetail) => void) {
+  const handler = (e: Event) => listener((e as CustomEvent<XpToastDetail>).detail);
+  window.addEventListener(TOAST_EVENT, handler);
+  return () => window.removeEventListener(TOAST_EVENT, handler);
+}
+
 /** Grant xp once per id. No-op if already earned. */
 export function award(id: string, xp: number) {
   if (typeof window === "undefined" || id in state.earned) return;
@@ -81,7 +121,7 @@ export function award(id: string, xp: number) {
   notify();
   emitXpFx({ text: `+${xp} xp` });
   for (const a of unlockedAchievements(state)) {
-    if (!before.has(a.id)) emitXpFx({ text: `★ ${a.name}`, big: true });
+    if (!before.has(a.id)) emitXpToast({ title: a.name, body: a.desc, kind: "achievement" });
   }
 }
 
