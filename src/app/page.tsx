@@ -254,8 +254,8 @@ const WRITING: LinkListItem[] = [
 // `contact: true` links are locked until the visitor earns SOCIAL_UNLOCK_XP -
 // they have to get to know Prithvi before they can reach out.
 const SOCIALS: { label: string; href: string; favicon: string; contact?: boolean }[] = [
-  { label: "Instagram", href: "https://instagram.com/prithvibofficial", favicon: "/logos/instagram.svg", contact: true },
-  { label: "LinkedIn", href: "https://www.linkedin.com/in/prithvibofficial", favicon: "/logos/linkedin.svg", contact: true },
+  { label: "Instagram", href: "https://instagram.com/theprithvibharadwaj", favicon: "/logos/instagram.svg", contact: true },
+  { label: "LinkedIn", href: "https://www.linkedin.com/in/prithvibharadwaj/", favicon: "/logos/linkedin.svg", contact: true },
   { label: "Twitter", href: "https://x.com/prithvibofficial", favicon: LOGO("x"), contact: true },
   { label: "GitHub", href: "https://github.com/prithvi-bharadwaj", favicon: LOGO("github") },
   { label: "Medium", href: "https://medium.com/@prithvibofficial", favicon: "/logos/medium.svg" },

@@ -34,6 +34,13 @@ html.dark {
   color-scheme: dark;
 }
 
+/* Monochrome brand marks (currentColor svgs rendered via <img>) resolve to
+   black; flip them to white in dark mode. */
+html.dark img[src="/logos/instagram.svg"],
+html.dark img[src="/logos/medium.svg"] {
+  filter: invert(1);
+}
+
 html,
 body {
   margin: 0;

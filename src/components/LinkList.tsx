@@ -177,7 +177,9 @@ export function LinkList({ label, items, columns = 1, variant = "compact", point
 
           const titleNode = (
             <span
-              className={`hover-underline text-(--ink)/60 group-hover:text-(--ink) transition-colors duration-200 inline leading-snug`}
+              // No hover-underline in prose (lore): the sweep stays put while
+              // wiggling words displace, which reads as a broken underline.
+              className={`${variant === "prose" ? "" : "hover-underline "}text-(--ink)/60 group-hover:text-(--ink) transition-colors duration-200 inline leading-snug`}
             >
               {pointer && (
                 <span className="text-(--ink)/30 mr-1.5">·</span>
