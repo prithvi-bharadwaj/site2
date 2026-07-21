@@ -436,7 +436,7 @@ export default function Home() {
 
         {/* Projects */}
         <div className="w-full max-w-[min(42rem,78vw)] mx-auto md:ml-[15vw] lg:ml-[18vw] mt-10 md:mt-14">
-          <PreviouslyList label="In 2026 I built." items={PROJECTS} />
+          <PreviouslyList label="In 2026 I built." items={PROJECTS} proofKind="project-proof" />
         </div>
 
         {/* Lore */}

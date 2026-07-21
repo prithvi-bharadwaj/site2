@@ -98,8 +98,8 @@ function renderTitleWithBrands(
           onClick={(e) => {
             e.stopPropagation();
             if (xpKind) award(`click:${media ? mediaKey(media) : brand.href}`, CLICK_XP);
-            if (media) {
-              // First click pins the preview card instead of leaving.
+            // Mouse clicks pin the preview card; keyboard activation navigates.
+            if (media && e.detail > 0) {
               e.preventDefault();
               if (xpKind) inspectEnd(`${xpKind}-proof:${mediaKey(media)}`);
               emitPin({ media, href: brand.href, x: e.clientX, y: e.clientY });
@@ -239,7 +239,12 @@ export function LinkList({ label, items, columns = 1, variant = "compact", point
                   className={`${wrapperClass} cursor-pointer`}
                   onClick={() => {
                     setOpen(isOpen ? null : i);
-                    if (item.media && !isOpen) emitHide();
+                    if (item.media && !isOpen) {
+                      emitHide();
+                      // The hover-inspect timer must die with the preview, or
+                      // it pays out for a card that's no longer showing.
+                      if (xpKind) inspectEnd(`${xpKind}-proof:${mediaKey(item.media)}`);
+                    }
                     if (xpKind && !isOpen) award(`${xpKind}:${item.title}`, CLICK_XP);
                   }}
                 >

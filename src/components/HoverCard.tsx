@@ -127,20 +127,23 @@ export function HoverCard() {
   }, [unpin]);
 
   // Pinned card dismissal: click outside, Escape, or scroll.
+  // "click" (not "pointerdown") so a re-click on the source link reaches its
+  // onClick first — the link stops propagation and toggles the pin itself;
+  // pointerdown would unpin before the click and the toggle would re-pin.
   useEffect(() => {
     if (!pinnedHref) return;
-    const onDown = (e: PointerEvent) => {
+    const onDocClick = (e: MouseEvent) => {
       if (!cardRef.current?.contains(e.target as Node)) unpin();
     };
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") unpin();
     };
     const onScroll = () => unpin();
-    document.addEventListener("pointerdown", onDown);
+    document.addEventListener("click", onDocClick);
     window.addEventListener("keydown", onKey);
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => {
-      document.removeEventListener("pointerdown", onDown);
+      document.removeEventListener("click", onDocClick);
       window.removeEventListener("keydown", onKey);
       window.removeEventListener("scroll", onScroll);
     };

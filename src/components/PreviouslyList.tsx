@@ -46,6 +46,12 @@ function tokenize(title: string, brands?: BrandLink[], inline?: InlineLink[]): S
 interface PreviouslyListProps {
   label: string;
   items: LinkListItem[];
+  /**
+   * Namespace for hover-inspect awards. The Previously section uses "proof"
+   * (counted by the Proof of Work achievement); other sections sharing this
+   * component must use their own prefix so they don't pollute that count.
+   */
+  proofKind?: string;
 }
 
 /**
@@ -54,7 +60,7 @@ interface PreviouslyListProps {
  * Words repel from cursor via the shared spring-physics wiggle manager;
  * underlined links move gently as single units so they stay clickable.
  */
-export function PreviouslyList({ label, items }: PreviouslyListProps) {
+export function PreviouslyList({ label, items, proofKind = "proof" }: PreviouslyListProps) {
   const ref = useRef<HTMLDivElement>(null);
   const [open, setOpen] = useState<number | null>(null);
   const xp = useXp();
@@ -75,8 +81,8 @@ export function PreviouslyList({ label, items }: PreviouslyListProps) {
           const isOpen = open === i;
           const segments = tokenize(item.title, item.brandLinks, item.inlineLinks);
           const proofKeys = [
-            ...(item.brandLinks ?? []).flatMap((b) => (b.media ? [`proof:${mediaKey(b.media)}`] : [])),
-            ...(item.inlineLinks ?? []).flatMap((l) => (l.media ? [`proof:${mediaKey(l.media)}`] : [])),
+            ...(item.brandLinks ?? []).flatMap((b) => (b.media ? [`${proofKind}:${mediaKey(b.media)}`] : [])),
+            ...(item.inlineLinks ?? []).flatMap((l) => (l.media ? [`${proofKind}:${mediaKey(l.media)}`] : [])),
           ];
           const verified = proofKeys.length > 0 && proofKeys.every((k) => k in xp.earned);
 
@@ -117,17 +123,18 @@ export function PreviouslyList({ label, items }: PreviouslyListProps) {
                         onClick={(e) => {
                           e.stopPropagation();
                           award(`click:${media ? mediaKey(media) : seg.brand.href}`, CLICK_XP);
-                          if (media) {
-                            // First click pins the preview card instead of leaving.
+                          // Mouse clicks pin the preview card instead of leaving.
+                          // Keyboard activation (e.detail === 0) navigates directly.
+                          if (media && e.detail > 0) {
                             e.preventDefault();
-                            inspectEnd(`proof:${mediaKey(media)}`);
+                            inspectEnd(`${proofKind}:${mediaKey(media)}`);
                             emitPin({ media, href: seg.brand.href, x: e.clientX, y: e.clientY });
                           }
                         }}
                         onPointerEnter={(e) => {
                           if (media && e.pointerType === "mouse") {
                             emitShow({ media, x: e.clientX, y: e.clientY });
-                            inspectStart(`proof:${mediaKey(media)}`);
+                            inspectStart(`${proofKind}:${mediaKey(media)}`);
                           }
                         }}
                         onPointerMove={(e) => {
@@ -136,7 +143,7 @@ export function PreviouslyList({ label, items }: PreviouslyListProps) {
                         onPointerLeave={(e) => {
                           if (media && e.pointerType === "mouse") {
                             emitHide();
-                            inspectEnd(`proof:${mediaKey(media)}`);
+                            inspectEnd(`${proofKind}:${mediaKey(media)}`);
                           }
                         }}
                         className="brand-link wl-unit inline-flex items-baseline gap-1 align-baseline"
@@ -166,16 +173,16 @@ export function PreviouslyList({ label, items }: PreviouslyListProps) {
                         onClick={(e) => {
                           e.stopPropagation();
                           award(`click:${media ? mediaKey(media) : seg.link.href}`, CLICK_XP);
-                          if (media) {
+                          if (media && e.detail > 0) {
                             e.preventDefault();
-                            inspectEnd(`proof:${mediaKey(media)}`);
+                            inspectEnd(`${proofKind}:${mediaKey(media)}`);
                             emitPin({ media, href: seg.link.href, x: e.clientX, y: e.clientY });
                           }
                         }}
                         onPointerEnter={(e) => {
                           if (media && e.pointerType === "mouse") {
                             emitShow({ media, x: e.clientX, y: e.clientY });
-                            inspectStart(`proof:${mediaKey(media)}`);
+                            inspectStart(`${proofKind}:${mediaKey(media)}`);
                           }
                         }}
                         onPointerMove={(e) => {
@@ -184,7 +191,7 @@ export function PreviouslyList({ label, items }: PreviouslyListProps) {
                         onPointerLeave={(e) => {
                           if (media && e.pointerType === "mouse") {
                             emitHide();
-                            inspectEnd(`proof:${mediaKey(media)}`);
+                            inspectEnd(`${proofKind}:${mediaKey(media)}`);
                           }
                         }}
                         data-repel

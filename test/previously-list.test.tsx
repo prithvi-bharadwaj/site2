@@ -50,9 +50,14 @@ describe("PreviouslyList", () => {
     const link = [...container.querySelectorAll("a")].find((a) => a.textContent?.includes("roam"))!;
     expect(link.getAttribute("target")).toBeNull(); // no new tabs anywhere
 
-    // Click: doesn't navigate, pins the hover card instead.
-    const clickEvent = fireEvent.click(link);
+    // Mouse click (detail > 0): doesn't navigate, pins the hover card instead.
+    const clickEvent = fireEvent.click(link, { detail: 1 });
     expect(clickEvent).toBe(false); // preventDefault was called
+    expect(pins).toEqual(["https://roam.lol"]);
+
+    // Keyboard activation (detail === 0): navigates, no pin.
+    const keyboardEvent = fireEvent.click(link, { detail: 0 });
+    expect(keyboardEvent).toBe(true); // no preventDefault - link follows href
     expect(pins).toEqual(["https://roam.lol"]);
     off();
   });
