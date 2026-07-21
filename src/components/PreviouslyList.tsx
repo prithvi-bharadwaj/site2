@@ -6,6 +6,7 @@ import { BrandIcon, hasBrandIcon } from "./BrandIcon";
 import { WiggleWords, useWiggleDescendants } from "./WiggleWords";
 import { emitShow, emitMove, emitHide } from "@/lib/hover-card-bus";
 import { CLICK_XP, award, inspectStart, inspectEnd, mediaKey, useXp } from "@/lib/xp";
+import { ProofPopup } from "./ProofPopup";
 
 const EASE = "cubic-bezier(0.23, 1, 0.32, 1)";
 const DOTTED = "1px dotted rgb(var(--ink-rgb) / 0.35)";
@@ -57,6 +58,8 @@ interface PreviouslyListProps {
 export function PreviouslyList({ label, items }: PreviouslyListProps) {
   const ref = useRef<HTMLDivElement>(null);
   const [open, setOpen] = useState<number | null>(null);
+  // "<itemIndex>:<segmentIndex>" of the proof popup currently expanded inline.
+  const [openProof, setOpenProof] = useState<string | null>(null);
   const xp = useXp();
 
   useWiggleDescendants(ref);
@@ -109,19 +112,25 @@ export function PreviouslyList({ label, items }: PreviouslyListProps) {
                 {segments.map((seg, si) => {
                   if (seg.kind === "brand") {
                     const media = seg.brand.media;
+                    const proofKey = `${i}:${si}`;
                     return (
                       <a
                         key={si}
                         href={seg.brand.href}
-                        target="_blank"
-                        rel="noopener noreferrer"
                         data-repel
                         onClick={(e) => {
                           e.stopPropagation();
                           award(`click:${media ? mediaKey(media) : seg.brand.href}`, CLICK_XP);
+                          if (media) {
+                            // First click expands the proof inline instead of leaving.
+                            e.preventDefault();
+                            emitHide();
+                            inspectEnd(`proof:${mediaKey(media)}`);
+                            setOpenProof((p) => (p === proofKey ? null : proofKey));
+                          }
                         }}
                         onPointerEnter={(e) => {
-                          if (media && e.pointerType === "mouse") {
+                          if (media && e.pointerType === "mouse" && openProof !== proofKey) {
                             emitShow({ media, x: e.clientX, y: e.clientY });
                             inspectStart(`proof:${mediaKey(media)}`);
                           }
@@ -155,18 +164,23 @@ export function PreviouslyList({ label, items }: PreviouslyListProps) {
                   }
                   if (seg.kind === "inline") {
                     const media = seg.link.media;
+                    const proofKey = `${i}:${si}`;
                     return (
                       <a
                         key={si}
                         href={seg.link.href}
-                        target="_blank"
-                        rel="noopener noreferrer"
                         onClick={(e) => {
                           e.stopPropagation();
                           award(`click:${media ? mediaKey(media) : seg.link.href}`, CLICK_XP);
+                          if (media) {
+                            e.preventDefault();
+                            emitHide();
+                            inspectEnd(`proof:${mediaKey(media)}`);
+                            setOpenProof((p) => (p === proofKey ? null : proofKey));
+                          }
                         }}
                         onPointerEnter={(e) => {
-                          if (media && e.pointerType === "mouse") {
+                          if (media && e.pointerType === "mouse" && openProof !== proofKey) {
                             emitShow({ media, x: e.clientX, y: e.clientY });
                             inspectStart(`proof:${mediaKey(media)}`);
                           }
@@ -203,8 +217,6 @@ export function PreviouslyList({ label, items }: PreviouslyListProps) {
                         <a
                           key={icon.href}
                           href={icon.href}
-                          target="_blank"
-                          rel="noopener noreferrer"
                           onClick={(e) => e.stopPropagation()}
                           title={icon.name}
                           data-repel
@@ -246,6 +258,22 @@ export function PreviouslyList({ label, items }: PreviouslyListProps) {
                 )}
               </span>
 
+              {openProof?.startsWith(`${i}:`) &&
+                (() => {
+                  const seg = segments[Number(openProof.split(":")[1])];
+                  const info =
+                    seg?.kind === "brand"
+                      ? { href: seg.brand.href, media: seg.brand.media }
+                      : seg?.kind === "inline"
+                        ? { href: seg.link.href, media: seg.link.media }
+                        : null;
+                  return info?.media ? (
+                    <div className="ml-5">
+                      <ProofPopup href={info.href} media={info.media} />
+                    </div>
+                  ) : null;
+                })()}
+
               {expandable && (
                 <div
                   className="work-detail ml-5"
@@ -278,8 +306,6 @@ export function PreviouslyList({ label, items }: PreviouslyListProps) {
                           <a
                             key={l.href}
                             href={l.href}
-                            target="_blank"
-                            rel="noopener noreferrer"
                             className="inline-flex items-center gap-1 text-[11px] text-(--ink)/45 hover:text-(--ink)/80 underline underline-offset-2"
                           >
                             {l.favicon && (

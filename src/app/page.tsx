@@ -433,8 +433,6 @@ export default function Home() {
                 <a
                   key={s.label}
                   href={s.href}
-                  target="_blank"
-                  rel="noopener noreferrer"
                   className="group inline-flex items-center gap-1.5 text-(--ink)/60 hover:text-(--ink) transition-colors"
                 >
                   <img

@@ -130,11 +130,19 @@ export function onXpToast(listener: (detail: XpToastDetail) => void) {
 /** Grant xp once per id. No-op if already earned. */
 export function award(id: string, xp: number) {
   if (typeof window === "undefined" || id in state.earned) return;
+  const first = state.total === 0;
   const before = new Set(unlockedAchievements(state).map((a) => a.id));
   state = { total: state.total + xp, earned: { ...state.earned, [id]: xp } };
   persist();
   notify();
   emitXpFx({ text: `+${xp} xp` });
+  if (first) {
+    emitXpToast({
+      title: "you found the xp",
+      body: `Hovering a preview pays +${HOVER_XP}, opening things pays +${CLICK_XP}. Contact links unlock at ${SOCIAL_UNLOCK_XP} xp.`,
+      kind: "info",
+    });
+  }
   for (const a of unlockedAchievements(state)) {
     if (!before.has(a.id)) emitXpToast({ title: a.name, body: a.desc, kind: "achievement" });
   }

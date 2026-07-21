@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 import { WiggleWords, useWiggleDescendants } from "./WiggleWords";
 import { emitShow, emitMove, emitHide, type HoverCardMedia } from "@/lib/hover-card-bus";
 import { CLICK_XP, award, inspectStart, inspectEnd, mediaKey } from "@/lib/xp";
+import { ProofPopup } from "./ProofPopup";
 
 export interface BrandLink {
   name: string;
@@ -73,7 +74,12 @@ function escapeRegex(s: string) {
   return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
-function renderTitleWithBrands(title: string, brands?: BrandLink[], xpKind?: string): ReactNode {
+function renderTitleWithBrands(
+  title: string,
+  brands: BrandLink[] | undefined,
+  xpKind: string | undefined,
+  onToggleBrand: (name: string) => void
+): ReactNode {
   if (!brands || brands.length === 0) return <WiggleWords text={title} />;
   const pattern = new RegExp(
     `(${brands.map((b) => escapeRegex(b.name)).join("|")})`,
@@ -90,12 +96,17 @@ function renderTitleWithBrands(title: string, brands?: BrandLink[], xpKind?: str
         <a
           key={i}
           href={brand.href}
-          target="_blank"
-          rel="noopener noreferrer"
           data-repel
           onClick={(e) => {
             e.stopPropagation();
             if (xpKind) award(`click:${media ? mediaKey(media) : brand.href}`, CLICK_XP);
+            if (media) {
+              // First click expands the proof inline instead of leaving.
+              e.preventDefault();
+              emitHide();
+              if (xpKind) inspectEnd(`${xpKind}-proof:${mediaKey(media)}`);
+              onToggleBrand(brand.name);
+            }
           }}
           onPointerEnter={(e) => {
             if (media && e.pointerType === "mouse") {
@@ -132,6 +143,8 @@ function renderTitleWithBrands(title: string, brands?: BrandLink[], xpKind?: str
 export function LinkList({ label, items, columns = 1, variant = "compact", pointer = false, xpKind }: LinkListProps) {
   const [visible, setVisible] = useState(false);
   const [open, setOpen] = useState<number | null>(null);
+  // "<itemIndex>:<brandName>" of the proof popup currently expanded inline.
+  const [openBrand, setOpenBrand] = useState<string | null>(null);
   const rootRef = useRef<HTMLElement>(null);
 
   useWiggleDescendants(rootRef);
@@ -183,7 +196,9 @@ export function LinkList({ label, items, columns = 1, variant = "compact", point
                   height={11}
                 />
               )}
-              {renderTitleWithBrands(item.title, item.brandLinks, xpKind)}
+              {renderTitleWithBrands(item.title, item.brandLinks, xpKind, (name) =>
+                setOpenBrand((p) => (p === `${i}:${name}` ? null : `${i}:${name}`))
+              )}
               {item.trailingFavicons && item.trailingFavicons.length > 0 && (
                 <span className="inline-flex items-center gap-1 ml-1.5 align-[-0.15em]">
                   {item.trailingFavicons.map((src) => (
@@ -243,8 +258,6 @@ export function LinkList({ label, items, columns = 1, variant = "compact", point
               ) : item.href ? (
                 <a
                   href={item.href}
-                  target="_blank"
-                  rel="noopener noreferrer"
                   className={wrapperClass}
                   onClick={() => {
                     if (xpKind) award(`${xpKind}:${item.href}`, CLICK_XP);
@@ -267,6 +280,13 @@ export function LinkList({ label, items, columns = 1, variant = "compact", point
                   )}
                 </span>
               )}
+
+              {openBrand?.startsWith(`${i}:`) &&
+                (() => {
+                  const name = openBrand.slice(`${i}:`.length);
+                  const brand = item.brandLinks?.find((b) => b.name === name);
+                  return brand?.media ? <ProofPopup href={brand.href} media={brand.media} /> : null;
+                })()}
 
               {expandable && (
                 <div
@@ -308,8 +328,6 @@ export function LinkList({ label, items, columns = 1, variant = "compact", point
                           <a
                             key={l.href}
                             href={l.href}
-                            target="_blank"
-                            rel="noopener noreferrer"
                             className="inline-flex items-center gap-1 text-[11px] text-(--ink)/45 hover:text-(--ink)/80 underline underline-offset-2"
                           >
                             {l.favicon && (
@@ -323,8 +341,6 @@ export function LinkList({ label, items, columns = 1, variant = "compact", point
                     {item.href && !item.expand && (
                       <a
                         href={item.href}
-                        target="_blank"
-                        rel="noopener noreferrer"
                         className="text-[11px] text-(--ink)/45 hover:text-(--ink)/80 underline underline-offset-2"
                       >
                         open ↗
