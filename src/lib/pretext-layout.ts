@@ -24,6 +24,8 @@ export type BlockType =
 export interface TextBlock {
   text: string;
   type: BlockType;
+  /** Split into per-character elements instead of per-word (letter wiggle). */
+  charLevel?: boolean;
   href?: string;
   color?: string;
   baseOpacity?: number;
@@ -62,12 +64,12 @@ export interface HeroLayoutResult {
 
 /** Style defaults per block type (monospace theme) */
 const BLOCK_DEFAULTS: Record<BlockType, { color: string; baseOpacity: number }> = {
-  heading: { color: "#131316", baseOpacity: 1.0 },
-  accent: { color: "#131316", baseOpacity: 1.0 },
-  tagline: { color: "#131316", baseOpacity: 0.8 },
-  body: { color: "#131316", baseOpacity: 0.6 },
-  label: { color: "#131316", baseOpacity: 0.35 },
-  link: { color: "#131316", baseOpacity: 0.5 },
+  heading: { color: "var(--ink)", baseOpacity: 1.0 },
+  accent: { color: "var(--ink)", baseOpacity: 1.0 },
+  tagline: { color: "var(--ink)", baseOpacity: 0.8 },
+  body: { color: "var(--ink)", baseOpacity: 0.6 },
+  label: { color: "var(--ink)", baseOpacity: 0.35 },
+  link: { color: "var(--ink)", baseOpacity: 0.5 },
 };
 
 /**
@@ -223,7 +225,7 @@ function layoutInlineBlocks(
     const text = block.text;
     if (!text) continue;
 
-    const isCharLevel = block.type === "accent";
+    const isCharLevel = block.type === "accent" || !!block.charLevel;
     const defaults = BLOCK_DEFAULTS[block.type];
     const styledBlock = {
       ...block,
@@ -351,7 +353,7 @@ export function layoutHero(config: HeroLayoutConfig): HeroLayoutResult {
 
         for (let li = 0; li < result.lines.length; li++) {
           const line = result.lines[li];
-          const isCharLevel = block.type === "accent";
+          const isCharLevel = block.type === "accent" || !!block.charLevel;
 
           const positioned = isCharLevel
             ? splitLineIntoChars(

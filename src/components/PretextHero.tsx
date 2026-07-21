@@ -216,9 +216,9 @@ export function PretextHero({ greeting, bio, className }: PretextHeroProps) {
 
   if (reducedMotion) {
     return (
-      <div className={`text-sm text-[#131316]/60 leading-relaxed max-w-2xl ${className ?? ""}`}>
+      <div className={`text-sm text-(--ink)/60 leading-relaxed max-w-2xl ${className ?? ""}`}>
         {/* mb-[16px] matches the canvas path's marginBottom: 16 (rem units inflate at the 125% root) */}
-        <p className="mb-[16px] text-lg text-[#131316]">{greeting}</p>
+        <p className="mb-[16px] text-lg text-(--ink)">{greeting}</p>
         <p>{bio}</p>
       </div>
     );

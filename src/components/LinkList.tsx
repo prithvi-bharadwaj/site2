@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
+import { WiggleWords, useWiggleDescendants } from "./WiggleWords";
 import { emitShow, emitMove, emitHide, type HoverCardMedia } from "@/lib/hover-card-bus";
 
 export interface BrandLink {
@@ -32,6 +33,8 @@ export interface LinkListItem {
   title: string;
   href?: string;
   favicon?: string;
+  /** Optional hover-preview media for the full item. */
+  media?: HoverCardMedia;
   /** Favicons rendered inline after the title text (for sentences mentioning multiple brands). */
   trailingFavicons?: string[];
   /** Greyscale clickable icons rendered inline after the title text. */
@@ -64,7 +67,7 @@ function escapeRegex(s: string) {
 }
 
 function renderTitleWithBrands(title: string, brands?: BrandLink[]): ReactNode {
-  if (!brands || brands.length === 0) return title;
+  if (!brands || brands.length === 0) return <WiggleWords text={title} />;
   const pattern = new RegExp(
     `(${brands.map((b) => escapeRegex(b.name)).join("|")})`,
     "gi"
@@ -82,6 +85,7 @@ function renderTitleWithBrands(title: string, brands?: BrandLink[]): ReactNode {
           href={brand.href}
           target="_blank"
           rel="noopener noreferrer"
+          data-repel
           onClick={(e) => e.stopPropagation()}
           onPointerEnter={(e) => {
             if (media && e.pointerType === "mouse") emitShow({ media, x: e.clientX, y: e.clientY });
@@ -92,7 +96,7 @@ function renderTitleWithBrands(title: string, brands?: BrandLink[]): ReactNode {
           onPointerLeave={(e) => {
             if (media && e.pointerType === "mouse") emitHide();
           }}
-          className="brand-link inline-flex items-baseline gap-1"
+          className="brand-link wl-unit inline-flex items-baseline gap-1"
         >
           <img
             src={brand.favicon}
@@ -105,13 +109,16 @@ function renderTitleWithBrands(title: string, brands?: BrandLink[]): ReactNode {
         </a>
       );
     }
-    return <span key={i}>{part}</span>;
+    return <WiggleWords key={i} text={part} />;
   });
 }
 
 export function LinkList({ label, items, columns = 1, variant = "compact", pointer = false }: LinkListProps) {
   const [visible, setVisible] = useState(false);
   const [open, setOpen] = useState<number | null>(null);
+  const rootRef = useRef<HTMLElement>(null);
+
+  useWiggleDescendants(rootRef);
 
   useEffect(() => {
     const t = setTimeout(() => setVisible(true), 600);
@@ -120,6 +127,7 @@ export function LinkList({ label, items, columns = 1, variant = "compact", point
 
   return (
     <section
+      ref={rootRef}
       style={{
         opacity: visible ? 1 : 0,
         transform: visible ? "translateY(0)" : "translateY(8px)",
@@ -127,8 +135,8 @@ export function LinkList({ label, items, columns = 1, variant = "compact", point
       }}
     >
       {label && (
-        <span className="text-[#131316]/35 text-xs uppercase tracking-widest block mb-6">
-          {label}
+        <span className="text-(--ink)/35 text-xs uppercase tracking-widest block mb-6">
+          <WiggleWords text={label} />
         </span>
       )}
       <div
@@ -145,10 +153,10 @@ export function LinkList({ label, items, columns = 1, variant = "compact", point
 
           const titleNode = (
             <span
-              className={`hover-underline text-[#131316]/60 group-hover:text-[#131316] transition-colors duration-200 inline leading-snug`}
+              className={`hover-underline text-(--ink)/60 group-hover:text-(--ink) transition-colors duration-200 inline leading-snug`}
             >
               {pointer && (
-                <span className="text-[#131316]/30 mr-1.5">·</span>
+                <span className="text-(--ink)/30 mr-1.5">·</span>
               )}
               {item.favicon && (
                 <img
@@ -177,18 +185,36 @@ export function LinkList({ label, items, columns = 1, variant = "compact", point
             </span>
           );
 
-          const wrapperClass = "group block leading-snug";
+          const wrapperClass = `group block leading-snug${pointer ? " bullet-hang" : ""}`;
 
           return (
-            <div key={item.title}>
+            <div
+              key={item.title}
+              onPointerEnter={(e) => {
+                if (item.media && !isOpen && e.pointerType === "mouse") {
+                  emitShow({ media: item.media, x: e.clientX, y: e.clientY });
+                }
+              }}
+              onPointerMove={(e) => {
+                if (item.media && !isOpen && e.pointerType === "mouse") {
+                  emitMove({ x: e.clientX, y: e.clientY });
+                }
+              }}
+              onPointerLeave={(e) => {
+                if (item.media && e.pointerType === "mouse") emitHide();
+              }}
+            >
               {expandable ? (
                 <span
                   className={`${wrapperClass} cursor-pointer`}
-                  onClick={() => setOpen(isOpen ? null : i)}
+                  onClick={() => {
+                    setOpen(isOpen ? null : i);
+                    if (item.media && !isOpen) emitHide();
+                  }}
                 >
                   {titleNode}
                   {item.meta && (
-                    <span className="text-[10px] text-[#131316]/20 tabular-nums ml-2">
+                    <span className="text-[10px] text-(--ink)/20 tabular-nums ml-2">
                       {item.meta}
                     </span>
                   )}
@@ -197,7 +223,7 @@ export function LinkList({ label, items, columns = 1, variant = "compact", point
                 <a href={item.href} target="_blank" rel="noopener noreferrer" className={wrapperClass}>
                   {titleNode}
                   {item.meta && (
-                    <span className="text-[10px] text-[#131316]/20 tabular-nums ml-2">
+                    <span className="text-[10px] text-(--ink)/20 tabular-nums ml-2">
                       {item.meta}
                     </span>
                   )}
@@ -206,7 +232,7 @@ export function LinkList({ label, items, columns = 1, variant = "compact", point
                 <span className={`${wrapperClass} cursor-default`}>
                   {titleNode}
                   {item.meta && (
-                    <span className="text-[10px] text-[#131316]/20 tabular-nums ml-2">
+                    <span className="text-[10px] text-(--ink)/20 tabular-nums ml-2">
                       {item.meta}
                     </span>
                   )}
@@ -223,7 +249,7 @@ export function LinkList({ label, items, columns = 1, variant = "compact", point
                 >
                   <div className="pt-1 pb-1 leading-relaxed">
                     {item.expand && (
-                      <p className="text-xs text-[#131316]/45">{item.expand}</p>
+                      <p className="text-xs text-(--ink)/45">{item.expand}</p>
                     )}
                     {item.expandFavicons && item.expandFavicons.length > 0 && (
                       <div className="mt-1.5 flex flex-wrap items-center gap-2">
@@ -247,7 +273,7 @@ export function LinkList({ label, items, columns = 1, variant = "compact", point
                             href={l.href}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="inline-flex items-center gap-1 text-[11px] text-[#131316]/45 hover:text-[#131316]/80 underline underline-offset-2"
+                            className="inline-flex items-center gap-1 text-[11px] text-(--ink)/45 hover:text-(--ink)/80 underline underline-offset-2"
                           >
                             {l.favicon && (
                               <img src={l.favicon} alt="" className="h-3 w-3 rounded-sm" width={12} height={12} />
@@ -262,7 +288,7 @@ export function LinkList({ label, items, columns = 1, variant = "compact", point
                         href={item.href}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="text-[11px] text-[#131316]/45 hover:text-[#131316]/80 underline underline-offset-2"
+                        className="text-[11px] text-(--ink)/45 hover:text-(--ink)/80 underline underline-offset-2"
                       >
                         open ↗
                       </a>

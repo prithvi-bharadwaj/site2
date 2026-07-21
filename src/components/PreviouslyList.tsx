@@ -1,12 +1,13 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import type { BrandLink, InlineLink, LinkListItem } from "./LinkList";
 import { BrandIcon, hasBrandIcon } from "./BrandIcon";
+import { WiggleWords, useWiggleDescendants } from "./WiggleWords";
 import { emitShow, emitMove, emitHide } from "@/lib/hover-card-bus";
 
 const EASE = "cubic-bezier(0.23, 1, 0.32, 1)";
-const DOTTED = "1px dotted rgba(19, 19, 22, 0.35)";
+const DOTTED = "1px dotted rgb(var(--ink-rgb) / 0.35)";
 
 function escapeRegex(s: string) {
   return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -26,12 +27,16 @@ function tokenize(title: string, brands?: BrandLink[], inline?: InlineLink[]): S
   if (patterns.length === 0) return [{ kind: "plain", text: title }];
 
   const regex = new RegExp(`(${patterns.map((p) => escapeRegex(p.match)).join("|")})`, "gi");
+  // Only the first occurrence of each phrase becomes a link - project titles
+  // like "skills - ...AI skills i use" repeat the name in the description.
+  const used = new Set<string>();
   return title
     .split(regex)
     .filter((part) => part.length > 0)
     .map<Segment>((part) => {
       const hit = patterns.find((p) => p.match.toLowerCase() === part.toLowerCase());
-      if (!hit) return { kind: "plain", text: part };
+      if (!hit || used.has(hit.match.toLowerCase())) return { kind: "plain", text: part };
+      used.add(hit.match.toLowerCase());
       if (hit.kind === "brand") return { kind: "brand", text: part, brand: hit.payload as BrandLink };
       return { kind: "inline", text: part, link: hit.payload as InlineLink };
     });
@@ -45,56 +50,19 @@ interface PreviouslyListProps {
 /**
  * Continuous-paragraph list. Same font as the bio. Tight line-spacing.
  * Only items with expand content get hover affordance + cursor pointer.
- * Words repel from cursor (same effect as InlineDialogue).
+ * Words repel from cursor via the shared spring-physics wiggle manager;
+ * underlined links move gently as single units so they stay clickable.
  */
 export function PreviouslyList({ label, items }: PreviouslyListProps) {
   const ref = useRef<HTMLDivElement>(null);
   const [open, setOpen] = useState<number | null>(null);
 
-  useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
-    if (window.matchMedia("(pointer: coarse)").matches) return;
-
-    const R = 70;
-    const F = 5;
-    function onMove(e: MouseEvent) {
-      if (!el) return;
-      const rect = el.getBoundingClientRect();
-      const mx = e.clientX - rect.left;
-      const my = e.clientY - rect.top;
-      for (const w of el.querySelectorAll<HTMLElement>("[data-repel]")) {
-        const wr = w.getBoundingClientRect();
-        const dx = wr.left - rect.left + wr.width / 2 - mx;
-        const dy = wr.top - rect.top + wr.height / 2 - my;
-        const d = Math.sqrt(dx * dx + dy * dy);
-        if (d < R && d > 0) {
-          const t = 1 - d / R;
-          w.style.transform = `translate(${(dx / d) * t * t * F}px, ${(dy / d) * t * t * F}px)`;
-        } else if (w.style.transform) {
-          w.style.transform = "";
-        }
-      }
-    }
-    function onLeave() {
-      if (!el) return;
-      for (const w of el.querySelectorAll<HTMLElement>("[data-repel]")) {
-        w.style.transform = "";
-      }
-    }
-    el.addEventListener("mousemove", onMove);
-    el.addEventListener("mouseleave", onLeave);
-    return () => {
-      el.removeEventListener("mousemove", onMove);
-      el.removeEventListener("mouseleave", onLeave);
-    };
-  }, []);
+  useWiggleDescendants(ref);
 
   return (
-    <div ref={ref} className="text-sm text-[#131316]/60 leading-relaxed">
-      <span className="text-[#131316]/35 text-xs uppercase tracking-widest block mb-6">
-        {label}
+    <div ref={ref} className="text-sm text-(--ink)/60 leading-relaxed">
+      <span className="text-(--ink)/35 text-xs uppercase tracking-widest block mb-6">
+        <WiggleWords text={label} />
       </span>
       <ul className="list-none p-0 m-0">
         {items.map((item, i) => {
@@ -106,7 +74,7 @@ export function PreviouslyList({ label, items }: PreviouslyListProps) {
           const segments = tokenize(item.title, item.brandLinks, item.inlineLinks);
 
           return (
-            <li key={i} className="m-0 p-0">
+            <li key={i} className="m-0 p-0 bullet-hang">
               <span
                 onClick={expandable ? () => setOpen(isOpen ? null : i) : undefined}
                 className={expandable ? "group cursor-pointer" : ""}
@@ -114,7 +82,7 @@ export function PreviouslyList({ label, items }: PreviouslyListProps) {
               >
                 <span
                   data-repel
-                  className="inline-block text-[#131316]/30 mr-2"
+                  className="inline-block text-(--ink)/30 mr-2"
                   style={{ transition: `transform 180ms ${EASE}` }}
                 >
                   ·
@@ -150,8 +118,7 @@ export function PreviouslyList({ label, items }: PreviouslyListProps) {
                         onPointerLeave={(e) => {
                           if (media && e.pointerType === "mouse") emitHide();
                         }}
-                        className="brand-link inline-flex items-baseline gap-1 align-baseline"
-                        style={{ transition: `transform 180ms ${EASE}` }}
+                        className="brand-link wl-unit inline-flex items-baseline gap-1 align-baseline"
                       >
                         <img
                           src={seg.brand.favicon}
@@ -170,7 +137,6 @@ export function PreviouslyList({ label, items }: PreviouslyListProps) {
                     );
                   }
                   if (seg.kind === "inline") {
-                    const segWords = seg.text.split(/(\s+)/);
                     const media = seg.link.media;
                     return (
                       <a
@@ -188,44 +154,20 @@ export function PreviouslyList({ label, items }: PreviouslyListProps) {
                         onPointerLeave={(e) => {
                           if (media && e.pointerType === "mouse") emitHide();
                         }}
-                        className="inline-baseline text-[#131316]/75 hover:text-[#131316]"
-                        style={{ textDecoration: "none" }}
+                        data-repel
+                        className="wl-unit inline-block text-(--ink)/75 hover:text-(--ink)"
+                        style={{
+                          textDecoration: "none",
+                          borderBottom: DOTTED,
+                          paddingBottom: 1,
+                        }}
                       >
-                        {segWords.map((w, wi) => {
-                          if (/^\s+$/.test(w)) return <span key={wi}>{w}</span>;
-                          return (
-                            <span
-                              key={wi}
-                              data-repel
-                              className="inline-block"
-                              style={{
-                                transition: `transform 180ms ${EASE}, color 200ms`,
-                                borderBottom: DOTTED,
-                                paddingBottom: 1,
-                              }}
-                            >
-                              {w}
-                            </span>
-                          );
-                        })}
+                        {seg.text}
                       </a>
                     );
                   }
                   // plain
-                  const segWords = seg.text.split(/(\s+)/);
-                  return segWords.map((w, wi) => {
-                    if (/^\s+$/.test(w)) return <span key={`${si}-${wi}`}>{w}</span>;
-                    return (
-                      <span
-                        key={`${si}-${wi}`}
-                        data-repel
-                        className="inline-block"
-                        style={{ transition: `transform 180ms ${EASE}, color 200ms` }}
-                      >
-                        {w}
-                      </span>
-                    );
-                  });
+                  return <WiggleWords key={si} text={seg.text} />;
                 })}
                 {item.trailingIcons && item.trailingIcons.length > 0 && (
                   <span className="inline-flex items-center gap-2 ml-2 align-[-0.15em]">
@@ -240,7 +182,7 @@ export function PreviouslyList({ label, items }: PreviouslyListProps) {
                           onClick={(e) => e.stopPropagation()}
                           title={icon.name}
                           data-repel
-                          className="inline-block text-[#131316]/55 hover:text-[#131316]"
+                          className="inline-block text-(--ink)/55 hover:text-(--ink)"
                           style={{ transition: `transform 180ms ${EASE}, color 200ms, opacity 200ms` }}
                         >
                           {useSvg ? (
@@ -288,7 +230,7 @@ export function PreviouslyList({ label, items }: PreviouslyListProps) {
                 >
                   <div className="pt-0.5 pb-1 leading-relaxed">
                     {item.expand && (
-                      <p className="text-xs text-[#131316]/45">{item.expand}</p>
+                      <p className="text-xs text-(--ink)/45">{item.expand}</p>
                     )}
                     {item.expandFavicons && item.expandFavicons.length > 0 && (
                       <div className="mt-1.5 flex flex-wrap items-center gap-2">
@@ -312,7 +254,7 @@ export function PreviouslyList({ label, items }: PreviouslyListProps) {
                             href={l.href}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="inline-flex items-center gap-1 text-[11px] text-[#131316]/45 hover:text-[#131316]/80 underline underline-offset-2"
+                            className="inline-flex items-center gap-1 text-[11px] text-(--ink)/45 hover:text-(--ink)/80 underline underline-offset-2"
                           >
                             {l.favicon && (
                               <img src={l.favicon} alt="" className="h-3 w-3 rounded-sm" width={12} height={12} />

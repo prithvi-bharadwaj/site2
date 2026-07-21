@@ -6,6 +6,9 @@ import { LinkList, type LinkListItem } from "@/components/LinkList";
 import { GenZToggle } from "@/components/GenZToggle";
 import { PreviouslyList } from "@/components/PreviouslyList";
 import { SubwaySurfersPip } from "@/components/SubwaySurfersPip";
+import { WiggleWords } from "@/components/WiggleWords";
+import { CursorTrail } from "@/components/CursorTrail";
+import { ThemeToggle } from "@/components/ThemeToggle";
 import { EditPanel } from "@/components/EditPanel";
 
 /* ── Default content ── */
@@ -13,17 +16,16 @@ import { EditPanel } from "@/components/EditPanel";
 const DEFAULTS = {
   greeting: "Hey, I'm Prithvi.",
   bio: "I've been building things on the internet since I was 13. Games first. Then AI. Then companies around both. I moved from Bangalore to SF to keep doing it.",
-  genz: `head of engineering @ roam, building world models for 3d games + robotics. shipped 100+ games solo for voodoo and supersonic - they thought i was a studio. won buildspace out of 30k people. moved bangalore → sf. google check at 13. hacked farmville. sold hoodies to my whole school. play csgo and dota 2 (1v1 me bro).`,
+  genz: `cto @ roam, building world models for 3d games + robotics. shipped 100+ games solo for voodoo and supersonic - they thought i was a studio. won buildspace out of 30k people. moved bangalore → sf. google check at 13. hacked farmville. sold hoodies to my whole school. play csgo and dota 2 (1v1 me bro).`,
 };
 
 type Content = typeof DEFAULTS;
 
-const STORAGE_KEY = "prithvi-site-content-v4";
+const STORAGE_KEY = "prithvi-site-content-v8";
 
 function loadContent(): Content {
   if (typeof window === "undefined") return DEFAULTS;
   try {
-    localStorage.removeItem("prithvi-site-content-v3");
     const stored = localStorage.getItem(STORAGE_KEY);
     if (stored) return { ...DEFAULTS, ...JSON.parse(stored) };
   } catch { /* ignore */ }
@@ -37,10 +39,10 @@ const SHOT = (name: string) => `/screenshots/${name}.png`;
 
 const PREVIOUSLY: LinkListItem[] = [
   {
-    title: "Head of Engineering at Roam - AI lab building generative world models for games. Raised $4.5M from Long Journey Ventures, Streamlined Ventures and angels from OpenAI, Anthropic, DeepMind and xAI",
+    title: "CTO at roam, an applied ai lab building generative world models for games + robotics. $4.5m raised",
     brandLinks: [
       {
-        name: "Roam",
+        name: "roam",
         href: "https://roam.lol",
         favicon: LOGO("roam"),
         media: {
@@ -52,13 +54,17 @@ const PREVIOUSLY: LinkListItem[] = [
     ],
   },
   {
-    title: "1st place, Google DeepMind × Stanford AI-Generated Game Contest (Apr 2026) - for Voxel Demolish",
+    title: "1st place at the Google DeepMind × Stanford AI Game Contest (2026), for a genAI playcast",
     inlineLinks: [
-      { phrase: "Voxel Demolish", href: "https://youtube.com/shorts/E4fyqr_semE" },
+      {
+        phrase: "genAI playcast",
+        href: "https://youtube.com/shorts/E4fyqr_semE",
+        media: { type: "youtube", id: "E4fyqr_semE", caption: "voxel demolish" },
+      },
     ],
   },
   {
-    title: "Bootstrapped my own game studio at 19 - made 100+ games for Voodoo and Supersonic, 200K+ downloads, $100K+ revenue",
+    title: "Bootstrapped a game studio at 19 and made 100+ games for Voodoo and Supersonic - 200K+ downloads, six-figure revenue",
     inlineLinks: [
       {
         phrase: "game studio",
@@ -94,10 +100,10 @@ const PREVIOUSLY: LinkListItem[] = [
     ],
   },
   {
-    title: "Built an internal genAI app for Roam - prompt → 3d multiplayer game in minutes",
+    title: "Built roam's prompt → 3D multiplayer game system",
     brandLinks: [
       {
-        name: "Roam",
+        name: "roam",
         href: "https://roam.lol",
         favicon: LOGO("roam"),
         media: {
@@ -110,26 +116,93 @@ const PREVIOUSLY: LinkListItem[] = [
     links: [{ label: "roam.lol/info", href: "https://roam.lol/info", favicon: LOGO("roam") }],
   },
   {
-    title: "Created a video game based on MrBeast in <6 weeks",
+    title: "Built a MrBeast game in six weeks",
   },
   {
-    title: "Won a live game show from Buildspace",
+    title: "Won Buildspace's live game show",
     inlineLinks: [
-      { phrase: "live game show", href: "https://x.com/FarzaTV/status/1719091708775059754" },
-      { phrase: "Buildspace", href: "https://buildspace.so/" },
+      {
+        phrase: "live game show",
+        href: "https://x.com/FarzaTV/status/1719091708775059754",
+        media: { type: "image", src: SHOT("gameshow"), caption: "x.com/FarzaTV - it's time for the next chapter" },
+      },
+      {
+        phrase: "Buildspace",
+        href: "https://buildspace.so/",
+        media: { type: "image", src: SHOT("buildspace"), caption: "buildspace.so - hi. this was buildspace." },
+      },
     ],
+  },
+];
+
+// Project titles are always links; unreleased ones point here for now.
+const DEFAULT_PROJECT_URL = "https://github.com/prithvi-bharadwaj";
+
+const PROJECTS: LinkListItem[] = [
+  {
+    title: "Focused - an open-source AI extension that organizes and searches your browser tabs",
+    inlineLinks: [{ phrase: "Focused", href: DEFAULT_PROJECT_URL }],
+  },
+  {
+    title: "Reflink - use your clipboard in Wispr Flow without stopping to talk",
+    inlineLinks: [
+      {
+        phrase: "Reflink",
+        href: "https://github.com/prithvi-bharadwaj/wf-reflink-extension",
+        media: { type: "image", src: SHOT("reflink"), caption: "github.com/prithvi-bharadwaj/wf-reflink-extension" },
+      },
+    ],
+  },
+  {
+    title: "v2p - open-source tool that turns any video into ready-to-send prompts for your AI agents",
+    inlineLinks: [{ phrase: "v2p", href: DEFAULT_PROJECT_URL }],
+  },
+  {
+    title: "AI sandbox - image + video generation with templates",
+    inlineLinks: [{ phrase: "AI sandbox", href: DEFAULT_PROJECT_URL }],
+  },
+  {
+    title: "slack huddle mcp - reads huddle transcripts + AI summaries straight from Slack",
+    inlineLinks: [{ phrase: "slack huddle mcp", href: DEFAULT_PROJECT_URL }],
+  },
+  {
+    title: "skills - my collection of AI skills i use daily",
+    inlineLinks: [{ phrase: "skills", href: DEFAULT_PROJECT_URL }],
+  },
+  {
+    title: "mcps - my collection of MCPs i use daily",
+    inlineLinks: [{ phrase: "mcps", href: DEFAULT_PROJECT_URL }],
+  },
+  {
+    title: "+ 100s more in previous years",
   },
 ];
 
 const LORE: LinkListItem[] = [
   {
-    title: "Got my first cheque from Google at 13",
+    title: "First cheque from Google at 13",
+    expand: "For a YouTube video showing people how to hack passwords.",
+    media: {
+      type: "image",
+      src: "/proof/youtube-password-video.png",
+      wide: true,
+      caption: "278,436 views before YouTube removed it",
+    },
   },
   {
-    title: "Found an exploit in Facebook games - traded unlimited Farmville resources for friends doing my homework in middle school",
+    title: "Hacked FarmVille for infinite resources; traded them for homework",
   },
   {
-    title: "Convinced Voodoo and Supersonic they'd signed an entire game studio at 19 - it was just me, doing the code, art, animation, sound and game design",
+    title: "Started an e-commerce brand in high school; sold out the first merch drop to my entire batch",
+    expand: "Almost got kicked out for it.",
+  },
+  {
+    title: "Built my own PC at 17; it paid for itself in under four months",
+    expand: "I started a design agency making edits, launch videos, marketing content, and social ads for businesses on Instagram.",
+  },
+  {
+    title: "At 19, convinced Voodoo I was a five-person studio",
+    expand: "I was doing the code, art, animation, and game design myself.",
     brandLinks: [
       {
         name: "Voodoo",
@@ -141,26 +214,23 @@ const LORE: LinkListItem[] = [
           caption: "voodoo.io",
         },
       },
-      {
-        name: "Supersonic",
-        href: "https://www.supersonic.com",
-        favicon: LOGO("supersonic"),
-        media: {
-          type: "image",
-          src: SHOT("supersonic"),
-          caption: "supersonic.com",
-        },
-      },
     ],
   },
   {
-    title: "Sold out my first merch collection to my entire batch in high school - almost got kicked out",
-  },
-  {
-    title: "Play competitive CSGO and Dota 2 - won multiple local tournaments",
+    title: "Won local CSGO and Dota 2 tournaments",
     brandLinks: [
-      { name: "CSGO", href: "https://store.steampowered.com/app/730/CounterStrike_2/", favicon: "/logos/csgo.svg" },
-      { name: "Dota 2", href: "https://store.steampowered.com/app/570/Dota_2/", favicon: "/logos/dota2.svg" },
+      {
+        name: "CSGO",
+        href: "https://store.steampowered.com/app/730/CounterStrike_2/",
+        favicon: "/logos/csgo.svg",
+        media: { type: "image", src: SHOT("csgo"), caption: "counter-strike 2" },
+      },
+      {
+        name: "Dota 2",
+        href: "https://store.steampowered.com/app/570/Dota_2/",
+        favicon: "/logos/dota2.svg",
+        media: { type: "image", src: SHOT("dota2"), caption: "dota 2" },
+      },
     ],
   },
 ];
@@ -189,25 +259,25 @@ const SOCIALS: { label: string; href: string; favicon: string }[] = [
 function EditToolbar({ onSave, onReset, onCopy }: { onSave: () => void; onReset: () => void; onCopy: () => void }) {
   return (
     <div
-      className="fixed top-4 right-4 z-50 flex items-center gap-2"
+      className="fixed top-4 right-14 z-50 flex items-center gap-2"
       style={{ animation: "word-enter 200ms ease-out" }}
     >
-      <span className="text-[10px] text-[#131316]/30 mr-2">edit mode</span>
+      <span className="text-[10px] text-(--ink)/30 mr-2">edit mode</span>
       <button
         onClick={onSave}
-        className="px-3 py-1 text-xs text-[#FFFFFF] bg-[#131316]/90 hover:bg-[#131316] rounded-md transition-colors cursor-pointer"
+        className="px-3 py-1 text-xs text-(--bg) bg-(--ink)/90 hover:bg-(--ink) rounded-md transition-colors cursor-pointer"
       >
         save
       </button>
       <button
         onClick={onCopy}
-        className="px-3 py-1 text-xs text-[#131316]/60 hover:text-[#131316] border border-[#131316]/15 hover:border-[#131316]/30 rounded-md transition-colors cursor-pointer"
+        className="px-3 py-1 text-xs text-(--ink)/60 hover:text-(--ink) border border-(--ink)/15 hover:border-(--ink)/30 rounded-md transition-colors cursor-pointer"
       >
         copy
       </button>
       <button
         onClick={onReset}
-        className="px-3 py-1 text-xs text-[#131316]/40 hover:text-[#131316]/70 rounded-md transition-colors cursor-pointer"
+        className="px-3 py-1 text-xs text-(--ink)/40 hover:text-(--ink)/70 rounded-md transition-colors cursor-pointer"
       >
         reset
       </button>
@@ -263,6 +333,8 @@ export default function Home() {
 
   return (
     <main className="relative min-h-screen">
+      <CursorTrail />
+      <ThemeToggle />
       {editMode && (
         <EditToolbar onSave={save} onReset={reset} onCopy={copyToClipboard} />
       )}
@@ -287,6 +359,11 @@ export default function Home() {
           <PreviouslyList label="Previously." items={PREVIOUSLY} />
         </div>
 
+        {/* Projects */}
+        <div className="w-full max-w-[min(42rem,78vw)] mx-auto md:ml-[15vw] lg:ml-[18vw] mt-10 md:mt-14">
+          <PreviouslyList label="In 2026 I built." items={PROJECTS} />
+        </div>
+
         {/* Lore */}
         <div className="w-full max-w-[min(42rem,78vw)] mx-auto md:ml-[15vw] lg:ml-[18vw] mt-10 md:mt-14">
           <LinkList label="Lore." items={LORE} variant="prose" pointer />
@@ -299,8 +376,8 @@ export default function Home() {
 
         {/* Socials */}
         <div className="w-full max-w-[min(42rem,78vw)] mx-auto md:ml-[15vw] lg:ml-[18vw] mt-10 md:mt-14 pb-24">
-          <span className="text-[#131316]/35 text-xs uppercase tracking-widest block mb-6">
-            Find me on.
+          <span className="text-(--ink)/35 text-xs uppercase tracking-widest block mb-6">
+            <WiggleWords text="Find me on." />
           </span>
           <div className="flex flex-wrap gap-x-5 gap-y-2 text-sm">
             {SOCIALS.map((s) => (
@@ -309,7 +386,7 @@ export default function Home() {
                 href={s.href}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="group inline-flex items-center gap-1.5 text-[#131316]/60 hover:text-[#131316] transition-colors"
+                className="group inline-flex items-center gap-1.5 text-(--ink)/60 hover:text-(--ink) transition-colors"
               >
                 <img
                   src={s.favicon}
@@ -323,13 +400,13 @@ export default function Home() {
             ))}
           </div>
 
-          {/* Gen z mode — footer easter egg */}
+          {/* Gen z mode - footer easter egg */}
           <div className="mt-10">
             <GenZToggle enabled={genzMode} onChange={setGenzMode} />
           </div>
           {genzMode && (
-            <div className="mt-4 text-sm text-[#131316]/60 leading-relaxed">
-              <p className="text-[#131316]/50 text-xs uppercase tracking-wider mb-2">tldr</p>
+            <div className="mt-4 text-sm text-(--ink)/60 leading-relaxed">
+              <p className="text-(--ink)/50 text-xs uppercase tracking-wider mb-2">tldr</p>
               {editMode && (
                 <EditPanel label="genz tldr" value={content.genz} onChange={(v) => update("genz", v)} />
               )}

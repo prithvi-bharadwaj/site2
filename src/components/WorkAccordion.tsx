@@ -33,7 +33,7 @@ export function WorkAccordion() {
         transition: "opacity 400ms ease-out, transform 400ms ease-out",
       }}
     >
-      <span className="text-[#131316]/35 text-xs uppercase tracking-widest block mb-6">
+      <span className="text-(--ink)/35 text-xs uppercase tracking-widest block mb-6">
         Work.
       </span>
       <div className="flex flex-col gap-y-2 text-sm">
@@ -43,11 +43,11 @@ export function WorkAccordion() {
               className="project-item group cursor-pointer"
               onClick={() => setOpen(open === i ? null : i)}
             >
-              <span className="hover-underline text-[#131316]/60 group-hover:text-[#131316] transition-colors duration-200">
+              <span className="hover-underline text-(--ink)/60 group-hover:text-(--ink) transition-colors duration-200">
                 {item.name}
               </span>
               {item.years && (
-                <span className="text-[10px] text-[#131316]/20 tabular-nums">
+                <span className="text-[10px] text-(--ink)/20 tabular-nums">
                   {item.years}
                 </span>
               )}
@@ -59,7 +59,7 @@ export function WorkAccordion() {
                 opacity: open === i ? 1 : 0,
               }}
             >
-              <p className="text-xs text-[#131316]/35 pt-1 leading-relaxed">
+              <p className="text-xs text-(--ink)/35 pt-1 leading-relaxed">
                 {item.detail}
               </p>
             </div>

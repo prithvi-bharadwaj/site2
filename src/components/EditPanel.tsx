@@ -12,7 +12,7 @@ export function EditPanel({ label, value, onChange }: EditPanelProps) {
 
   return (
     <div className="mb-1">
-      <label className="block text-[10px] uppercase tracking-wider text-[#131316]/25 mb-1">
+      <label className="block text-[10px] uppercase tracking-wider text-(--ink)/25 mb-1">
         {label}
       </label>
       <textarea
@@ -20,7 +20,7 @@ export function EditPanel({ label, value, onChange }: EditPanelProps) {
         value={value}
         onChange={(e) => onChange(e.target.value)}
         spellCheck={false}
-        className="w-full bg-[#131316]/[0.03] border border-[#131316]/10 rounded-md px-3 py-2 text-xs text-[#131316]/70 font-mono leading-relaxed resize-vertical focus:outline-none focus:border-[#131316]/25 transition-colors"
+        className="w-full bg-(--ink)/[0.03] border border-(--ink)/10 rounded-md px-3 py-2 text-xs text-(--ink)/70 font-mono leading-relaxed resize-vertical focus:outline-none focus:border-(--ink)/25 transition-colors"
       />
     </div>
   );

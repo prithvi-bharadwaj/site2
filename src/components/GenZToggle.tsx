@@ -19,7 +19,7 @@ export function GenZToggle({ enabled, onChange }: GenZToggleProps) {
         font: "inherit",
       }}
     >
-      <span className="text-xs text-[#131316]/40 transition-colors group-hover:text-[#131316]/70">
+      <span className="text-xs text-(--ink)/40 transition-colors group-hover:text-(--ink)/70">
         gen z mode
       </span>
 
@@ -27,14 +27,14 @@ export function GenZToggle({ enabled, onChange }: GenZToggleProps) {
         className="relative inline-flex h-4 w-8 items-center rounded-full transition-colors duration-200"
         style={{
           backgroundColor: enabled
-            ? "#131316"
-            : "rgba(19, 19, 22, 0.15)",
+            ? "var(--ink)"
+            : "rgb(var(--ink-rgb) / 0.15)",
         }}
       >
         <span
           className="inline-block h-2.5 w-2.5 rounded-full transition-transform duration-200"
           style={{
-            backgroundColor: enabled ? "#FFFFFF" : "rgba(19, 19, 22, 0.6)",
+            backgroundColor: enabled ? "var(--bg)" : "rgb(var(--ink-rgb) / 0.6)",
             transform: enabled ? "translateX(18px)" : "translateX(3px)",
           }}
         />

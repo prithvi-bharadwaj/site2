@@ -9,9 +9,11 @@ interface HoverCardMediaBase {
 }
 
 export type HoverCardMedia =
-  | (HoverCardMediaBase & { type: "image"; src: string })
+  | (HoverCardMediaBase & { type: "image"; src: string; position?: string; wide?: boolean })
   | (HoverCardMediaBase & { type: "video"; src: string; poster?: string })
-  | (HoverCardMediaBase & { type: "youtube"; id: string });
+  | (HoverCardMediaBase & { type: "youtube"; id: string })
+  // Caption-only card (e.g. "link coming soon").
+  | (HoverCardMediaBase & { type: "note" });
 
 export interface HoverCardShowDetail {
   media: HoverCardMedia;

@@ -45,8 +45,14 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className={sans.variable}>
+    <html lang="en" className={sans.variable} suppressHydrationWarning>
       <head>
+        <script
+          // Apply the stored theme before paint to avoid a light flash.
+          dangerouslySetInnerHTML={{
+            __html: `(function(){try{if(localStorage.getItem("prithvi-theme")==="dark")document.documentElement.classList.add("dark")}catch(e){}})()`,
+          }}
+        />
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{
@@ -55,7 +61,7 @@ export default function RootLayout({
               "@type": "Person",
               name: "Prithvi",
               url: "https://prithvibharadwaj.com",
-              jobTitle: "Software Developer",
+              jobTitle: "CTO at roam",
               description: "Developer, creator, explorer.",
               sameAs: [],
             }),
