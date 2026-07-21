@@ -14,9 +14,11 @@ interface ProofPopupProps {
  */
 export function ProofPopup({ href, media }: ProofPopupProps) {
   const label = media.caption ?? href.replace(/^https?:\/\/(www\.)?/, "");
+  // ~20% larger than the hover card (296px, 560px in wide mode).
+  const maxWidth = media.type === "image" && media.wide ? 672 : 355;
 
   return (
-    <div className="my-3" style={{ animation: "word-enter 220ms ease-out" }}>
+    <div className="my-3" style={{ animation: "word-enter 220ms ease-out", maxWidth }}>
       {media.type === "image" && (
         <a href={href} className="group/proof block cursor-pointer">
           <img
