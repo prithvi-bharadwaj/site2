@@ -19,7 +19,9 @@ export function InspectProgress() {
     const onMove = (e: PointerEvent) => {
       mouse.current = { x: e.clientX, y: e.clientY };
       if (wrapRef.current) {
-        wrapRef.current.style.transform = `translate3d(${e.clientX + 14}px, ${e.clientY + 22}px, 0)`;
+        // Above the cursor: the hover card occupies the space below-right,
+        // so anything placed there is hidden underneath it.
+        wrapRef.current.style.transform = `translate3d(${e.clientX + 8}px, ${e.clientY - 34}px, 0)`;
       }
     };
     window.addEventListener("pointermove", onMove, { passive: true });
@@ -47,22 +49,22 @@ export function InspectProgress() {
   if (!active) return null;
 
   return (
-    <div className="pointer-events-none fixed inset-0 z-[85]" aria-hidden="true">
+    <div className="pointer-events-none fixed inset-0 z-[95]" aria-hidden="true">
       <div
         ref={wrapRef}
         className="absolute left-0 top-0 flex flex-col items-center gap-0.5"
         style={{
-          transform: `translate3d(${mouse.current.x + 14}px, ${mouse.current.y + 22}px, 0)`,
+          transform: `translate3d(${mouse.current.x + 8}px, ${mouse.current.y - 34}px, 0)`,
         }}
       >
-        <span className="block h-[3px] w-9 overflow-hidden rounded-full bg-(--ink)/15">
+        <span className="text-[9px] tabular-nums text-(--ink)/60">+{HOVER_XP} xp</span>
+        <span className="block h-1 w-10 overflow-hidden rounded-full bg-(--ink)/20 shadow-[0_0_0_2px_var(--bg)]">
           <span
             key={active.key}
-            className="block h-full rounded-full bg-(--ink)/70"
+            className="block h-full rounded-full bg-(--ink)/80"
             style={{ animation: `inspect-fill ${active.ms}ms linear forwards` }}
           />
         </span>
-        <span className="text-[9px] tabular-nums text-(--ink)/45">+{HOVER_XP} xp</span>
       </div>
     </div>
   );
