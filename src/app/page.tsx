@@ -10,6 +10,9 @@ import { WiggleWords } from "@/components/WiggleWords";
 import { CursorTrail } from "@/components/CursorTrail";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { EditPanel } from "@/components/EditPanel";
+import { XpFx } from "@/components/XpFx";
+import { XpHud } from "@/components/XpHud";
+import { GENZ_UNLOCK_XP, award, useXp } from "@/lib/xp";
 
 /* ── Default content ── */
 
@@ -292,6 +295,7 @@ export default function Home() {
   const [editMode, setEditMode] = useState(false);
   const [content, setContent] = useState<Content>(DEFAULTS);
   const [hydrated, setHydrated] = useState(false);
+  const xp = useXp();
 
   useEffect(() => {
     setContent(loadContent());
@@ -334,6 +338,8 @@ export default function Home() {
   return (
     <main className="relative min-h-screen">
       <CursorTrail />
+      <XpFx />
+      <XpHud />
       <ThemeToggle />
       {editMode && (
         <EditToolbar onSave={save} onReset={reset} onCopy={copyToClipboard} />
@@ -366,12 +372,12 @@ export default function Home() {
 
         {/* Lore */}
         <div className="w-full max-w-[min(42rem,78vw)] mx-auto md:ml-[15vw] lg:ml-[18vw] mt-10 md:mt-14">
-          <LinkList label="Lore." items={LORE} variant="prose" pointer />
+          <LinkList label="Lore." items={LORE} variant="prose" pointer xpKind="lore" />
         </div>
 
         {/* Writing */}
         <div className="w-full max-w-[min(42rem,78vw)] mx-auto md:ml-[15vw] lg:ml-[18vw] mt-10 md:mt-14">
-          <LinkList label="Writing." items={WRITING} pointer />
+          <LinkList label="Writing." items={WRITING} pointer xpKind="writing" />
         </div>
 
         {/* Socials */}
@@ -402,7 +408,14 @@ export default function Home() {
 
           {/* Gen z mode - footer easter egg */}
           <div className="mt-10">
-            <GenZToggle enabled={genzMode} onChange={setGenzMode} />
+            <GenZToggle
+              enabled={genzMode}
+              locked={!genzMode && xp.total < GENZ_UNLOCK_XP}
+              onChange={(v) => {
+                setGenzMode(v);
+                if (v) award("genz:on", 5);
+              }}
+            />
           </div>
           {genzMode && (
             <div className="mt-4 text-sm text-(--ink)/60 leading-relaxed">

@@ -5,6 +5,7 @@ import type { BrandLink, InlineLink, LinkListItem } from "./LinkList";
 import { BrandIcon, hasBrandIcon } from "./BrandIcon";
 import { WiggleWords, useWiggleDescendants } from "./WiggleWords";
 import { emitShow, emitMove, emitHide } from "@/lib/hover-card-bus";
+import { inspectStart, inspectEnd, mediaKey, useXp } from "@/lib/xp";
 
 const EASE = "cubic-bezier(0.23, 1, 0.32, 1)";
 const DOTTED = "1px dotted rgb(var(--ink-rgb) / 0.35)";
@@ -56,6 +57,7 @@ interface PreviouslyListProps {
 export function PreviouslyList({ label, items }: PreviouslyListProps) {
   const ref = useRef<HTMLDivElement>(null);
   const [open, setOpen] = useState<number | null>(null);
+  const xp = useXp();
 
   useWiggleDescendants(ref);
 
@@ -72,6 +74,11 @@ export function PreviouslyList({ label, items }: PreviouslyListProps) {
             (item.expandFavicons && item.expandFavicons.length > 0);
           const isOpen = open === i;
           const segments = tokenize(item.title, item.brandLinks, item.inlineLinks);
+          const proofKeys = [
+            ...(item.brandLinks ?? []).flatMap((b) => (b.media ? [`proof:${mediaKey(b.media)}`] : [])),
+            ...(item.inlineLinks ?? []).flatMap((l) => (l.media ? [`proof:${mediaKey(l.media)}`] : [])),
+          ];
+          const verified = proofKeys.length > 0 && proofKeys.every((k) => k in xp.earned);
 
           return (
             <li key={i} className="m-0 p-0 bullet-hang">
@@ -82,10 +89,11 @@ export function PreviouslyList({ label, items }: PreviouslyListProps) {
               >
                 <span
                   data-repel
-                  className="inline-block text-(--ink)/30 mr-2"
-                  style={{ transition: `transform 180ms ${EASE}` }}
+                  title={verified ? "proof inspected" : undefined}
+                  className={`inline-block mr-2 ${verified ? "text-(--ink)/75" : "text-(--ink)/30"}`}
+                  style={{ transition: `transform 180ms ${EASE}, color 400ms` }}
                 >
-                  ·
+                  {verified ? "•" : "·"}
                 </span>
                 {item.favicon && (
                   <img
@@ -110,13 +118,19 @@ export function PreviouslyList({ label, items }: PreviouslyListProps) {
                         data-repel
                         onClick={(e) => e.stopPropagation()}
                         onPointerEnter={(e) => {
-                          if (media && e.pointerType === "mouse") emitShow({ media, x: e.clientX, y: e.clientY });
+                          if (media && e.pointerType === "mouse") {
+                            emitShow({ media, x: e.clientX, y: e.clientY });
+                            inspectStart(`proof:${mediaKey(media)}`);
+                          }
                         }}
                         onPointerMove={(e) => {
                           if (media && e.pointerType === "mouse") emitMove({ x: e.clientX, y: e.clientY });
                         }}
                         onPointerLeave={(e) => {
-                          if (media && e.pointerType === "mouse") emitHide();
+                          if (media && e.pointerType === "mouse") {
+                            emitHide();
+                            inspectEnd(`proof:${mediaKey(media)}`);
+                          }
                         }}
                         className="brand-link wl-unit inline-flex items-baseline gap-1 align-baseline"
                       >
@@ -146,13 +160,19 @@ export function PreviouslyList({ label, items }: PreviouslyListProps) {
                         rel="noopener noreferrer"
                         onClick={(e) => e.stopPropagation()}
                         onPointerEnter={(e) => {
-                          if (media && e.pointerType === "mouse") emitShow({ media, x: e.clientX, y: e.clientY });
+                          if (media && e.pointerType === "mouse") {
+                            emitShow({ media, x: e.clientX, y: e.clientY });
+                            inspectStart(`proof:${mediaKey(media)}`);
+                          }
                         }}
                         onPointerMove={(e) => {
                           if (media && e.pointerType === "mouse") emitMove({ x: e.clientX, y: e.clientY });
                         }}
                         onPointerLeave={(e) => {
-                          if (media && e.pointerType === "mouse") emitHide();
+                          if (media && e.pointerType === "mouse") {
+                            emitHide();
+                            inspectEnd(`proof:${mediaKey(media)}`);
+                          }
                         }}
                         data-repel
                         className="wl-unit inline-block text-(--ink)/75 hover:text-(--ink)"

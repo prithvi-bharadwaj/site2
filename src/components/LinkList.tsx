@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { WiggleWords, useWiggleDescendants } from "./WiggleWords";
 import { emitShow, emitMove, emitHide, type HoverCardMedia } from "@/lib/hover-card-bus";
+import { award, inspectStart, inspectEnd, mediaKey } from "@/lib/xp";
 
 export interface BrandLink {
   name: string;
@@ -60,13 +61,19 @@ interface LinkListProps {
   variant?: "compact" | "prose";
   /** Show a leading "—" before each item. */
   pointer?: boolean;
+  /**
+   * Discovery-XP namespace ("lore", "writing"). When set, expanding an item
+   * or opening its link awards xp once, and hover previews count as proof
+   * inspection under `<xpKind>-proof:`.
+   */
+  xpKind?: string;
 }
 
 function escapeRegex(s: string) {
   return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
-function renderTitleWithBrands(title: string, brands?: BrandLink[]): ReactNode {
+function renderTitleWithBrands(title: string, brands?: BrandLink[], xpKind?: string): ReactNode {
   if (!brands || brands.length === 0) return <WiggleWords text={title} />;
   const pattern = new RegExp(
     `(${brands.map((b) => escapeRegex(b.name)).join("|")})`,
@@ -88,13 +95,19 @@ function renderTitleWithBrands(title: string, brands?: BrandLink[]): ReactNode {
           data-repel
           onClick={(e) => e.stopPropagation()}
           onPointerEnter={(e) => {
-            if (media && e.pointerType === "mouse") emitShow({ media, x: e.clientX, y: e.clientY });
+            if (media && e.pointerType === "mouse") {
+              emitShow({ media, x: e.clientX, y: e.clientY });
+              if (xpKind) inspectStart(`${xpKind}-proof:${mediaKey(media)}`);
+            }
           }}
           onPointerMove={(e) => {
             if (media && e.pointerType === "mouse") emitMove({ x: e.clientX, y: e.clientY });
           }}
           onPointerLeave={(e) => {
-            if (media && e.pointerType === "mouse") emitHide();
+            if (media && e.pointerType === "mouse") {
+              emitHide();
+              if (xpKind) inspectEnd(`${xpKind}-proof:${mediaKey(media)}`);
+            }
           }}
           className="brand-link wl-unit inline-flex items-baseline gap-1"
         >
@@ -113,7 +126,7 @@ function renderTitleWithBrands(title: string, brands?: BrandLink[]): ReactNode {
   });
 }
 
-export function LinkList({ label, items, columns = 1, variant = "compact", pointer = false }: LinkListProps) {
+export function LinkList({ label, items, columns = 1, variant = "compact", pointer = false, xpKind }: LinkListProps) {
   const [visible, setVisible] = useState(false);
   const [open, setOpen] = useState<number | null>(null);
   const rootRef = useRef<HTMLElement>(null);
@@ -167,7 +180,7 @@ export function LinkList({ label, items, columns = 1, variant = "compact", point
                   height={11}
                 />
               )}
-              {renderTitleWithBrands(item.title, item.brandLinks)}
+              {renderTitleWithBrands(item.title, item.brandLinks, xpKind)}
               {item.trailingFavicons && item.trailingFavicons.length > 0 && (
                 <span className="inline-flex items-center gap-1 ml-1.5 align-[-0.15em]">
                   {item.trailingFavicons.map((src) => (
@@ -193,6 +206,7 @@ export function LinkList({ label, items, columns = 1, variant = "compact", point
               onPointerEnter={(e) => {
                 if (item.media && !isOpen && e.pointerType === "mouse") {
                   emitShow({ media: item.media, x: e.clientX, y: e.clientY });
+                  if (xpKind) inspectStart(`${xpKind}-proof:${mediaKey(item.media)}`);
                 }
               }}
               onPointerMove={(e) => {
@@ -201,7 +215,10 @@ export function LinkList({ label, items, columns = 1, variant = "compact", point
                 }
               }}
               onPointerLeave={(e) => {
-                if (item.media && e.pointerType === "mouse") emitHide();
+                if (item.media && e.pointerType === "mouse") {
+                  emitHide();
+                  if (xpKind) inspectEnd(`${xpKind}-proof:${mediaKey(item.media)}`);
+                }
               }}
             >
               {expandable ? (
@@ -210,6 +227,7 @@ export function LinkList({ label, items, columns = 1, variant = "compact", point
                   onClick={() => {
                     setOpen(isOpen ? null : i);
                     if (item.media && !isOpen) emitHide();
+                    if (xpKind && !isOpen) award(`${xpKind}:${item.title}`, 2);
                   }}
                 >
                   {titleNode}
@@ -220,7 +238,15 @@ export function LinkList({ label, items, columns = 1, variant = "compact", point
                   )}
                 </span>
               ) : item.href ? (
-                <a href={item.href} target="_blank" rel="noopener noreferrer" className={wrapperClass}>
+                <a
+                  href={item.href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={wrapperClass}
+                  onClick={() => {
+                    if (xpKind) award(`${xpKind}:${item.href}`, 1);
+                  }}
+                >
                   {titleNode}
                   {item.meta && (
                     <span className="text-[10px] text-(--ink)/20 tabular-nums ml-2">

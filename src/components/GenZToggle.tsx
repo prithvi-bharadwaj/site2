@@ -1,16 +1,28 @@
 "use client";
 
+import { GENZ_UNLOCK_XP, emitXpFx } from "@/lib/xp";
+
 interface GenZToggleProps {
   enabled: boolean;
   onChange: (enabled: boolean) => void;
+  /** Locked until the visitor earns enough discovery xp. */
+  locked?: boolean;
 }
 
-export function GenZToggle({ enabled, onChange }: GenZToggleProps) {
+export function GenZToggle({ enabled, onChange, locked = false }: GenZToggleProps) {
   return (
     <button
-      onClick={() => onChange(!enabled)}
+      onClick={() => {
+        if (locked) {
+          emitXpFx({ text: `locked · ${GENZ_UNLOCK_XP} xp` });
+          return;
+        }
+        onChange(!enabled);
+      }}
       role="switch"
       aria-checked={enabled}
+      aria-disabled={locked}
+      title={locked ? `unlocks at ${GENZ_UNLOCK_XP} xp` : undefined}
       className="group flex cursor-pointer items-center gap-3 transition-colors duration-200"
       style={{
         background: "none",
@@ -21,6 +33,7 @@ export function GenZToggle({ enabled, onChange }: GenZToggleProps) {
     >
       <span className="text-xs text-(--ink)/40 transition-colors group-hover:text-(--ink)/70">
         gen z mode
+        {locked && <span className="ml-1.5 opacity-60">🔒</span>}
       </span>
 
       <span
@@ -29,6 +42,7 @@ export function GenZToggle({ enabled, onChange }: GenZToggleProps) {
           backgroundColor: enabled
             ? "var(--ink)"
             : "rgb(var(--ink-rgb) / 0.15)",
+          opacity: locked ? 0.5 : 1,
         }}
       >
         <span
