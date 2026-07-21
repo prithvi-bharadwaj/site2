@@ -17,13 +17,31 @@ html {
   font-size: 125%;
 }
 
+:root {
+  --ink: #131316;
+  --ink-rgb: 19 19 22;
+  --bg: #FFFFFF;
+  --card-bg: #ffffff;
+  --card-media-bg: #f5f5f5;
+}
+
+html.dark {
+  --ink: #F2F2F0;
+  --ink-rgb: 242 242 240;
+  --bg: #131316;
+  --card-bg: #1C1C1F;
+  --card-media-bg: #232327;
+  color-scheme: dark;
+}
+
 html,
 body {
   margin: 0;
   padding: 0;
   width: 100%;
   height: 100%;
-  color: #131316;
+  color: var(--ink);
+  transition: color 250ms ease, background 250ms ease;
   font-weight: 300;
   line-height: 1.62;
   -webkit-font-smoothing: antialiased;
@@ -31,7 +49,7 @@ body {
 }
 
 html {
-  background: #FFFFFF;
+  background: var(--bg);
 }
 
 body {
@@ -199,7 +217,7 @@ a.project-item {
 
 @media (hover: hover) and (pointer: fine) {
   .pretext-link:hover {
-    color: #ffffff !important;
+    color: var(--bg) !important;
     opacity: 1 !important;
   }
 }
@@ -261,6 +279,8 @@ a.project-item {
 .work-detail {
   overflow: hidden;
   transition: max-height 250ms var(--ease-out), opacity 200ms var(--ease-out);
+  /* Cancel the bullet hanging indent inherited from the list item. */
+  text-indent: 0;
 }
 
 .work-item {
@@ -269,7 +289,7 @@ a.project-item {
 
 @media (hover: hover) and (pointer: fine) {
   .work-item:hover {
-    background-color: rgba(19, 19, 22, 0.02);
+    background-color: rgb(var(--ink-rgb) / 0.02);
   }
 }
 
@@ -325,13 +345,13 @@ a.project-item {
   bottom: 2px;
   width: 100%;
   height: 1px;
-  background: rgba(19, 19, 22, 0.4);
+  background: rgb(var(--ink-rgb) / 0.4);
   transition: background 300ms var(--ease-out);
 }
 
 @media (hover: hover) and (pointer: fine) {
   .trigger-overlay:hover::after {
-    background: rgba(19, 19, 22, 0.8);
+    background: rgb(var(--ink-rgb) / 0.8);
   }
 }
 
@@ -339,13 +359,13 @@ a.project-item {
 .action-link-overlay {
   display: block;
   text-decoration: none;
-  border-bottom: 1px solid rgba(19, 19, 22, 0.25);
+  border-bottom: 1px solid rgb(var(--ink-rgb) / 0.25);
   cursor: pointer;
 }
 
 @media (hover: hover) and (pointer: fine) {
   .action-link-overlay:hover {
-    border-bottom-color: rgba(19, 19, 22, 0.5);
+    border-bottom-color: rgb(var(--ink-rgb) / 0.5);
   }
 }
 
@@ -369,6 +389,43 @@ a.project-item {
   }
 }
 
+/* Slight cursor trail — full-viewport canvas above content, below the hover card */
+.cursor-trail {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  pointer-events: none;
+  z-index: 50;
+}
+
+/* Word wiggle — each word repels from the cursor with spring physics (no transition; transforms are written per frame) */
+.wl-word {
+  display: inline-block;
+}
+
+/* Subtle per-letter shear inside each word — compounds with the word's transform */
+.wl-ch {
+  display: inline-block;
+}
+
+/* Hanging indent so wrapped lines align with the text, not under the bullet. */
+.bullet-hang {
+  padding-left: 1em;
+  text-indent: -1em;
+}
+
+/* text-indent inherits into inline-block letter/word spans and collapses their
+   width - reset it; the hanging indent only belongs to the list item's own line box. */
+.bullet-hang * {
+  text-indent: 0;
+}
+
+/* Whole-unit wiggle for underlined links — moves as one so the underline stays continuous */
+.wl-unit {
+  transition: transform 180ms cubic-bezier(0.23, 1, 0.32, 1), color 200ms;
+}
+
 /* Inline prose link — dotted underline always, solid line wipes in on hover */
 .prose-link {
   position: relative;
@@ -377,7 +434,7 @@ a.project-item {
   text-decoration: none;
   background-image:
     linear-gradient(currentColor, currentColor),
-    repeating-linear-gradient(to right, rgba(19, 19, 22, 0.34) 0, rgba(19, 19, 22, 0.34) 3px, transparent 3px, transparent 6px);
+    repeating-linear-gradient(to right, rgb(var(--ink-rgb) / 0.34) 0, rgb(var(--ink-rgb) / 0.34) 3px, transparent 3px, transparent 6px);
   background-position: 0 100%, 0 100%;
   background-repeat: no-repeat, repeat-x;
   background-size: 0 1px, 100% 1px;
@@ -403,7 +460,7 @@ a.project-item {
   opacity: 0;
   transition: opacity 140ms var(--ease-out);
   z-index: 90;
-  background: #ffffff;
+  background: var(--card-bg);
   border-radius: 6px;
   padding: 8px;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06), 0 14px 28px rgba(0, 0, 0, 0.12);
@@ -418,15 +475,33 @@ a.project-item {
   width: 100%;
   height: 175px;
   overflow: hidden;
-  background: #f5f5f5;
+  background: var(--card-media-bg);
   border-radius: 3px;
+}
+
+/* Caption-only note card (e.g. "link coming soon") */
+.hover-card[data-mode="note"] {
+  width: auto;
+  max-width: 220px;
+  padding: 4px 10px 6px;
+  white-space: nowrap;
+}
+
+/* Wide banner mode for screenshot strips (e.g. a single YouTube Studio row). */
+.hover-card[data-wide="true"] {
+  width: 560px;
+}
+
+.hover-card[data-wide="true"] .hover-card-media {
+  height: auto;
+  aspect-ratio: 1220 / 220;
 }
 
 .hover-card-caption {
   padding: 8px 4px 2px;
   font-size: 11px;
   line-height: 1.4;
-  color: rgba(19, 19, 22, 0.6);
+  color: rgb(var(--ink-rgb) / 0.6);
   letter-spacing: 0.005em;
 }
 

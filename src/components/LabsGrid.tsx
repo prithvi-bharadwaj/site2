@@ -35,7 +35,7 @@ export function LabsGrid({ compact }: { compact?: boolean } = {}) {
         transition: "opacity 400ms ease-out, transform 400ms ease-out",
       }}
     >
-      <span className="text-[#131316]/35 text-xs uppercase tracking-widest block mb-6">
+      <span className="text-(--ink)/35 text-xs uppercase tracking-widest block mb-6">
         Projects.
       </span>
       <div className={`grid grid-cols-1 ${compact ? "" : "sm:grid-cols-2"} gap-x-12 gap-y-2 text-sm`}>
@@ -43,13 +43,13 @@ export function LabsGrid({ compact }: { compact?: boolean } = {}) {
           <div key={item.title}>
             {item.href ? (
               <a href={item.href} className="project-item group">
-                <span className="hover-underline text-[#131316]/60 group-hover:text-[#131316] transition-colors duration-200">
+                <span className="hover-underline text-(--ink)/60 group-hover:text-(--ink) transition-colors duration-200">
                   {item.title}
                 </span>
               </a>
             ) : (
               <span className="project-item group cursor-default">
-                <span className="hover-underline text-[#131316]/60 group-hover:text-[#131316] transition-colors duration-200">
+                <span className="hover-underline text-(--ink)/60 group-hover:text-(--ink) transition-colors duration-200">
                   {item.title}
                 </span>
               </span>
