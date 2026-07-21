@@ -329,6 +329,20 @@ export default function Home() {
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
+  // Dwell reward: 60 visible seconds on the site (tab-away time doesn't count).
+  useEffect(() => {
+    let seconds = 0;
+    const timer = window.setInterval(() => {
+      if (document.visibilityState !== "visible") return;
+      seconds += 1;
+      if (seconds >= 60) {
+        window.clearInterval(timer);
+        award("time:60s", CLICK_XP);
+      }
+    }, 1000);
+    return () => window.clearInterval(timer);
+  }, []);
+
   const update = useCallback((key: keyof Content, value: string) => {
     setContent((prev) => ({ ...prev, [key]: value }));
   }, []);

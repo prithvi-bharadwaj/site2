@@ -212,7 +212,14 @@ export function HoverCard() {
       role={pinnedHref ? undefined : "presentation"}
     >
       {pinnedHref ? (
-        <a href={pinnedHref} className="hover-card-linkwrap" aria-label={media?.caption ?? "open link"}>
+        // New tab on purpose: the visitor keeps their xp session running here.
+        <a
+          href={pinnedHref}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="hover-card-linkwrap"
+          aria-label={media?.caption ?? "open link"}
+        >
           {inner}
         </a>
       ) : (

@@ -51,7 +51,7 @@ describe("HoverCard", () => {
     expect(container.querySelector("iframe.hover-card-youtube")).not.toBeNull();
   });
 
-  it("pins into a clickable same-tab link and ignores hide while pinned", () => {
+  it("pins into a clickable new-tab link and ignores hide while pinned", () => {
     const { container } = render(<HoverCard />);
     const media = { type: "image" as const, src: "/x.png", caption: "x.com" };
 
@@ -62,7 +62,8 @@ describe("HoverCard", () => {
     expect(card.className).toContain("pinned");
     const link = container.querySelector("a.hover-card-linkwrap")!;
     expect(link.getAttribute("href")).toBe("https://x.com");
-    expect(link.getAttribute("target")).toBeNull();
+    // The pinned card is the one deliberate new-tab link: the xp session stays alive here.
+    expect(link.getAttribute("target")).toBe("_blank");
 
     // Hover-out hide events don't dismiss a pinned card.
     act(() => {

@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   ACHIEVEMENTS,
+  MAX_XP,
   TOTALS,
   award,
   inspectEnd,
@@ -85,6 +86,11 @@ describe("xp store", () => {
     expect(ACHIEVEMENTS.find((a) => a.id === "did-not-touch-grass")!.done(currentState())).toBe(true);
   });
 
+  it("unlocks Quality Time after the 60s dwell award", () => {
+    act(() => award("time:60s", 50));
+    expect(ACHIEVEMENTS.find((a) => a.id === "quality-time")!.done(currentState())).toBe(true);
+  });
+
   it("maps xp totals to levels", () => {
     expect(levelFor(0).name).toBe("stranger");
     expect(levelFor(59).index).toBe(0);
@@ -97,7 +103,7 @@ describe("xp store", () => {
 
   it("reports completion percent capped at 100", () => {
     expect(completionPct(0)).toBe(0);
-    expect(completionPct(685)).toBe(50);
+    expect(completionPct(MAX_XP / 2)).toBe(50);
     expect(completionPct(99999)).toBe(100);
   });
 });

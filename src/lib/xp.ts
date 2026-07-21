@@ -27,7 +27,7 @@ export const SOCIAL_UNLOCK_XP = 150;
  * Rough total xp available on the site (hovers + clicks + one-offs).
  * Used for the "you've explored N%" completion stat.
  */
-export const MAX_XP = 1370;
+export const MAX_XP = 1420;
 
 export function completionPct(total: number) {
   return Math.min(100, Math.round((total / MAX_XP) * 100));
@@ -260,6 +260,12 @@ export const ACHIEVEMENTS: Achievement[] = [
     name: "Touch Grass",
     desc: "Scrolled all the way to the bottom",
     done: (s) => "scroll:bottom" in s.earned,
+  },
+  {
+    id: "quality-time",
+    name: "Quality Time",
+    desc: "Stuck around for a full minute",
+    done: (s) => "time:60s" in s.earned,
   },
 ];
 
