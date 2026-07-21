@@ -5,7 +5,7 @@ import type { BrandLink, InlineLink, LinkListItem } from "./LinkList";
 import { BrandIcon, hasBrandIcon } from "./BrandIcon";
 import { WiggleWords, useWiggleDescendants } from "./WiggleWords";
 import { emitShow, emitMove, emitHide } from "@/lib/hover-card-bus";
-import { inspectStart, inspectEnd, mediaKey, useXp } from "@/lib/xp";
+import { CLICK_XP, award, inspectStart, inspectEnd, mediaKey, useXp } from "@/lib/xp";
 
 const EASE = "cubic-bezier(0.23, 1, 0.32, 1)";
 const DOTTED = "1px dotted rgb(var(--ink-rgb) / 0.35)";
@@ -116,7 +116,10 @@ export function PreviouslyList({ label, items }: PreviouslyListProps) {
                         target="_blank"
                         rel="noopener noreferrer"
                         data-repel
-                        onClick={(e) => e.stopPropagation()}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          award(`click:${media ? mediaKey(media) : seg.brand.href}`, CLICK_XP);
+                        }}
                         onPointerEnter={(e) => {
                           if (media && e.pointerType === "mouse") {
                             emitShow({ media, x: e.clientX, y: e.clientY });
@@ -158,7 +161,10 @@ export function PreviouslyList({ label, items }: PreviouslyListProps) {
                         href={seg.link.href}
                         target="_blank"
                         rel="noopener noreferrer"
-                        onClick={(e) => e.stopPropagation()}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          award(`click:${media ? mediaKey(media) : seg.link.href}`, CLICK_XP);
+                        }}
                         onPointerEnter={(e) => {
                           if (media && e.pointerType === "mouse") {
                             emitShow({ media, x: e.clientX, y: e.clientY });

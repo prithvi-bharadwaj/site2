@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { WiggleWords, useWiggleDescendants } from "./WiggleWords";
 import { emitShow, emitMove, emitHide, type HoverCardMedia } from "@/lib/hover-card-bus";
-import { award, inspectStart, inspectEnd, mediaKey } from "@/lib/xp";
+import { CLICK_XP, award, inspectStart, inspectEnd, mediaKey } from "@/lib/xp";
 
 export interface BrandLink {
   name: string;
@@ -93,7 +93,10 @@ function renderTitleWithBrands(title: string, brands?: BrandLink[], xpKind?: str
           target="_blank"
           rel="noopener noreferrer"
           data-repel
-          onClick={(e) => e.stopPropagation()}
+          onClick={(e) => {
+            e.stopPropagation();
+            if (xpKind) award(`click:${media ? mediaKey(media) : brand.href}`, CLICK_XP);
+          }}
           onPointerEnter={(e) => {
             if (media && e.pointerType === "mouse") {
               emitShow({ media, x: e.clientX, y: e.clientY });
@@ -227,7 +230,7 @@ export function LinkList({ label, items, columns = 1, variant = "compact", point
                   onClick={() => {
                     setOpen(isOpen ? null : i);
                     if (item.media && !isOpen) emitHide();
-                    if (xpKind && !isOpen) award(`${xpKind}:${item.title}`, 2);
+                    if (xpKind && !isOpen) award(`${xpKind}:${item.title}`, CLICK_XP);
                   }}
                 >
                   {titleNode}
@@ -244,7 +247,7 @@ export function LinkList({ label, items, columns = 1, variant = "compact", point
                   rel="noopener noreferrer"
                   className={wrapperClass}
                   onClick={() => {
-                    if (xpKind) award(`${xpKind}:${item.href}`, 1);
+                    if (xpKind) award(`${xpKind}:${item.href}`, CLICK_XP);
                   }}
                 >
                   {titleNode}
@@ -276,6 +279,14 @@ export function LinkList({ label, items, columns = 1, variant = "compact", point
                   <div className="pt-1 pb-1 leading-relaxed">
                     {item.expand && (
                       <p className="text-xs text-(--ink)/45">{item.expand}</p>
+                    )}
+                    {item.media?.type === "image" && (
+                      <img
+                        src={item.media.src}
+                        alt={item.media.caption ?? ""}
+                        className="mt-2 h-auto w-full rounded-md border border-(--ink)/8"
+                        loading="lazy"
+                      />
                     )}
                     {item.expandFavicons && item.expandFavicons.length > 0 && (
                       <div className="mt-1.5 flex flex-wrap items-center gap-2">

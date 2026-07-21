@@ -13,7 +13,8 @@ import { EditPanel } from "@/components/EditPanel";
 import { XpFx } from "@/components/XpFx";
 import { XpHud } from "@/components/XpHud";
 import { XpToasts } from "@/components/XpToasts";
-import { SOCIAL_UNLOCK_XP, award, emitXpToast, useXp } from "@/lib/xp";
+import { ExitGate } from "@/components/ExitGate";
+import { CLICK_XP, SOCIAL_UNLOCK_XP, award, emitXpToast, useXp } from "@/lib/xp";
 
 /* ── Default content ── */
 
@@ -317,6 +318,17 @@ export default function Home() {
     return () => window.removeEventListener("keydown", onKey);
   }, []);
 
+  useEffect(() => {
+    function onScroll() {
+      if (window.innerHeight + window.scrollY >= document.body.scrollHeight - 60) {
+        award("scroll:bottom", CLICK_XP);
+        window.removeEventListener("scroll", onScroll);
+      }
+    }
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+
   const update = useCallback((key: keyof Content, value: string) => {
     setContent((prev) => ({ ...prev, [key]: value }));
   }, []);
@@ -345,6 +357,7 @@ export default function Home() {
       <XpFx />
       <XpHud />
       <XpToasts />
+      <ExitGate />
       <ThemeToggle />
       {editMode && (
         <EditToolbar onSave={save} onReset={reset} onCopy={copyToClipboard} />

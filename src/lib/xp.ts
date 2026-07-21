@@ -15,8 +15,23 @@ const STORAGE_KEY = "prithvi-xp-v1";
 const FX_EVENT = "xp:fx";
 const TOAST_EVENT = "xp:toast";
 
+/** Hovering a proof preview long enough. */
+export const HOVER_XP = 10;
+/** Clicking any tracked link / expanding lore. */
+export const CLICK_XP = 50;
+
 /** Contact links (instagram, twitter, linkedin) unlock at this xp. */
-export const SOCIAL_UNLOCK_XP = 12;
+export const SOCIAL_UNLOCK_XP = 150;
+
+/**
+ * Rough total xp available on the site (hovers + clicks + one-offs).
+ * Used for the "you've explored N%" completion stat.
+ */
+export const MAX_XP = 1370;
+
+export function completionPct(total: number) {
+  return Math.min(100, Math.round((total / MAX_XP) * 100));
+}
 
 export interface Level {
   name: string;
@@ -25,10 +40,10 @@ export interface Level {
 
 export const LEVELS: Level[] = [
   { name: "stranger", min: 0 },
-  { name: "visitor", min: 5 },
-  { name: "acquaintance", min: 12 },
-  { name: "friend", min: 22 },
-  { name: "real one", min: 35 },
+  { name: "visitor", min: 60 },
+  { name: "acquaintance", min: 150 },
+  { name: "friend", min: 450 },
+  { name: "real one", min: 900 },
 ];
 
 export function levelFor(total: number): Level & { index: number; next: Level | null } {
@@ -160,7 +175,7 @@ export function mediaKey(media: HoverCardMedia): string {
   return media.caption ?? "note";
 }
 
-export function inspectStart(id: string, xp = 2) {
+export function inspectStart(id: string, xp = HOVER_XP) {
   if (typeof window === "undefined" || id in state.earned || timers.has(id)) return;
   timers.set(
     id,
@@ -231,6 +246,12 @@ export const ACHIEVEMENTS: Achievement[] = [
     name: "Did Not Touch Grass",
     desc: "Enabled gen z mode",
     done: (s) => "genz:on" in s.earned,
+  },
+  {
+    id: "touch-grass",
+    name: "Touch Grass",
+    desc: "Scrolled all the way to the bottom",
+    done: (s) => "scroll:bottom" in s.earned,
   },
 ];
 

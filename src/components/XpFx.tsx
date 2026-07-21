@@ -5,64 +5,52 @@ import { onXpFx } from "@/lib/xp";
 
 interface Particle {
   id: number;
-  x: number;
-  y: number;
   text: string;
-  big: boolean;
+  offsetY: number;
+  tilt: number;
 }
 
-const LIFETIME_MS = 1100;
-const BIG_LIFETIME_MS = 1600;
+const LIFETIME_MS = 1300;
 
 /**
- * Cursor-anchored xp particles. Listens for "xp:fx" events and floats a
- * tiny "+2 xp" (or "★ Achievement") label up from wherever the mouse is.
- * No toasts, no layout - purely ephemeral.
+ * Screen-wide xp bursts. Every "xp:fx" event flashes its text huge across
+ * the middle of the viewport, then floats up and fades. Purely ephemeral,
+ * never intercepts input.
  */
 export function XpFx() {
   const [particles, setParticles] = useState<Particle[]>([]);
-  const mouse = useRef({ x: -1, y: -1 });
   const nextId = useRef(0);
 
   useEffect(() => {
-    const onMove = (e: PointerEvent) => {
-      mouse.current = { x: e.clientX, y: e.clientY };
-    };
-    window.addEventListener("pointermove", onMove, { passive: true });
-
-    const off = onXpFx(({ text, big }) => {
-      const { x, y } = mouse.current;
-      if (x < 0) return; // no pointer yet (touch/keyboard) - skip quietly
+    return onXpFx(({ text }) => {
       const id = nextId.current++;
-      const jitter = (Math.random() - 0.5) * 16;
-      // Achievements stack slightly higher so they don't overlap the +xp
-      const p: Particle = { id, x: x + 10 + jitter, y: y - 14 - (big ? 22 : 0), text, big: !!big };
+      const p: Particle = {
+        id,
+        text,
+        offsetY: (Math.random() - 0.5) * 30, // vh jitter so bursts don't overlap
+        tilt: (Math.random() - 0.5) * 6,
+      };
       setParticles((prev) => [...prev, p]);
       window.setTimeout(() => {
         setParticles((prev) => prev.filter((q) => q.id !== id));
-      }, big ? BIG_LIFETIME_MS : LIFETIME_MS);
+      }, LIFETIME_MS);
     });
-
-    return () => {
-      window.removeEventListener("pointermove", onMove);
-      off();
-    };
   }, []);
 
   if (particles.length === 0) return null;
 
   return (
-    <div className="pointer-events-none fixed inset-0 z-[80]" aria-hidden="true">
+    <div className="pointer-events-none fixed inset-0 z-[80] overflow-hidden" aria-hidden="true">
       {particles.map((p) => (
         <span
           key={p.id}
-          className={`absolute tabular-nums whitespace-nowrap font-medium ${
-            p.big ? "text-sm text-(--ink)/95" : "text-[13px] text-(--ink)/85"
-          }`}
+          className="absolute inset-x-0 text-center font-bold tabular-nums text-(--ink)/90"
           style={{
-            left: p.x,
-            top: p.y,
-            animation: `xp-float ${p.big ? BIG_LIFETIME_MS : LIFETIME_MS}ms ease-out forwards`,
+            top: `calc(45vh + ${p.offsetY}vh)`,
+            fontSize: "clamp(48px, 9vw, 140px)",
+            letterSpacing: "-0.02em",
+            rotate: `${p.tilt}deg`,
+            animation: `xp-burst ${LIFETIME_MS}ms ease-out forwards`,
           }}
         >
           {p.text}

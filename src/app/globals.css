@@ -381,18 +381,22 @@ a.project-item {
   }
 }
 
-/* XP particle — floats up from the cursor and fades */
-@keyframes xp-float {
+/* XP burst — pops huge across the screen, floats up and fades */
+@keyframes xp-burst {
   0% {
     opacity: 0;
-    transform: translateY(4px);
+    transform: translateY(10px) scale(0.85);
   }
-  15% {
+  12% {
     opacity: 1;
+    transform: translateY(0) scale(1.02);
+  }
+  25% {
+    transform: translateY(-4px) scale(1);
   }
   100% {
     opacity: 0;
-    transform: translateY(-36px);
+    transform: translateY(-80px) scale(1);
   }
 }
 

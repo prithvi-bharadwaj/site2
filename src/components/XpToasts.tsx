@@ -1,20 +1,17 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { emitXpToast, onXpToast, type XpToastDetail } from "@/lib/xp";
+import { onXpToast, type XpToastDetail } from "@/lib/xp";
 
 interface Toast extends XpToastDetail {
   id: number;
 }
 
 const TOAST_MS = 5500;
-const EXIT_BAIT_KEY = "prithvi-exit-baited";
 
 /**
  * Steam-style notification stack, bottom right (above the xp HUD).
  * Achievement unlocks and info nudges arrive via the "xp:toast" event.
- * Also owns the exit-intent hook: when the cursor leaves the top of the
- * viewport, bait the visitor once per session with the hidden game.
  */
 export function XpToasts() {
   const [toasts, setToasts] = useState<Toast[]>([]);
@@ -33,26 +30,7 @@ export function XpToasts() {
       }, TOAST_MS);
     });
 
-    const onMouseOut = (e: MouseEvent) => {
-      if (e.relatedTarget || e.clientY > 0) return; // only real top-of-window exits
-      try {
-        if (sessionStorage.getItem(EXIT_BAIT_KEY)) return;
-        sessionStorage.setItem(EXIT_BAIT_KEY, "1");
-      } catch {
-        return;
-      }
-      emitXpToast({
-        title: "leaving already?",
-        body: "78% of visitors unlock the hidden game before they quit. Have you found where it is?",
-        kind: "info",
-      });
-    };
-    document.addEventListener("mouseout", onMouseOut);
-
-    return () => {
-      off();
-      document.removeEventListener("mouseout", onMouseOut);
-    };
+    return off;
   }, []);
 
   if (toasts.length === 0) return null;

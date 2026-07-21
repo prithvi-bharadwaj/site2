@@ -7,6 +7,7 @@ import {
   inspectStart,
   onXpFx,
   onXpToast,
+  completionPct,
   levelFor,
   resetXp,
   unlockedAchievements,
@@ -59,7 +60,7 @@ describe("xp store", () => {
     vi.useFakeTimers();
     inspectStart("proof:hover1");
     vi.advanceTimersByTime(700);
-    expect(currentState().earned["proof:hover1"]).toBe(2);
+    expect(currentState().earned["proof:hover1"]).toBe(10);
 
     inspectStart("proof:hover2");
     inspectEnd("proof:hover2");
@@ -86,11 +87,17 @@ describe("xp store", () => {
 
   it("maps xp totals to levels", () => {
     expect(levelFor(0).name).toBe("stranger");
-    expect(levelFor(4).index).toBe(0);
-    expect(levelFor(5).name).toBe("visitor");
-    expect(levelFor(12).name).toBe("acquaintance");
-    expect(levelFor(100).name).toBe("real one");
-    expect(levelFor(100).next).toBeNull();
-    expect(levelFor(6).next!.min).toBe(12);
+    expect(levelFor(59).index).toBe(0);
+    expect(levelFor(60).name).toBe("visitor");
+    expect(levelFor(150).name).toBe("acquaintance");
+    expect(levelFor(2000).name).toBe("real one");
+    expect(levelFor(2000).next).toBeNull();
+    expect(levelFor(70).next!.min).toBe(150);
+  });
+
+  it("reports completion percent capped at 100", () => {
+    expect(completionPct(0)).toBe(0);
+    expect(completionPct(685)).toBe(50);
+    expect(completionPct(99999)).toBe(100);
   });
 });
