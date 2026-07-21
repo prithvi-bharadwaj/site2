@@ -16,6 +16,7 @@ import { XpHud } from "@/components/XpHud";
 import { XpToasts } from "@/components/XpToasts";
 import { ExitGate } from "@/components/ExitGate";
 import { CLICK_XP, SOCIAL_UNLOCK_XP, award, emitXpToast, useXp } from "@/lib/xp";
+import { emitShow, emitMove, emitHide, type HoverCardMedia } from "@/lib/hover-card-bus";
 
 /* ── Default content ── */
 
@@ -254,13 +255,47 @@ const WRITING: LinkListItem[] = [
 
 // `contact: true` links are locked until the visitor earns SOCIAL_UNLOCK_XP -
 // they have to get to know Prithvi before they can reach out.
-const SOCIALS: { label: string; href: string; favicon: string; contact?: boolean }[] = [
-  { label: "Instagram", href: "https://instagram.com/theprithvibharadwaj", favicon: "/logos/instagram.svg", contact: true },
-  { label: "LinkedIn", href: "https://www.linkedin.com/in/prithvibharadwaj/", favicon: "/logos/linkedin.svg", contact: true },
-  { label: "Twitter", href: "https://x.com/prithvibofficial", favicon: LOGO("x"), contact: true },
-  { label: "GitHub", href: "https://github.com/prithvi-bharadwaj", favicon: LOGO("github") },
+const SOCIALS: {
+  label: string;
+  href: string;
+  favicon: string;
+  contact?: boolean;
+  media?: HoverCardMedia;
+}[] = [
+  {
+    label: "Instagram",
+    href: "https://instagram.com/theprithvibharadwaj",
+    favicon: "/logos/instagram.svg",
+    contact: true,
+    media: { type: "image", src: SHOT("social-instagram"), caption: "@theprithvibharadwaj" },
+  },
+  {
+    label: "LinkedIn",
+    href: "https://www.linkedin.com/in/prithvibharadwaj/",
+    favicon: "/logos/linkedin.svg",
+    contact: true,
+    media: { type: "image", src: SHOT("social-linkedin"), caption: "linkedin.com/in/prithvibharadwaj" },
+  },
+  {
+    label: "Twitter",
+    href: "https://x.com/PrithviBtw",
+    favicon: LOGO("x"),
+    contact: true,
+    media: { type: "image", src: SHOT("social-x"), caption: "@PrithviBtw · 672 posts", position: "top" },
+  },
+  {
+    label: "GitHub",
+    href: "https://github.com/prithvi-bharadwaj",
+    favicon: LOGO("github"),
+    media: { type: "image", src: SHOT("social-github"), caption: "1,811 contributions in the last year" },
+  },
   { label: "Medium", href: "https://medium.com/@prithvibofficial", favicon: "/logos/medium.svg" },
-  { label: "Substack", href: "https://prithvibharadwaj.substack.com", favicon: LOGO("substack") },
+  {
+    label: "Substack",
+    href: "https://prithvibharadwaj.substack.com",
+    favicon: LOGO("substack"),
+    media: { type: "image", src: SHOT("social-substack"), caption: "Prithvi's Substack" },
+  },
 ];
 
 /* ── Edit mode toolbar ── */
@@ -432,6 +467,15 @@ export default function Home() {
                     })
                   }
                   title={`unlocks at ${SOCIAL_UNLOCK_XP} xp`}
+                  onPointerEnter={(e) => {
+                    if (s.media && e.pointerType === "mouse") emitShow({ media: s.media, x: e.clientX, y: e.clientY });
+                  }}
+                  onPointerMove={(e) => {
+                    if (s.media && e.pointerType === "mouse") emitMove({ x: e.clientX, y: e.clientY });
+                  }}
+                  onPointerLeave={(e) => {
+                    if (s.media && e.pointerType === "mouse") emitHide();
+                  }}
                   className="group inline-flex cursor-pointer items-center gap-1.5 text-(--ink)/40 transition-colors hover:text-(--ink)/60"
                 >
                   <img
@@ -449,6 +493,15 @@ export default function Home() {
                 <a
                   key={s.label}
                   href={s.href}
+                  onPointerEnter={(e) => {
+                    if (s.media && e.pointerType === "mouse") emitShow({ media: s.media, x: e.clientX, y: e.clientY });
+                  }}
+                  onPointerMove={(e) => {
+                    if (s.media && e.pointerType === "mouse") emitMove({ x: e.clientX, y: e.clientY });
+                  }}
+                  onPointerLeave={(e) => {
+                    if (s.media && e.pointerType === "mouse") emitHide();
+                  }}
                   className="group inline-flex items-center gap-1.5 text-(--ink)/60 hover:text-(--ink) transition-colors"
                 >
                   <img
