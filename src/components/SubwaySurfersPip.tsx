@@ -19,7 +19,7 @@ export function SubwaySurfersPip() {
 
   return (
     <div
-      className="pointer-events-none fixed bottom-4 right-4 z-50 h-[285px] w-[160px] overflow-hidden rounded-xl shadow-2xl md:h-[498px] md:w-[280px]"
+      className="pointer-events-none fixed bottom-16 right-4 z-50 h-[285px] w-[160px] overflow-hidden rounded-xl shadow-2xl md:h-[498px] md:w-[280px]"
       style={{
         opacity: mounted ? 1 : 0,
         transform: mounted ? "translateY(0)" : "translateY(20px)",
