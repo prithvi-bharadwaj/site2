@@ -388,6 +388,16 @@ a.project-item {
   }
 }
 
+/* Cursor inspect meter — fills over the hover dwell time */
+@keyframes inspect-fill {
+  from {
+    width: 0%;
+  }
+  to {
+    width: 100%;
+  }
+}
+
 /* XP burst — pops huge across the screen, floats up and fades */
 @keyframes xp-burst {
   0% {

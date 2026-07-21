@@ -11,6 +11,7 @@ import { CursorTrail } from "@/components/CursorTrail";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { EditPanel } from "@/components/EditPanel";
 import { XpFx } from "@/components/XpFx";
+import { InspectProgress } from "@/components/InspectProgress";
 import { XpHud } from "@/components/XpHud";
 import { XpToasts } from "@/components/XpToasts";
 import { ExitGate } from "@/components/ExitGate";
@@ -369,6 +370,7 @@ export default function Home() {
     <main className="relative min-h-screen">
       <CursorTrail />
       <XpFx />
+      <InspectProgress />
       <XpHud />
       <XpToasts />
       <ExitGate />
@@ -468,7 +470,7 @@ export default function Home() {
               enabled={genzMode}
               onChange={(v) => {
                 setGenzMode(v);
-                if (v) award("genz:on", 5);
+                if (v) award("genz:on", CLICK_XP);
               }}
             />
           </div>

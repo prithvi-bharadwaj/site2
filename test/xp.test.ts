@@ -60,12 +60,12 @@ describe("xp store", () => {
   it("inspectStart awards after the dwell time, inspectEnd cancels", () => {
     vi.useFakeTimers();
     inspectStart("proof:hover1");
-    vi.advanceTimersByTime(700);
+    vi.advanceTimersByTime(1100);
     expect(currentState().earned["proof:hover1"]).toBe(10);
 
     inspectStart("proof:hover2");
     inspectEnd("proof:hover2");
-    vi.advanceTimersByTime(700);
+    vi.advanceTimersByTime(1100);
     expect(currentState().earned["proof:hover2"]).toBeUndefined();
   });
 

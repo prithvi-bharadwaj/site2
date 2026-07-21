@@ -10,7 +10,7 @@ interface Toast extends XpToastDetail {
 const TOAST_MS = 5500;
 
 /**
- * Steam-style notification stack, bottom right (above the xp HUD).
+ * Steam-style notification stack, top right (below the theme toggle).
  * Achievement unlocks and info nudges arrive via the "xp:toast" event.
  */
 export function XpToasts() {
@@ -36,7 +36,7 @@ export function XpToasts() {
   if (toasts.length === 0) return null;
 
   return (
-    <div className="fixed bottom-20 right-4 z-[75] flex w-72 flex-col items-end gap-2">
+    <div className="fixed top-14 right-4 z-[75] flex w-72 flex-col items-end gap-2">
       {toasts.map((t) => (
         <div
           key={t.id}

@@ -173,8 +173,26 @@ export function useXp(): XpState {
 
 /* ── Proof inspection: hover a preview long enough and it counts ── */
 
-const INSPECT_MS = 600;
+const INSPECT_MS = 1000;
+const INSPECT_START_EVENT = "xp:inspect-start";
+const INSPECT_END_EVENT = "xp:inspect-end";
 const timers = new Map<string, number>();
+
+export interface InspectDetail {
+  id: string;
+  ms: number;
+}
+
+export function onInspectStart(listener: (detail: InspectDetail) => void) {
+  const handler = (e: Event) => listener((e as CustomEvent<InspectDetail>).detail);
+  window.addEventListener(INSPECT_START_EVENT, handler);
+  return () => window.removeEventListener(INSPECT_START_EVENT, handler);
+}
+
+export function onInspectEnd(listener: () => void) {
+  window.addEventListener(INSPECT_END_EVENT, listener);
+  return () => window.removeEventListener(INSPECT_END_EVENT, listener);
+}
 
 /** Stable key for a hover-preview media object. */
 export function mediaKey(media: HoverCardMedia): string {
@@ -192,6 +210,9 @@ export function inspectStart(id: string, xp = HOVER_XP) {
       award(id, xp);
     }, INSPECT_MS)
   );
+  window.dispatchEvent(
+    new CustomEvent<InspectDetail>(INSPECT_START_EVENT, { detail: { id, ms: INSPECT_MS } })
+  );
 }
 
 export function inspectEnd(id: string) {
@@ -199,6 +220,7 @@ export function inspectEnd(id: string) {
   if (t !== undefined) {
     clearTimeout(t);
     timers.delete(id);
+    window.dispatchEvent(new Event(INSPECT_END_EVENT));
   }
 }
 
