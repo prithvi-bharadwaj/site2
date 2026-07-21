@@ -26,9 +26,19 @@ export interface HoverCardMoveDetail {
   y: number;
 }
 
+export interface HoverCardPinDetail {
+  media: HoverCardMedia;
+  /** Destination the pinned card links to (same tab). */
+  href: string;
+  x: number;
+  y: number;
+}
+
 const SHOW = "hovercard:show";
 const MOVE = "hovercard:move";
 const HIDE = "hovercard:hide";
+const PIN = "hovercard:pin";
+const UNPIN = "hovercard:unpin";
 
 export function emitShow(detail: HoverCardShowDetail) {
   window.dispatchEvent(new CustomEvent<HoverCardShowDetail>(SHOW, { detail }));
@@ -57,4 +67,23 @@ export function onMove(listener: (detail: HoverCardMoveDetail) => void) {
 export function onHide(listener: () => void) {
   window.addEventListener(HIDE, listener);
   return () => window.removeEventListener(HIDE, listener);
+}
+
+export function emitPin(detail: HoverCardPinDetail) {
+  window.dispatchEvent(new CustomEvent<HoverCardPinDetail>(PIN, { detail }));
+}
+
+export function onPin(listener: (detail: HoverCardPinDetail) => void) {
+  const handler = (e: Event) => listener((e as CustomEvent<HoverCardPinDetail>).detail);
+  window.addEventListener(PIN, handler);
+  return () => window.removeEventListener(PIN, handler);
+}
+
+export function emitUnpin() {
+  window.dispatchEvent(new Event(UNPIN));
+}
+
+export function onUnpin(listener: () => void) {
+  window.addEventListener(UNPIN, listener);
+  return () => window.removeEventListener(UNPIN, listener);
 }

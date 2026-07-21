@@ -4,9 +4,8 @@ import { useRef, useState } from "react";
 import type { BrandLink, InlineLink, LinkListItem } from "./LinkList";
 import { BrandIcon, hasBrandIcon } from "./BrandIcon";
 import { WiggleWords, useWiggleDescendants } from "./WiggleWords";
-import { emitShow, emitMove, emitHide } from "@/lib/hover-card-bus";
+import { emitShow, emitMove, emitHide, emitPin } from "@/lib/hover-card-bus";
 import { CLICK_XP, award, inspectStart, inspectEnd, mediaKey, useXp } from "@/lib/xp";
-import { ProofPopup } from "./ProofPopup";
 
 const EASE = "cubic-bezier(0.23, 1, 0.32, 1)";
 const DOTTED = "1px dotted rgb(var(--ink-rgb) / 0.35)";
@@ -58,8 +57,6 @@ interface PreviouslyListProps {
 export function PreviouslyList({ label, items }: PreviouslyListProps) {
   const ref = useRef<HTMLDivElement>(null);
   const [open, setOpen] = useState<number | null>(null);
-  // "<itemIndex>:<segmentIndex>" of the proof popup currently expanded inline.
-  const [openProof, setOpenProof] = useState<string | null>(null);
   const xp = useXp();
 
   useWiggleDescendants(ref);
@@ -112,7 +109,6 @@ export function PreviouslyList({ label, items }: PreviouslyListProps) {
                 {segments.map((seg, si) => {
                   if (seg.kind === "brand") {
                     const media = seg.brand.media;
-                    const proofKey = `${i}:${si}`;
                     return (
                       <a
                         key={si}
@@ -122,15 +118,14 @@ export function PreviouslyList({ label, items }: PreviouslyListProps) {
                           e.stopPropagation();
                           award(`click:${media ? mediaKey(media) : seg.brand.href}`, CLICK_XP);
                           if (media) {
-                            // First click expands the proof inline instead of leaving.
+                            // First click pins the preview card instead of leaving.
                             e.preventDefault();
-                            emitHide();
                             inspectEnd(`proof:${mediaKey(media)}`);
-                            setOpenProof((p) => (p === proofKey ? null : proofKey));
+                            emitPin({ media, href: seg.brand.href, x: e.clientX, y: e.clientY });
                           }
                         }}
                         onPointerEnter={(e) => {
-                          if (media && e.pointerType === "mouse" && openProof !== proofKey) {
+                          if (media && e.pointerType === "mouse") {
                             emitShow({ media, x: e.clientX, y: e.clientY });
                             inspectStart(`proof:${mediaKey(media)}`);
                           }
@@ -164,7 +159,6 @@ export function PreviouslyList({ label, items }: PreviouslyListProps) {
                   }
                   if (seg.kind === "inline") {
                     const media = seg.link.media;
-                    const proofKey = `${i}:${si}`;
                     return (
                       <a
                         key={si}
@@ -174,13 +168,12 @@ export function PreviouslyList({ label, items }: PreviouslyListProps) {
                           award(`click:${media ? mediaKey(media) : seg.link.href}`, CLICK_XP);
                           if (media) {
                             e.preventDefault();
-                            emitHide();
                             inspectEnd(`proof:${mediaKey(media)}`);
-                            setOpenProof((p) => (p === proofKey ? null : proofKey));
+                            emitPin({ media, href: seg.link.href, x: e.clientX, y: e.clientY });
                           }
                         }}
                         onPointerEnter={(e) => {
-                          if (media && e.pointerType === "mouse" && openProof !== proofKey) {
+                          if (media && e.pointerType === "mouse") {
                             emitShow({ media, x: e.clientX, y: e.clientY });
                             inspectStart(`proof:${mediaKey(media)}`);
                           }
@@ -257,22 +250,6 @@ export function PreviouslyList({ label, items }: PreviouslyListProps) {
                   </span>
                 )}
               </span>
-
-              {openProof?.startsWith(`${i}:`) &&
-                (() => {
-                  const seg = segments[Number(openProof.split(":")[1])];
-                  const info =
-                    seg?.kind === "brand"
-                      ? { href: seg.brand.href, media: seg.brand.media }
-                      : seg?.kind === "inline"
-                        ? { href: seg.link.href, media: seg.link.media }
-                        : null;
-                  return info?.media ? (
-                    <div className="ml-5">
-                      <ProofPopup href={info.href} media={info.media} />
-                    </div>
-                  ) : null;
-                })()}
 
               {expandable && (
                 <div

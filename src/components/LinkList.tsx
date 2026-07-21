@@ -2,9 +2,8 @@
 
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { WiggleWords, useWiggleDescendants } from "./WiggleWords";
-import { emitShow, emitMove, emitHide, type HoverCardMedia } from "@/lib/hover-card-bus";
+import { emitShow, emitMove, emitHide, emitPin, type HoverCardMedia } from "@/lib/hover-card-bus";
 import { CLICK_XP, award, inspectStart, inspectEnd, mediaKey } from "@/lib/xp";
-import { ProofPopup } from "./ProofPopup";
 
 export interface BrandLink {
   name: string;
@@ -77,8 +76,7 @@ function escapeRegex(s: string) {
 function renderTitleWithBrands(
   title: string,
   brands: BrandLink[] | undefined,
-  xpKind: string | undefined,
-  onToggleBrand: (name: string) => void
+  xpKind: string | undefined
 ): ReactNode {
   if (!brands || brands.length === 0) return <WiggleWords text={title} />;
   const pattern = new RegExp(
@@ -101,11 +99,10 @@ function renderTitleWithBrands(
             e.stopPropagation();
             if (xpKind) award(`click:${media ? mediaKey(media) : brand.href}`, CLICK_XP);
             if (media) {
-              // First click expands the proof inline instead of leaving.
+              // First click pins the preview card instead of leaving.
               e.preventDefault();
-              emitHide();
               if (xpKind) inspectEnd(`${xpKind}-proof:${mediaKey(media)}`);
-              onToggleBrand(brand.name);
+              emitPin({ media, href: brand.href, x: e.clientX, y: e.clientY });
             }
           }}
           onPointerEnter={(e) => {
@@ -143,8 +140,6 @@ function renderTitleWithBrands(
 export function LinkList({ label, items, columns = 1, variant = "compact", pointer = false, xpKind }: LinkListProps) {
   const [visible, setVisible] = useState(false);
   const [open, setOpen] = useState<number | null>(null);
-  // "<itemIndex>:<brandName>" of the proof popup currently expanded inline.
-  const [openBrand, setOpenBrand] = useState<string | null>(null);
   const rootRef = useRef<HTMLElement>(null);
 
   useWiggleDescendants(rootRef);
@@ -196,9 +191,7 @@ export function LinkList({ label, items, columns = 1, variant = "compact", point
                   height={11}
                 />
               )}
-              {renderTitleWithBrands(item.title, item.brandLinks, xpKind, (name) =>
-                setOpenBrand((p) => (p === `${i}:${name}` ? null : `${i}:${name}`))
-              )}
+              {renderTitleWithBrands(item.title, item.brandLinks, xpKind)}
               {item.trailingFavicons && item.trailingFavicons.length > 0 && (
                 <span className="inline-flex items-center gap-1 ml-1.5 align-[-0.15em]">
                   {item.trailingFavicons.map((src) => (
@@ -280,13 +273,6 @@ export function LinkList({ label, items, columns = 1, variant = "compact", point
                   )}
                 </span>
               )}
-
-              {openBrand?.startsWith(`${i}:`) &&
-                (() => {
-                  const name = openBrand.slice(`${i}:`.length);
-                  const brand = item.brandLinks?.find((b) => b.name === name);
-                  return brand?.media ? <ProofPopup href={brand.href} media={brand.media} /> : null;
-                })()}
 
               {expandable && (
                 <div
