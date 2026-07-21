@@ -26,9 +26,14 @@ export function HoverCard() {
   const cardRef = useRef<HTMLDivElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const wideRef = useRef(false);
+  const hideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     const offShow = onShow(({ media: m, x, y }) => {
+      if (hideTimerRef.current) {
+        clearTimeout(hideTimerRef.current);
+        hideTimerRef.current = null;
+      }
       setMedia(m);
       setVisible(true);
       wideRef.current = m.type === "image" && !!m.wide;
@@ -46,11 +51,18 @@ export function HoverCard() {
     });
     const offHide = onHide(() => {
       setVisible(false);
+      // Unmount streaming media once the fade-out finishes so a hidden
+      // YouTube iframe doesn't keep playing in the background.
+      hideTimerRef.current = setTimeout(() => {
+        setMedia((m) => (m?.type === "youtube" ? null : m));
+        hideTimerRef.current = null;
+      }, 250);
     });
     return () => {
       offShow();
       offMove();
       offHide();
+      if (hideTimerRef.current) clearTimeout(hideTimerRef.current);
     };
   }, []);
 

@@ -34,7 +34,7 @@ export function GenZToggle({ enabled, onChange }: GenZToggleProps) {
         <span
           className="inline-block h-2.5 w-2.5 rounded-full transition-transform duration-200"
           style={{
-            backgroundColor: enabled ? "#FFFFFF" : "rgb(var(--ink-rgb) / 0.6)",
+            backgroundColor: enabled ? "var(--bg)" : "rgb(var(--ink-rgb) / 0.6)",
             transform: enabled ? "translateX(18px)" : "translateX(3px)",
           }}
         />

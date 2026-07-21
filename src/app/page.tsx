@@ -265,7 +265,7 @@ function EditToolbar({ onSave, onReset, onCopy }: { onSave: () => void; onReset:
       <span className="text-[10px] text-(--ink)/30 mr-2">edit mode</span>
       <button
         onClick={onSave}
-        className="px-3 py-1 text-xs text-[#FFFFFF] bg-(--ink)/90 hover:bg-(--ink) rounded-md transition-colors cursor-pointer"
+        className="px-3 py-1 text-xs text-(--bg) bg-(--ink)/90 hover:bg-(--ink) rounded-md transition-colors cursor-pointer"
       >
         save
       </button>
