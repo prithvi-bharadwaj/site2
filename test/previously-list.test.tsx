@@ -61,4 +61,38 @@ describe("PreviouslyList", () => {
     expect(pins).toEqual(["https://roam.lol"]);
     off();
   });
+
+  it("pins a note confirm card for links without media instead of navigating", () => {
+    const pins: { href: string; media: unknown }[] = [];
+    const off = onPin((d) => pins.push({ href: d.href, media: d.media }));
+    const { container } = render(
+      <PreviouslyList
+        label="In 2026 I built."
+        items={[
+          {
+            title: "Focused - an open-source AI extension",
+            inlineLinks: [{ phrase: "Focused", href: "https://github.com/prithvi-bharadwaj" }],
+          },
+        ]}
+      />
+    );
+
+    const link = [...container.querySelectorAll("a")].find((a) => a.textContent === "Focused")!;
+
+    // First click arms the confirm card; it must not navigate.
+    const clickEvent = fireEvent.click(link, { detail: 1 });
+    expect(clickEvent).toBe(false); // preventDefault was called
+    expect(pins).toEqual([
+      {
+        href: "https://github.com/prithvi-bharadwaj",
+        media: { type: "note", caption: "github.com/prithvi-bharadwaj" },
+      },
+    ]);
+
+    // Keyboard activation still navigates directly (pinned card is mouse UI).
+    const keyboardEvent = fireEvent.click(link, { detail: 0 });
+    expect(keyboardEvent).toBe(true);
+    expect(pins.length).toBe(1);
+    off();
+  });
 });

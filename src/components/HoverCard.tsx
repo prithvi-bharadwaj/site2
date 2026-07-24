@@ -14,19 +14,27 @@ const CARD_WIDTH = 296;
 const CARD_HEIGHT = 230;
 const WIDE_CARD_WIDTH = 560;
 const WIDE_CARD_HEIGHT = 150;
+// Caption-only note chips are a fraction of a media card.
+const NOTE_CARD_WIDTH = 320;
+const NOTE_CARD_HEIGHT = 36;
 // Pinned (clicked) cards grow ~20%.
 const PIN_SCALE = 1.2;
 const OFFSET_X = 16;
 const OFFSET_Y = 16;
 
-function clampPosition(x: number, y: number, wide: boolean, pinned = false) {
+type CardShape = "default" | "wide" | "note";
+
+function clampPosition(x: number, y: number, shape: CardShape, pinned = false) {
   if (typeof window === "undefined") return { x, y };
-  const scale = pinned ? PIN_SCALE : 1;
-  const w = (wide ? WIDE_CARD_WIDTH : CARD_WIDTH) * scale;
-  const h = (wide ? WIDE_CARD_HEIGHT : CARD_HEIGHT) * scale;
+  // Note chips render at natural width; only media cards grow when pinned.
+  const scale = pinned && shape !== "note" ? PIN_SCALE : 1;
+  const w = (shape === "wide" ? WIDE_CARD_WIDTH : shape === "note" ? NOTE_CARD_WIDTH : CARD_WIDTH) * scale;
+  const h = (shape === "wide" ? WIDE_CARD_HEIGHT : shape === "note" ? NOTE_CARD_HEIGHT : CARD_HEIGHT) * scale;
+  // max() last: on narrow viewports the card must stay on-screen at the left/top
+  // even when it's wider than the space to the right of the cursor.
   return {
-    x: Math.min(Math.max(8, x + OFFSET_X), window.innerWidth - w - 8),
-    y: Math.min(Math.max(8, y + OFFSET_Y), window.innerHeight - h - 8),
+    x: Math.max(8, Math.min(x + OFFSET_X, window.innerWidth - w - 8)),
+    y: Math.max(8, Math.min(y + OFFSET_Y, window.innerHeight - h - 8)),
   };
 }
 
@@ -42,7 +50,7 @@ export function HoverCard() {
   const [pinnedHref, setPinnedHref] = useState<string | null>(null);
   const cardRef = useRef<HTMLDivElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
-  const wideRef = useRef(false);
+  const shapeRef = useRef<CardShape>("default");
   const pinnedRef = useRef<string | null>(null);
   const hideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -74,10 +82,10 @@ export function HoverCard() {
       clearHideTimer();
       setMedia(m);
       setVisible(true);
-      wideRef.current = m.type === "image" && !!m.wide;
+      shapeRef.current = m.type === "note" ? "note" : m.type === "image" && m.wide ? "wide" : "default";
       const card = cardRef.current;
       if (card) {
-        const { x: px, y: py } = clampPosition(x, y, wideRef.current);
+        const { x: px, y: py } = clampPosition(x, y, shapeRef.current);
         card.style.transform = `translate3d(${px}px, ${py}px, 0)`;
       }
     });
@@ -85,7 +93,7 @@ export function HoverCard() {
       if (pinnedRef.current) return;
       const card = cardRef.current;
       if (!card) return;
-      const { x: px, y: py } = clampPosition(x, y, wideRef.current);
+      const { x: px, y: py } = clampPosition(x, y, shapeRef.current);
       card.style.transform = `translate3d(${px}px, ${py}px, 0)`;
     });
     const offHide = onHide(() => {
@@ -107,11 +115,11 @@ export function HoverCard() {
       clearHideTimer();
       setMedia(m);
       setVisible(true);
-      wideRef.current = m.type === "image" && !!m.wide;
+      shapeRef.current = m.type === "note" ? "note" : m.type === "image" && m.wide ? "wide" : "default";
       setPinned(href);
       const card = cardRef.current;
       if (card) {
-        const { x: px, y: py } = clampPosition(x, y, wideRef.current, true);
+        const { x: px, y: py } = clampPosition(x, y, shapeRef.current, true);
         card.style.transform = `translate3d(${px}px, ${py}px, 0)`;
       }
     });
