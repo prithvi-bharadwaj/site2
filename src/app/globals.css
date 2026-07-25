@@ -655,3 +655,56 @@ html.dark .switch-thumb {
 html.dark .switch[data-checked="true"] .switch-thumb {
   background: var(--bg);
 }
+
+/* ── Physics overlay ─────────────────────────────────────────────────────
+   Sits above the cursor trail, below the HUD and the controls panel. */
+.physics-canvas {
+  position: fixed;
+  top: 0;
+  left: 0;
+  pointer-events: none;
+  z-index: 65;
+}
+
+.physics-fist {
+  position: fixed;
+  left: 50%;
+  bottom: 0;
+  z-index: 66;
+  font-size: 88px;
+  line-height: 1;
+  pointer-events: none;
+  user-select: none;
+  filter: drop-shadow(0 8px 16px rgb(0 0 0 / 0.28));
+  animation: fist-slam 620ms both;
+}
+
+@media (max-width: 640px) {
+  .physics-fist {
+    font-size: 62px;
+  }
+}
+
+/* Connects at 30% (190ms), which is when the impulse fires. */
+@keyframes fist-slam {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, 130%) rotate(-16deg) scale(0.82);
+    animation-timing-function: cubic-bezier(0.3, 0, 0.15, 1);
+  }
+  18% {
+    opacity: 1;
+  }
+  30% {
+    opacity: 1;
+    transform: translate(-50%, -6%) rotate(-3deg) scale(1.06);
+    animation-timing-function: cubic-bezier(0.4, 0, 0.6, 1);
+  }
+  42% {
+    transform: translate(-50%, 16%) rotate(-7deg) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, 135%) rotate(-18deg) scale(0.85);
+  }
+}
