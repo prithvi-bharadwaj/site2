@@ -1,13 +1,6 @@
 "use client";
 
-import {
-  forwardRef,
-  useCallback,
-  useEffect,
-  useRef,
-  useState,
-  type CSSProperties,
-} from "react";
+import { useCallback, useEffect, useRef, useState, type CSSProperties } from "react";
 import { createPortal } from "react-dom";
 import { layoutHero, type PositionedWord } from "@/lib/pretext-layout";
 import {
@@ -16,21 +9,11 @@ import {
   type CookieParticle,
 } from "@/lib/cookie-physics";
 import { saveCookieChoice } from "@/lib/cookie-quest";
+import { launchOntoPet } from "@/lib/crumb-ballistics";
+import { playClick } from "@/lib/crumb-sfx";
+import { CookieParticleView, SpritePet, type PetMood } from "@/components/CrumbPet";
 
 type Phase = "idle" | "opening" | "falling" | "complete" | "declined" | "closing";
-type PetMood =
-  | "sad"
-  | "tracking"
-  | "open"
-  | "chew"
-  | "happy"
-  | "bonked"
-  | "blush"
-  | "alert"
-  | "drool"
-  | "startle"
-  | "squash"
-  | "lick";
 
 const LABEL = "allow cookies";
 const BUTTON_WIDTH = 132;
@@ -47,61 +30,6 @@ function layoutLabel(): PositionedWord[] {
       marginBottom: 0,
     }],
   }).words;
-}
-
-// Sprite renderer over public/images/crumb-sprites.png (3 × 2 grid, one pose
-// per mood). The outline sheet is a currentColor mask layered on a --bg
-// silhouette mask so cookies never show through the body in either theme.
-const SpritePet = forwardRef<HTMLDivElement, { mood: PetMood; onTap: () => void }>(
-  function SpritePet({ mood, onTap }, ref) {
-    return (
-      <div ref={ref} className="crumb-pet" data-mood={mood} onClick={onTap} aria-hidden="true">
-        <div className="crumb-pet-sprite" />
-      </div>
-    );
-  },
-);
-
-function playClick() {
-  try {
-    const Ctor =
-      window.AudioContext ??
-      (window as Window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
-    if (!Ctor) return;
-    const ctx = new Ctor();
-    const osc = ctx.createOscillator();
-    const gain = ctx.createGain();
-    osc.type = "square";
-    osc.frequency.value = 1250;
-    gain.gain.setValueAtTime(0.055, ctx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.06);
-    osc.connect(gain).connect(ctx.destination);
-    osc.start();
-    osc.stop(ctx.currentTime + 0.07);
-    osc.onended = () => void ctx.close();
-  } catch {
-    // Audio is a garnish; stay silent if the context is unavailable.
-  }
-}
-
-function CookieParticleView({
-  particle,
-  register,
-}: {
-  particle: CookieParticle;
-  register: (id: number, node: HTMLDivElement | null) => void;
-}) {
-  const dotCount = 3 + (particle.id % 3);
-  return (
-    <div ref={(node) => register(particle.id, node)} className="crumb-particle" aria-hidden="true">
-      <span className="crumb-particle-letter">{particle.char}</span>
-      <span className="crumb-particle-cookie">
-        {Array.from({ length: dotCount }, (_, dot) => (
-          <i key={dot} style={{ "--dot": dot } as CSSProperties} />
-        ))}
-      </span>
-    </div>
-  );
 }
 
 export function CookieQuest() {
@@ -122,7 +50,7 @@ export function CookieQuest() {
   const dialogRef = useRef<HTMLElement>(null);
   const declineRef = useRef<HTMLButtonElement>(null);
   const rafRef = useRef(0);
-  const dropRafRef = useRef(0);
+  const dropCancelRef = useRef<(() => void) | null>(null);
   const timersRef = useRef<number[]>([]);
   const completedRef = useRef(false);
 
@@ -130,7 +58,8 @@ export function CookieQuest() {
     timersRef.current.forEach(window.clearTimeout);
     timersRef.current = [];
     cancelAnimationFrame(rafRef.current);
-    cancelAnimationFrame(dropRafRef.current);
+    dropCancelRef.current?.();
+    dropCancelRef.current = null;
   }, []);
 
   useEffect(() => {
@@ -354,66 +283,15 @@ export function CookieQuest() {
       return;
     }
 
-    // Wait a frame so any phase-change styling lands before measuring.
-    requestAnimationFrame(() => requestAnimationFrame(() => {
-      const nodeRect = node.getBoundingClientRect();
-      const petRect = pet.getBoundingClientRect();
-      const sceneRect = scene.getBoundingClientRect();
-      const drop = petRect.top + 10 - nodeRect.bottom;
-      const drift = petRect.left + petRect.width / 2 - (nodeRect.left + nodeRect.width / 2);
-
-      // Ballistic launch: an upward kick, then gravity carries it onto the head.
-      const gravity = 2600;
-      const flight = 0.72;
-      const vx = drift / flight;
-      let vy = drop / flight - (gravity * flight) / 2;
-      let x = 0;
-      let y = 0;
-      let rotation = 0;
-      let startled = false;
-      const spin = drift < 0 ? -11 : 11;
-      let previous = performance.now();
-      node.style.willChange = "transform";
-
-      const fly = (now: number) => {
-        const dt = Math.min(now - previous, 32) / 1000;
-        previous = now;
-        vy += gravity * dt;
-        x += vx * dt;
-        y += vy * dt;
-        rotation += spin * dt;
-
-        // A beat before contact the pup notices what's coming.
-        if (!startled && vy > 0 && drop - y < 130) {
-          startled = true;
-          setPetMood("startle");
-        }
-
-        if (y >= drop && vy > 0) {
-          node.style.transform = `translate(${x}px, ${drop}px) rotate(${rotation}deg)`;
-          setPetMood("squash");
-          timersRef.current.push(window.setTimeout(() => setPetMood("bonked"), 340));
-          setImpact({
-            x: petRect.left - sceneRect.left + petRect.width / 2,
-            y: petRect.top - sceneRect.top + 8,
-          });
-          node.animate(
-            [
-              { transform: `translate(${x}px, ${drop}px) rotate(${rotation}deg)` },
-              { transform: `translate(${x}px, ${drop - 12}px) rotate(${rotation + 3}deg)`, offset: 0.45 },
-              { transform: `translate(${x}px, ${drop - 2}px) rotate(${rotation + 2}deg)` },
-            ],
-            { duration: 300, easing: "ease-out", fill: "forwards" },
-          );
-          timersRef.current.push(window.setTimeout(closeDialog, closeDelay));
-          return;
-        }
-
-        node.style.transform = `translate(${x}px, ${y}px) rotate(${rotation}deg)`;
-        dropRafRef.current = requestAnimationFrame(fly);
-      };
-      dropRafRef.current = requestAnimationFrame(fly);
-    }));
+    dropCancelRef.current = launchOntoPet(node, pet, scene, {
+      onStartle: () => setPetMood("startle"),
+      onImpact: (x, y) => {
+        setPetMood("squash");
+        timersRef.current.push(window.setTimeout(() => setPetMood("bonked"), 340));
+        setImpact({ x, y });
+        timersRef.current.push(window.setTimeout(closeDialog, closeDelay));
+      },
+    });
   }, [closeDialog]);
 
   function declineCookies() {
