@@ -164,6 +164,14 @@ export function CookieQuest() {
         for (const particle of nextParticles) {
           const node = particleRefs.current.get(particle.id);
           if (!node) continue;
+          // Hand off per letter: the button glyph hides the exact frame its
+          // physics twin activates, so nothing blinks out and back.
+          if (particle.active) {
+            const letterNode = letterRefs.current.get(particle.id);
+            if (letterNode && letterNode.style.visibility !== "hidden") {
+              letterNode.style.visibility = "hidden";
+            }
+          }
           node.style.opacity = particle.active && !particle.eaten ? "1" : node.style.opacity;
           node.style.transform = `translate3d(${particle.x - 14}px, ${particle.y - 14}px, 0) rotate(${particle.rotation}deg)`;
           const letter = node.querySelector<HTMLElement>(".crumb-particle-letter");

@@ -16,14 +16,23 @@ describe("cookie particle physics", () => {
     expect(first[1].startDelay).toBeGreaterThan(first[0].startDelay);
   });
 
-  it("flips the letter into a cookie right after release", () => {
-    const particles = createCookieParticles([{ char: "A", x: 0, y: 0 }], 2);
+  it("stays a letter while jumping up, then flips into a cookie on the way down", () => {
+    const particles = createCookieParticles([{ char: "A", x: 0, y: -200 }], 2);
     const first = particles[0];
+    let elapsed = first.startDelay;
 
-    stepCookiePhysics(particles, 16, first.startDelay + 80, BOUNDS);
-    expect(first.morph).toBe(0);
+    expect(first.vy).toBeLessThan(0);
+    for (let frame = 0; frame < 200 && first.vy <= 0; frame += 1) {
+      elapsed += 16;
+      stepCookiePhysics(particles, 16, elapsed, BOUNDS);
+      if (first.vy < 0) expect(first.morph).toBe(0);
+    }
+    expect(first.vy).toBeGreaterThan(0);
 
-    stepCookiePhysics(particles, 16, first.startDelay + 420, BOUNDS);
+    for (let frame = 0; frame < 40; frame += 1) {
+      elapsed += 16;
+      stepCookiePhysics(particles, 16, elapsed, BOUNDS);
+    }
     expect(first.morph).toBe(1);
   });
 

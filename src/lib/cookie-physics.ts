@@ -13,6 +13,8 @@ export interface CookieParticle extends LetterSource {
   phase: number;
   startDelay: number;
   morph: number;
+  /** Age (s) at which descent began; morph runs from here. -1 while rising. */
+  morphAt: number;
   bounces: number;
   active: boolean;
   eaten: boolean;
@@ -47,12 +49,14 @@ export function createCookieParticles(
       ...letter,
       id,
       vx: (a - 0.5) * 120,
-      vy: 40 + b * 60,
+      // Upward kick: letters leap out of the button, then gravity takes over.
+      vy: -(420 + b * 180),
       rotation: (c - 0.5) * 18,
       angularVelocity: (b - 0.5) * 260,
       phase: a * Math.PI * 2,
       startDelay: id * 40 + c * 60,
       morph: 0,
+      morphAt: -1,
       bounces: 0,
       active: false,
       eaten: false,
@@ -77,8 +81,6 @@ export function stepCookiePhysics(
     const age = (elapsedMs - particle.startDelay) / 1000;
     if (age < 0) continue;
     particle.active = true;
-    // Flip into a cookie as it tumbles clear of the trapdoor.
-    particle.morph = Math.max(0, Math.min(1, (age - 0.12) / 0.22));
 
     particle.vy += GRAVITY * dt;
 
@@ -91,6 +93,11 @@ export function stepCookiePhysics(
     particle.x += particle.vx * dt;
     particle.y += particle.vy * dt;
     particle.rotation += particle.angularVelocity * dt;
+
+    // Stay a letter through the jump; flip into a cookie once descent begins.
+    if (particle.morphAt < 0 && particle.vy > 0) particle.morphAt = age;
+    particle.morph =
+      particle.morphAt < 0 ? 0 : Math.max(0, Math.min(1, (age - particle.morphAt) / 0.25));
 
     if (particle.y >= bounds.floorY) {
       particle.y = bounds.floorY;

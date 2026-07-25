@@ -950,11 +950,6 @@ main.crumb-page-blurred {
   transform: rotate(-68deg);
 }
 
-.crumb-scene[data-phase="falling"] .crumb-brick-letter,
-.crumb-scene[data-phase="complete"] .crumb-brick-letter {
-  opacity: 0;
-}
-
 .crumb-particle {
   position: absolute;
   top: 0;
@@ -978,7 +973,8 @@ main.crumb-page-blurred {
 }
 
 .crumb-particle-letter {
-  font: 500 11px/1 "SFMono-Regular", Consolas, monospace;
+  /* Matches .crumb-brick-letter so the handoff frame is invisible. */
+  font: 500 10px/1 "SFMono-Regular", Consolas, monospace;
 }
 
 .crumb-particle-cookie {
