@@ -11,6 +11,13 @@ import { CursorTrail } from "@/components/CursorTrail";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { EditPanel } from "@/components/EditPanel";
 import { CookieQuest } from "@/components/CookieQuest";
+import { XpFx } from "@/components/XpFx";
+import { InspectProgress } from "@/components/InspectProgress";
+import { XpHud } from "@/components/XpHud";
+import { XpToasts } from "@/components/XpToasts";
+import { ExitGate } from "@/components/ExitGate";
+import { CLICK_XP, SOCIAL_UNLOCK_XP, award, emitXpToast, useXp } from "@/lib/xp";
+import { emitShow, emitMove, emitHide, type HoverCardMedia } from "@/lib/hover-card-bus";
 
 /* ── Default content ── */
 
@@ -247,12 +254,49 @@ const WRITING: LinkListItem[] = [
   { title: "the philosophy behind \"asjbdhjasdfhgw\"", meta: "nov 2023", href: "https://prithvibharadwaj.substack.com/p/the-philosophy-behind-asjbdhjasdfhgw", favicon: LOGO("substack") },
 ];
 
-const SOCIALS: { label: string; href: string; favicon: string }[] = [
-  { label: "Instagram", href: "https://instagram.com/prithvibofficial", favicon: "/logos/instagram.svg" },
-  { label: "GitHub", href: "https://github.com/prithvi-bharadwaj", favicon: LOGO("github") },
-  { label: "Twitter", href: "https://x.com/prithvibofficial", favicon: LOGO("x") },
+// `contact: true` links are locked until the visitor earns SOCIAL_UNLOCK_XP -
+// they have to get to know Prithvi before they can reach out.
+const SOCIALS: {
+  label: string;
+  href: string;
+  favicon: string;
+  contact?: boolean;
+  media?: HoverCardMedia;
+}[] = [
+  {
+    label: "Instagram",
+    href: "https://instagram.com/theprithvibharadwaj",
+    favicon: "/logos/instagram.svg",
+    contact: true,
+    media: { type: "image", src: SHOT("social-instagram"), caption: "@theprithvibharadwaj" },
+  },
+  {
+    label: "LinkedIn",
+    href: "https://www.linkedin.com/in/prithvibharadwaj/",
+    favicon: "/logos/linkedin.svg",
+    contact: true,
+    media: { type: "image", src: SHOT("social-linkedin"), caption: "linkedin.com/in/prithvibharadwaj" },
+  },
+  {
+    label: "Twitter",
+    href: "https://x.com/PrithviBtw",
+    favicon: LOGO("x"),
+    contact: true,
+    media: { type: "image", src: SHOT("social-x"), caption: "@PrithviBtw · 672 posts", position: "top" },
+  },
+  {
+    label: "GitHub",
+    href: "https://github.com/prithvi-bharadwaj",
+    favicon: LOGO("github"),
+    media: { type: "image", src: SHOT("social-github"), caption: "1,811 contributions in the last year" },
+  },
   { label: "Medium", href: "https://medium.com/@prithvibofficial", favicon: "/logos/medium.svg" },
-  { label: "Substack", href: "https://prithvibharadwaj.substack.com", favicon: LOGO("substack") },
+  {
+    label: "Substack",
+    href: "https://prithvibharadwaj.substack.com",
+    favicon: LOGO("substack"),
+    media: { type: "image", src: SHOT("social-substack"), caption: "Prithvi's Substack" },
+  },
 ];
 
 /* ── Edit mode toolbar ── */
@@ -290,9 +334,11 @@ function EditToolbar({ onSave, onReset, onCopy }: { onSave: () => void; onReset:
 
 export default function Home() {
   const [genzMode, setGenzMode] = useState(false);
+  const [pipDismissed, setPipDismissed] = useState(false);
   const [editMode, setEditMode] = useState(false);
   const [content, setContent] = useState<Content>(DEFAULTS);
   const [hydrated, setHydrated] = useState(false);
+  const xp = useXp();
 
   useEffect(() => {
     setContent(loadContent());
@@ -308,6 +354,31 @@ export default function Home() {
     }
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
+  }, []);
+
+  useEffect(() => {
+    function onScroll() {
+      if (window.innerHeight + window.scrollY >= document.body.scrollHeight - 60) {
+        award("scroll:bottom", CLICK_XP);
+        window.removeEventListener("scroll", onScroll);
+      }
+    }
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+
+  // Dwell reward: 60 visible seconds on the site (tab-away time doesn't count).
+  useEffect(() => {
+    let seconds = 0;
+    const timer = window.setInterval(() => {
+      if (document.visibilityState !== "visible") return;
+      seconds += 1;
+      if (seconds >= 60) {
+        window.clearInterval(timer);
+        award("time:60s", CLICK_XP);
+      }
+    }, 1000);
+    return () => window.clearInterval(timer);
   }, []);
 
   const update = useCallback((key: keyof Content, value: string) => {
@@ -335,6 +406,11 @@ export default function Home() {
   return (
     <main className="relative min-h-screen">
       <CursorTrail />
+      <XpFx />
+      <InspectProgress />
+      <XpHud />
+      <XpToasts />
+      <ExitGate />
       <ThemeToggle />
       {editMode && (
         <EditToolbar onSave={save} onReset={reset} onCopy={copyToClipboard} />
@@ -363,17 +439,17 @@ export default function Home() {
 
         {/* Projects */}
         <div className="w-full max-w-[min(42rem,78vw)] mx-auto md:ml-[15vw] lg:ml-[18vw] mt-10 md:mt-14">
-          <PreviouslyList label="In 2026 I built." items={PROJECTS} />
+          <PreviouslyList label="In 2026 I built." items={PROJECTS} proofKind="project-proof" />
         </div>
 
         {/* Lore */}
         <div className="w-full max-w-[min(42rem,78vw)] mx-auto md:ml-[15vw] lg:ml-[18vw] mt-10 md:mt-14">
-          <LinkList label="Lore." items={LORE} variant="prose" pointer />
+          <LinkList label="Lore." items={LORE} variant="prose" pointer xpKind="lore" />
         </div>
 
         {/* Writing */}
         <div className="w-full max-w-[min(42rem,78vw)] mx-auto md:ml-[15vw] lg:ml-[18vw] mt-10 md:mt-14">
-          <LinkList label="Writing." items={WRITING} pointer />
+          <LinkList label="Writing." items={WRITING} pointer xpKind="writing" />
         </div>
 
         {/* Socials */}
@@ -382,29 +458,80 @@ export default function Home() {
             <WiggleWords text="Find me on." />
           </span>
           <div className="flex flex-wrap gap-x-5 gap-y-2 text-sm">
-            {SOCIALS.map((s) => (
-              <a
-                key={s.label}
-                href={s.href}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="group inline-flex items-center gap-1.5 text-(--ink)/60 hover:text-(--ink) transition-colors"
-              >
-                <img
-                  src={s.favicon}
-                  alt=""
-                  width={11}
-                  height={11}
-                  className="h-[0.7rem] w-[0.7rem] rounded-sm opacity-70 group-hover:opacity-100 transition-opacity"
-                />
-                <span className="hover-underline">{s.label}</span>
-              </a>
-            ))}
+            {SOCIALS.map((s) =>
+              s.contact && xp.total < SOCIAL_UNLOCK_XP ? (
+                <button
+                  key={s.label}
+                  onClick={() =>
+                    emitXpToast({
+                      title: "get to know me first",
+                      body: `Spend time on the site before you reach out. Hover the proof, open the lore, read the writing. Contact links unlock at ${SOCIAL_UNLOCK_XP} xp.`,
+                      kind: "info",
+                    })
+                  }
+                  title={`unlocks at ${SOCIAL_UNLOCK_XP} xp`}
+                  onPointerEnter={(e) => {
+                    if (s.media && e.pointerType === "mouse") emitShow({ media: s.media, x: e.clientX, y: e.clientY });
+                  }}
+                  onPointerMove={(e) => {
+                    if (s.media && e.pointerType === "mouse") emitMove({ x: e.clientX, y: e.clientY });
+                  }}
+                  onPointerLeave={(e) => {
+                    if (s.media && e.pointerType === "mouse") emitHide();
+                  }}
+                  className="group inline-flex cursor-pointer items-center gap-1.5 text-(--ink)/40 transition-colors hover:text-(--ink)/60"
+                >
+                  <img
+                    src={s.favicon}
+                    alt=""
+                    width={11}
+                    height={11}
+                    className="h-[0.7rem] w-[0.7rem] rounded-sm opacity-40"
+                    style={{ filter: "grayscale(1)" }}
+                  />
+                  <span className="select-none blur-[3px]">{s.label}</span>
+                  <span className="text-[10px] opacity-60">🔒</span>
+                </button>
+              ) : (
+                <a
+                  key={s.label}
+                  href={s.href}
+                  onPointerEnter={(e) => {
+                    if (s.media && e.pointerType === "mouse") emitShow({ media: s.media, x: e.clientX, y: e.clientY });
+                  }}
+                  onPointerMove={(e) => {
+                    if (s.media && e.pointerType === "mouse") emitMove({ x: e.clientX, y: e.clientY });
+                  }}
+                  onPointerLeave={(e) => {
+                    if (s.media && e.pointerType === "mouse") emitHide();
+                  }}
+                  className="group inline-flex items-center gap-1.5 text-(--ink)/60 hover:text-(--ink) transition-colors"
+                >
+                  <img
+                    src={s.favicon}
+                    alt=""
+                    width={11}
+                    height={11}
+                    className="h-[0.7rem] w-[0.7rem] rounded-sm opacity-70 group-hover:opacity-100 transition-opacity"
+                  />
+                  <span className="hover-underline">{s.label}</span>
+                </a>
+              )
+            )}
           </div>
 
           {/* Gen z mode - footer easter egg */}
           <div className="mt-10">
-            <GenZToggle enabled={genzMode} onChange={setGenzMode} />
+            <GenZToggle
+              enabled={genzMode}
+              onChange={(v) => {
+                setGenzMode(v);
+                if (v) {
+                  setPipDismissed(false); // re-toggling brings the pip back
+                  award("genz:on", CLICK_XP);
+                }
+              }}
+            />
           </div>
           {genzMode && (
             <div className="mt-4 text-sm text-(--ink)/60 leading-relaxed">
@@ -413,12 +540,17 @@ export default function Home() {
                 <EditPanel label="genz tldr" value={content.genz} onChange={(v) => update("genz", v)} />
               )}
               <p>{content.genz}</p>
+              {/* Scroll room so the pip can't sit on top of the socials/tldr
+                  at the bottom of the page. At 2xl it lives in the free margin. */}
+              {!pipDismissed && <div aria-hidden className="h-[340px] 2xl:h-0" />}
             </div>
           )}
         </div>
       </div>
 
-      {genzMode && <SubwaySurfersPip />}
+      {genzMode && !pipDismissed && (
+        <SubwaySurfersPip onDismiss={() => setPipDismissed(true)} />
+      )}
     </main>
   );
 }

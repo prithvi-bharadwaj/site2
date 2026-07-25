@@ -2,15 +2,27 @@
 
 import { useRef, useState } from "react";
 import type { BrandLink, InlineLink, LinkListItem } from "./LinkList";
+import type { HoverCardMedia } from "@/lib/hover-card-bus";
 import { BrandIcon, hasBrandIcon } from "./BrandIcon";
 import { WiggleWords, useWiggleDescendants } from "./WiggleWords";
-import { emitShow, emitMove, emitHide } from "@/lib/hover-card-bus";
+import { emitShow, emitMove, emitHide, emitPin, isPinnedInspect } from "@/lib/hover-card-bus";
+import { CLICK_XP, award, inspectStart, inspectEnd, mediaKey, useXp } from "@/lib/xp";
 
 const EASE = "cubic-bezier(0.23, 1, 0.32, 1)";
 const DOTTED = "1px dotted rgb(var(--ink-rgb) / 0.35)";
 
 function escapeRegex(s: string) {
   return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+/** Caption-only confirm card for links that ship no proof media. */
+function linkNote(href: string): HoverCardMedia {
+  try {
+    const u = new URL(href);
+    return { type: "note", caption: `${u.host}${u.pathname === "/" ? "" : u.pathname}` };
+  } catch {
+    return { type: "note", caption: href };
+  }
 }
 
 type Segment =
@@ -45,6 +57,12 @@ function tokenize(title: string, brands?: BrandLink[], inline?: InlineLink[]): S
 interface PreviouslyListProps {
   label: string;
   items: LinkListItem[];
+  /**
+   * Namespace for hover-inspect awards. The Previously section uses "proof"
+   * (counted by the Proof of Work achievement); other sections sharing this
+   * component must use their own prefix so they don't pollute that count.
+   */
+  proofKind?: string;
 }
 
 /**
@@ -53,9 +71,10 @@ interface PreviouslyListProps {
  * Words repel from cursor via the shared spring-physics wiggle manager;
  * underlined links move gently as single units so they stay clickable.
  */
-export function PreviouslyList({ label, items }: PreviouslyListProps) {
+export function PreviouslyList({ label, items, proofKind = "proof" }: PreviouslyListProps) {
   const ref = useRef<HTMLDivElement>(null);
   const [open, setOpen] = useState<number | null>(null);
+  const xp = useXp();
 
   useWiggleDescendants(ref);
 
@@ -72,6 +91,11 @@ export function PreviouslyList({ label, items }: PreviouslyListProps) {
             (item.expandFavicons && item.expandFavicons.length > 0);
           const isOpen = open === i;
           const segments = tokenize(item.title, item.brandLinks, item.inlineLinks);
+          const proofKeys = [
+            ...(item.brandLinks ?? []).flatMap((b) => (b.media ? [`${proofKind}:${mediaKey(b.media)}`] : [])),
+            ...(item.inlineLinks ?? []).flatMap((l) => (l.media ? [`${proofKind}:${mediaKey(l.media)}`] : [])),
+          ];
+          const verified = proofKeys.length > 0 && proofKeys.every((k) => k in xp.earned);
 
           return (
             <li key={i} className="m-0 p-0 bullet-hang">
@@ -82,10 +106,11 @@ export function PreviouslyList({ label, items }: PreviouslyListProps) {
               >
                 <span
                   data-repel
-                  className="inline-block text-(--ink)/30 mr-2"
-                  style={{ transition: `transform 180ms ${EASE}` }}
+                  title={verified ? "proof inspected" : undefined}
+                  className={`inline-block mr-2 ${verified ? "text-(--ink)/75" : "text-(--ink)/30"}`}
+                  style={{ transition: `transform 180ms ${EASE}, color 400ms` }}
                 >
-                  ·
+                  {verified ? "•" : "·"}
                 </span>
                 {item.favicon && (
                   <img
@@ -105,18 +130,42 @@ export function PreviouslyList({ label, items }: PreviouslyListProps) {
                       <a
                         key={si}
                         href={seg.brand.href}
-                        target="_blank"
-                        rel="noopener noreferrer"
                         data-repel
-                        onClick={(e) => e.stopPropagation()}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          award(`click:${media ? mediaKey(media) : seg.brand.href}`, CLICK_XP);
+                          // Mouse/touch clicks pin a confirm card instead of leaving;
+                          // the pinned card is the second click that navigates.
+                          // Keyboard activation (e.detail === 0) navigates directly.
+                          if (e.detail > 0) {
+                            e.preventDefault();
+                            if (media) inspectEnd(`${proofKind}:${mediaKey(media)}`);
+                            emitPin({
+                              media: media ?? linkNote(seg.brand.href),
+                              href: seg.brand.href,
+                              inspectId: media ? `${proofKind}:${mediaKey(media)}` : undefined,
+                              x: e.clientX,
+                              y: e.clientY,
+                            });
+                          }
+                        }}
                         onPointerEnter={(e) => {
-                          if (media && e.pointerType === "mouse") emitShow({ media, x: e.clientX, y: e.clientY });
+                          if (media && e.pointerType === "mouse") {
+                            emitShow({ media, x: e.clientX, y: e.clientY });
+                            inspectStart(`${proofKind}:${mediaKey(media)}`);
+                          }
                         }}
                         onPointerMove={(e) => {
                           if (media && e.pointerType === "mouse") emitMove({ x: e.clientX, y: e.clientY });
                         }}
                         onPointerLeave={(e) => {
-                          if (media && e.pointerType === "mouse") emitHide();
+                          if (media && e.pointerType === "mouse") {
+                            emitHide();
+                            // Once pinned, the dwell belongs to the card - leaving
+                            // the source link must not cancel it.
+                            const id = `${proofKind}:${mediaKey(media)}`;
+                            if (!isPinnedInspect(id)) inspectEnd(id);
+                          }
                         }}
                         className="brand-link wl-unit inline-flex items-baseline gap-1 align-baseline"
                       >
@@ -142,17 +191,38 @@ export function PreviouslyList({ label, items }: PreviouslyListProps) {
                       <a
                         key={si}
                         href={seg.link.href}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        onClick={(e) => e.stopPropagation()}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          award(`click:${media ? mediaKey(media) : seg.link.href}`, CLICK_XP);
+                          if (e.detail > 0) {
+                            e.preventDefault();
+                            if (media) inspectEnd(`${proofKind}:${mediaKey(media)}`);
+                            emitPin({
+                              media: media ?? linkNote(seg.link.href),
+                              href: seg.link.href,
+                              inspectId: media ? `${proofKind}:${mediaKey(media)}` : undefined,
+                              x: e.clientX,
+                              y: e.clientY,
+                            });
+                          }
+                        }}
                         onPointerEnter={(e) => {
-                          if (media && e.pointerType === "mouse") emitShow({ media, x: e.clientX, y: e.clientY });
+                          if (media && e.pointerType === "mouse") {
+                            emitShow({ media, x: e.clientX, y: e.clientY });
+                            inspectStart(`${proofKind}:${mediaKey(media)}`);
+                          }
                         }}
                         onPointerMove={(e) => {
                           if (media && e.pointerType === "mouse") emitMove({ x: e.clientX, y: e.clientY });
                         }}
                         onPointerLeave={(e) => {
-                          if (media && e.pointerType === "mouse") emitHide();
+                          if (media && e.pointerType === "mouse") {
+                            emitHide();
+                            // Once pinned, the dwell belongs to the card - leaving
+                            // the source link must not cancel it.
+                            const id = `${proofKind}:${mediaKey(media)}`;
+                            if (!isPinnedInspect(id)) inspectEnd(id);
+                          }
                         }}
                         data-repel
                         className="wl-unit inline-block text-(--ink)/75 hover:text-(--ink)"
@@ -177,8 +247,6 @@ export function PreviouslyList({ label, items }: PreviouslyListProps) {
                         <a
                           key={icon.href}
                           href={icon.href}
-                          target="_blank"
-                          rel="noopener noreferrer"
                           onClick={(e) => e.stopPropagation()}
                           title={icon.name}
                           data-repel
@@ -252,8 +320,6 @@ export function PreviouslyList({ label, items }: PreviouslyListProps) {
                           <a
                             key={l.href}
                             href={l.href}
-                            target="_blank"
-                            rel="noopener noreferrer"
                             className="inline-flex items-center gap-1 text-[11px] text-(--ink)/45 hover:text-(--ink)/80 underline underline-offset-2"
                           >
                             {l.favicon && (

@@ -34,6 +34,13 @@ html.dark {
   color-scheme: dark;
 }
 
+/* Monochrome brand marks (currentColor svgs rendered via <img>) resolve to
+   black; flip them to white in dark mode. */
+html.dark img[src="/logos/instagram.svg"],
+html.dark img[src="/logos/medium.svg"] {
+  filter: invert(1);
+}
+
 html,
 body {
   margin: 0;
@@ -1559,6 +1566,35 @@ a.project-item {
   }
 }
 
+/* Cursor inspect meter — fills over the hover dwell time */
+@keyframes inspect-fill {
+  from {
+    width: 0%;
+  }
+  to {
+    width: 100%;
+  }
+}
+
+/* XP burst — pops huge across the screen, floats up and fades */
+@keyframes xp-burst {
+  0% {
+    opacity: 0;
+    transform: translateY(10px) scale(0.85);
+  }
+  12% {
+    opacity: 1;
+    transform: translateY(0) scale(1.02);
+  }
+  25% {
+    transform: translateY(-4px) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-80px) scale(1);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   * {
     animation-duration: 0.01ms !important;
@@ -1636,7 +1672,7 @@ a.project-item {
   width: 296px;
   pointer-events: none;
   opacity: 0;
-  transition: opacity 140ms var(--ease-out);
+  transition: opacity 140ms var(--ease-out), width 200ms var(--ease-out);
   z-index: 90;
   background: var(--card-bg);
   border-radius: 6px;
@@ -1648,6 +1684,40 @@ a.project-item {
   opacity: 1;
 }
 
+/* Pinned (clicked) state — the card freezes, grows ~20%, and becomes a link. */
+.hover-card.pinned {
+  pointer-events: auto;
+  width: 355px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08), 0 20px 44px rgba(0, 0, 0, 0.18);
+}
+
+.hover-card.pinned .hover-card-media {
+  height: 210px;
+}
+
+.hover-card.pinned[data-wide="true"] {
+  width: 672px;
+}
+
+.hover-card.pinned[data-wide="true"] .hover-card-media {
+  height: auto;
+}
+
+.hover-card-linkwrap {
+  display: block;
+  color: inherit;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.hover-card.pinned .hover-card-caption {
+  transition: color 150ms;
+}
+
+.hover-card.pinned:hover .hover-card-caption {
+  color: rgb(var(--ink-rgb) / 0.9);
+}
+
 .hover-card-media {
   position: relative;
   width: 100%;
@@ -1655,14 +1725,24 @@ a.project-item {
   overflow: hidden;
   background: var(--card-media-bg);
   border-radius: 3px;
+  transition: height 200ms var(--ease-out);
 }
 
-/* Caption-only note card (e.g. "link coming soon") */
+/* Caption-only note card (e.g. "link coming soon", link-confirm pins) */
 .hover-card[data-mode="note"] {
   width: auto;
   max-width: 220px;
   padding: 4px 10px 6px;
   white-space: nowrap;
+}
+
+.hover-card[data-mode="note"] .hover-card-caption {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.hover-card.pinned[data-mode="note"] {
+  max-width: 320px;
 }
 
 /* Wide banner mode for screenshot strips (e.g. a single YouTube Studio row). */

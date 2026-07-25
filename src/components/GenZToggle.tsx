@@ -11,11 +11,11 @@ export function GenZToggle({ enabled, onChange }: GenZToggleProps) {
       onClick={() => onChange(!enabled)}
       role="switch"
       aria-checked={enabled}
-      className="group flex cursor-pointer items-center gap-3 transition-colors duration-200"
+      // Vertical padding + negative margin: ~44px touch target, zero layout shift.
+      className="group -my-3 -mr-3 flex cursor-pointer items-center gap-3 py-3 pr-3 transition-colors duration-200"
       style={{
         background: "none",
         border: "none",
-        padding: 0,
         font: "inherit",
       }}
     >
