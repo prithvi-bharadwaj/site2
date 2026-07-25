@@ -168,9 +168,11 @@ export function CookieQuest() {
     if (!visible) return;
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
-    // Blur the page directly; backdrop-filter is defeated by ancestor effects.
-    const page = document.querySelector("main");
+    // Blur the page directly (backdrop-filter is defeated by ancestor effects)
+    // and mark it inert so keyboard focus stays trapped in the dialog.
+    const page = document.querySelector<HTMLElement>("main");
     page?.classList.add("crumb-page-blurred");
+    if (page) page.inert = true;
     const focusFrame = requestAnimationFrame(() => dialogRef.current?.focus());
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") closeDialog();
@@ -180,6 +182,7 @@ export function CookieQuest() {
       cancelAnimationFrame(focusFrame);
       document.body.style.overflow = previousOverflow;
       page?.classList.remove("crumb-page-blurred");
+      if (page) page.inert = false;
       document.removeEventListener("keydown", onKeyDown);
     };
   }, [closeDialog, visible]);
@@ -345,8 +348,9 @@ export function CookieQuest() {
     const scene = sceneRef.current;
     const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     if (!node || !pet || !scene || reducedMotion || typeof node.animate !== "function") {
+      // No flight to watch: brief bonk beat, then get out of the way.
       setPetMood("bonked");
-      timersRef.current.push(window.setTimeout(closeDialog, 1500));
+      timersRef.current.push(window.setTimeout(closeDialog, 350));
       return;
     }
 
