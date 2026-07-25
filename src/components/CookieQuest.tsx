@@ -66,11 +66,11 @@ export function CookieQuest() {
     release: releaseCloth,
     disturb: disturbCloth,
     isReleased: clothReleased,
-  } = useTrapCloth(visible, {
-    width: BUTTON_WIDTH,
-    height: BUTTON_HEIGHT,
-    radius: BUTTON_RADIUS,
-  });
+  } = useTrapCloth(
+    visible,
+    { width: BUTTON_WIDTH, height: BUTTON_HEIGHT, radius: BUTTON_RADIUS },
+    allowRef,
+  );
 
   const clearTimers = useCallback(() => {
     timersRef.current.forEach(window.clearTimeout);
@@ -332,8 +332,9 @@ export function CookieQuest() {
     }
     setPhase("opening");
     setPetMood("alert");
-    // The bottom edge peels loose right as the button finishes compressing.
-    timersRef.current.push(window.setTimeout(releaseCloth, 120));
+    // Wait out crumb-brick-compress (220ms): mid-squash the button is scaled and
+    // the unscaled cloth hinges would not sit on its corners.
+    timersRef.current.push(window.setTimeout(releaseCloth, 220));
     const timer = window.setTimeout(beginPhysics, 360);
     timersRef.current.push(timer);
   }

@@ -1,6 +1,5 @@
 import { describe, expect, it } from "vitest";
 import {
-  arcPoints,
   createTrapCloth,
   disturbTrapCloth,
   releaseTrapCloth,
@@ -63,20 +62,6 @@ describe("trap cloth", () => {
         expect(length).toBeGreaterThan(cloth.restLength * 0.8);
         expect(length).toBeLessThan(cloth.restLength * 1.2);
       }
-    }
-  });
-
-  it("corner arcs land exactly on the endpoints they bridge", () => {
-    // Bottom-left corner arc: from the 45° diagonal down to the hinge pin.
-    const points = arcPoints(58, 36, 9.5, Math.PI * 0.75, Math.PI * 0.5, 8);
-    expect(points).toHaveLength(9);
-    expect(points[0].x).toBeCloseTo(58 - 9.5 * Math.SQRT1_2);
-    expect(points[0].y).toBeCloseTo(36 + 9.5 * Math.SQRT1_2);
-    expect(points[8].x).toBeCloseTo(58);
-    expect(points[8].y).toBeCloseTo(45.5);
-    // Every point stays on the stroke circle.
-    for (const point of points) {
-      expect(Math.hypot(point.x - 58, point.y - 36)).toBeCloseTo(9.5);
     }
   });
 

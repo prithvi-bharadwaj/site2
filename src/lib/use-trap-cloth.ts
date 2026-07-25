@@ -1,33 +1,24 @@
 "use client";
 
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef, type RefObject } from "react";
 import {
-  arcPoints,
   createTrapCloth,
   disturbTrapCloth,
   releaseTrapCloth,
   stepTrapCloth,
   type TrapCloth,
 } from "@/lib/trap-cloth";
-import {
-  createClothRenderer,
-  type ClothRenderer,
-  type RenderStrip,
-  type StripPoint,
-} from "@/lib/trap-cloth-gl";
+import { createClothRenderer, type ClothRenderer } from "@/lib/trap-cloth-gl";
 
 // Canvas geometry — mirrors .crumb-trap-cloth in globals.css.
 const PAD_X = 48;
 const PAD_TOP = 8;
 const CANVAS_HEIGHT = 168;
-// Taut it's the button's 1px bottom border; loose it thickens to 2px so the
-// hanging fabric stays clearly visible against the falling cookies.
-const THICKNESS_TAUT = 1;
-const THICKNESS_LOOSE = 2;
+// Loose the fabric reads a touch heavier than the 1px border it replaced, so it
+// stays visible against the falling cookies.
+const THICKNESS = 2;
 const LINE_ALPHA = 0.45;
-// Mirrors the .crumb-brick border stroke (1px, ink at 0.18).
-const BORDER_THICKNESS = 1;
-const BORDER_ALPHA = 0.18;
+const MAX_DPR = 3;
 
 interface TrapClothButton {
   width: number;
@@ -36,51 +27,22 @@ interface TrapClothButton {
 }
 
 /**
- * The real border-bottom stays transparent (see .crumb-brick), which also
- * blanks the lower half of each corner arc — CSS splits corner painting at
- * the diagonal. These two static arc segments fill that notch so the side
- * borders run seamlessly down to the cloth hinges.
+ * The allow-cookies button's bottom edge as a cloth strip. While taut the CSS
+ * border-bottom draws it (crisp, and joined to the corner arcs); the canvas is
+ * empty. On release the button gets data-cloth="loose" — CSS masks the straight
+ * run of the border and this verlet sim takes over, rendered by a WebGL ribbon
+ * shader. The hinges sit exactly where the masked run met the corner arcs.
  */
-function cornerArcs({ width, height, radius }: TrapClothButton): StripPoint[][] {
-  const centerY = PAD_TOP + height - radius;
-  const strokeRadius = radius - BORDER_THICKNESS / 2;
-  return [
-    arcPoints(PAD_X + radius, centerY, strokeRadius, Math.PI * 0.75, Math.PI * 0.5),
-    arcPoints(PAD_X + width - radius, centerY, strokeRadius, Math.PI * 0.25, Math.PI * 0.5),
-  ];
-}
-
-/**
- * The allow-cookies button's bottom edge as a cloth strip: taut while idle,
- * released into a verlet flap sim rendered by a WebGL ribbon shader.
- */
-export function useTrapCloth(active: boolean, button: TrapClothButton) {
+export function useTrapCloth(
+  active: boolean,
+  button: TrapClothButton,
+  buttonRef: RefObject<HTMLButtonElement | null>,
+) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const clothRef = useRef<TrapCloth | null>(null);
   const rendererRef = useRef<ClothRenderer | null>(null);
-  const arcsRef = useRef<StripPoint[][]>([]);
   const rafRef = useRef(0);
   const { width, height, radius } = button;
-
-  const drawScene = useCallback((clothThickness: number) => {
-    const cloth = clothRef.current;
-    const renderer = rendererRef.current;
-    if (!cloth || !renderer) return;
-    const strips: RenderStrip[] = [
-      ...cloth.flaps.map((flap) => ({
-        points: flap,
-        thickness: clothThickness,
-        alpha: LINE_ALPHA,
-        shaded: true,
-      })),
-      ...arcsRef.current.map((points) => ({
-        points,
-        thickness: BORDER_THICKNESS,
-        alpha: BORDER_ALPHA,
-      })),
-    ];
-    renderer.draw(strips);
-  }, []);
 
   useEffect(() => {
     if (!active) return;
@@ -91,7 +53,7 @@ export function useTrapCloth(active: boolean, button: TrapClothButton) {
       rightX: PAD_X + width - radius,
       y: PAD_TOP + height - 0.5,
     });
-    arcsRef.current = cornerArcs({ width, height, radius });
+    buttonRef.current?.removeAttribute("data-cloth");
     const ink = getComputedStyle(document.documentElement)
       .getPropertyValue("--ink-rgb")
       .trim()
@@ -102,30 +64,37 @@ export function useTrapCloth(active: boolean, button: TrapClothButton) {
       : [0.07, 0.07, 0.09];
     const renderer = createClothRenderer(canvas, color);
     rendererRef.current = renderer;
-    renderer?.resize(width + PAD_X * 2, CANVAS_HEIGHT, Math.min(window.devicePixelRatio || 1, 2));
-    drawScene(THICKNESS_TAUT);
+    renderer?.resize(width + PAD_X * 2, CANVAS_HEIGHT, Math.min(window.devicePixelRatio || 1, MAX_DPR));
     return () => {
       cancelAnimationFrame(rafRef.current);
       renderer?.dispose();
       rendererRef.current = null;
       clothRef.current = null;
     };
-  }, [active, drawScene, width, height, radius]);
+  }, [active, buttonRef, width, height, radius]);
 
   /** Let the bottom edge go and run the flap sim until the dialog unmounts. */
   const release = useCallback(() => {
     const cloth = clothRef.current;
-    if (!cloth || !rendererRef.current || cloth.released) return;
+    const renderer = rendererRef.current;
+    if (!cloth || !renderer || cloth.released) return;
     releaseTrapCloth(cloth);
+    // Same frame the border strip disappears, so the handoff has no seam.
+    buttonRef.current?.setAttribute("data-cloth", "loose");
     let previous = performance.now();
     const frame = (now: number) => {
       stepTrapCloth(cloth, now - previous);
       previous = now;
-      drawScene(THICKNESS_LOOSE);
+      renderer.draw(cloth.flaps.map((flap) => ({
+        points: flap,
+        thickness: THICKNESS,
+        alpha: LINE_ALPHA,
+        shaded: true,
+      })));
       rafRef.current = requestAnimationFrame(frame);
     };
-    rafRef.current = requestAnimationFrame(frame);
-  }, [drawScene]);
+    frame(previous);
+  }, [buttonRef]);
 
   /** Nudge the cloth from (x, y) in trap-local coordinates (button top-left origin). */
   const disturb = useCallback((x: number, y: number, radiusPx: number, ix: number, iy: number) => {

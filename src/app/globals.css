@@ -866,11 +866,23 @@ main.crumb-page-blurred {
   background: var(--bg);
 }
 
-/* The cloth canvas draws the brick's whole bottom edge (taut line + lower
-   corner arcs), so the real border-bottom stays transparent. Painting both
-   leaves a notch at the corners the moment the cloth releases. */
-.crumb-brick {
-  border-bottom-color: transparent;
+/* The CSS border owns the bottom edge until the trap opens, so idle the button
+   is one continuous stroke with pixel-perfect corners. On release this strip
+   (bg-coloured, spanning only the straight run between the corner arcs) hides
+   the part the cloth takes over; the arcs stay CSS all the way down. */
+.crumb-brick::after {
+  content: "";
+  position: absolute;
+  bottom: -1px;
+  left: 9px;
+  right: 9px;
+  height: 1px;
+  background: var(--bg);
+  opacity: 0;
+}
+
+.crumb-brick[data-cloth="loose"]::after {
+  opacity: 1;
 }
 
 /* The button's bottom edge, redrawn as a cloth sim. Geometry (48px side

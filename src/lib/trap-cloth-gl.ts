@@ -145,10 +145,15 @@ function createWebGLRenderer(
   gl.enableVertexAttribArray(aShade);
   gl.vertexAttribPointer(aShade, 1, gl.FLOAT, false, STRIDE, 12);
 
+  // Anti-alias ramp, in CSS px: one device pixel, so lines land as crisp as a
+  // CSS border instead of a soft band.
+  let feather = 0.5;
+
   return {
     resize(width, height, dpr) {
       canvas.width = Math.round(width * dpr);
       canvas.height = Math.round(height * dpr);
+      feather = 0.5 / dpr;
       gl.viewport(0, 0, canvas.width, canvas.height);
       gl.uniform2f(uSize, width, height);
     },
@@ -156,9 +161,9 @@ function createWebGLRenderer(
       gl.clearColor(0, 0, 0, 0);
       gl.clear(gl.COLOR_BUFFER_BIT);
       for (const strip of strips) {
-        const halfWidth = strip.thickness / 2 + 1;
+        const halfWidth = strip.thickness / 2 + feather;
         gl.uniform1f(uAlpha, strip.alpha);
-        gl.uniform1f(uInner, Math.max(strip.thickness / 2 - 0.5, 0) / halfWidth);
+        gl.uniform1f(uInner, Math.max(strip.thickness / 2 - feather, 0) / halfWidth);
         const ribbon = buildRibbon(strip.points, halfWidth, strip.shaded === true);
         gl.bufferData(gl.ARRAY_BUFFER, ribbon, gl.DYNAMIC_DRAW);
         gl.drawArrays(gl.TRIANGLE_STRIP, 0, ribbon.length / 4);
