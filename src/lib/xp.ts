@@ -77,7 +77,7 @@ export interface XpFxDetail {
 export interface XpToastDetail {
   title: string;
   body: string;
-  kind: "achievement" | "info";
+  kind: "achievement" | "info" | "level";
 }
 
 const EMPTY: XpState = { total: 0, earned: {} };
@@ -138,6 +138,7 @@ export function award(id: string, xp: number) {
   if (typeof window === "undefined" || id in state.earned) return;
   const first = state.total === 0;
   const before = new Set(unlockedAchievements(state).map((a) => a.id));
+  const prevLevel = levelFor(state.total).index;
   state = { total: state.total + xp, earned: { ...state.earned, [id]: xp } };
   persist();
   notify();
@@ -150,7 +151,19 @@ export function award(id: string, xp: number) {
     });
   }
   for (const a of unlockedAchievements(state)) {
-    if (!before.has(a.id)) emitXpToast({ title: a.name, body: a.desc, kind: "achievement" });
+    if (!before.has(a.id)) {
+      emitXpToast({ title: a.name, body: a.desc, kind: "achievement" });
+      emitXpFx({ text: `★ ${a.name}`, big: true });
+    }
+  }
+  const level = levelFor(state.total);
+  if (level.index > prevLevel) {
+    emitXpToast({
+      title: `lv${level.index} · ${level.name}`,
+      body: level.next ? `next: ${level.next.name} at ${level.next.min} xp` : "max level reached",
+      kind: "level",
+    });
+    emitXpFx({ text: `lv${level.index} ${level.name}`, big: true });
   }
 }
 

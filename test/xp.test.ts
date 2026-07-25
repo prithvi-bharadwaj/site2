@@ -57,6 +57,27 @@ describe("xp store", () => {
     expect(seen).toContain("+2 xp");
   });
 
+  it("emits a big fx burst and a level toast on level up", () => {
+    const fx: { text: string; big?: boolean }[] = [];
+    const toasts: { title: string; kind: string }[] = [];
+    const offFx = onXpFx((d) => fx.push(d));
+    const offToast = onXpToast((d) => toasts.push(d));
+    // Level 1 (visitor) starts at 60 xp.
+    act(() => award("click:levelup", 60));
+    offFx();
+    offToast();
+    expect(fx).toContainEqual({ text: "lv1 visitor", big: true });
+    expect(toasts.some((t) => t.kind === "level" && t.title === "lv1 · visitor")).toBe(true);
+  });
+
+  it("emits a big fx burst when an achievement unlocks", () => {
+    const fx: { text: string; big?: boolean }[] = [];
+    const off = onXpFx((d) => fx.push(d));
+    act(() => award("genz:on", 50));
+    off();
+    expect(fx).toContainEqual({ text: "★ Did Not Touch Grass", big: true });
+  });
+
   it("inspectStart awards after the dwell time, inspectEnd cancels", () => {
     vi.useFakeTimers();
     inspectStart("proof:hover1");
