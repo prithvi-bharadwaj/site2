@@ -333,6 +333,7 @@ function EditToolbar({ onSave, onReset, onCopy }: { onSave: () => void; onReset:
 
 export default function Home() {
   const [genzMode, setGenzMode] = useState(false);
+  const [pipDismissed, setPipDismissed] = useState(false);
   const [editMode, setEditMode] = useState(false);
   const [content, setContent] = useState<Content>(DEFAULTS);
   const [hydrated, setHydrated] = useState(false);
@@ -523,7 +524,10 @@ export default function Home() {
               enabled={genzMode}
               onChange={(v) => {
                 setGenzMode(v);
-                if (v) award("genz:on", CLICK_XP);
+                if (v) {
+                  setPipDismissed(false); // re-toggling brings the pip back
+                  award("genz:on", CLICK_XP);
+                }
               }}
             />
           </div>
@@ -534,12 +538,17 @@ export default function Home() {
                 <EditPanel label="genz tldr" value={content.genz} onChange={(v) => update("genz", v)} />
               )}
               <p>{content.genz}</p>
+              {/* Scroll room so the pip can't sit on top of the socials/tldr
+                  at the bottom of the page. At 2xl it lives in the free margin. */}
+              {!pipDismissed && <div aria-hidden className="h-[340px] 2xl:h-0" />}
             </div>
           )}
         </div>
       </div>
 
-      {genzMode && <SubwaySurfersPip />}
+      {genzMode && !pipDismissed && (
+        <SubwaySurfersPip onDismiss={() => setPipDismissed(true)} />
+      )}
     </main>
   );
 }

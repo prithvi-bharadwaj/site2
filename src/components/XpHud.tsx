@@ -1,10 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   ACHIEVEMENTS,
   SOCIAL_UNLOCK_XP,
   TOTALS,
+  canHover,
   levelFor,
   resetXp,
   unlockedAchievements,
@@ -24,6 +25,24 @@ function count(s: XpState, prefix: string) {
 export function XpHud() {
   const xp = useXp();
   const [open, setOpen] = useState(false);
+  const rootRef = useRef<HTMLDivElement>(null);
+
+  // The drawer dismisses like the pinned proof card: outside click or Escape.
+  useEffect(() => {
+    if (!open) return;
+    const onDocClick = (e: MouseEvent) => {
+      if (!rootRef.current?.contains(e.target as Node)) setOpen(false);
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setOpen(false);
+    };
+    document.addEventListener("click", onDocClick);
+    window.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("click", onDocClick);
+      window.removeEventListener("keydown", onKey);
+    };
+  }, [open]);
 
   const level = levelFor(xp.total);
   const pct = level.next
@@ -38,7 +57,7 @@ export function XpHud() {
   ];
 
   return (
-    <div className="fixed bottom-4 right-4 z-[70] flex flex-col items-end">
+    <div ref={rootRef} className="fixed bottom-4 right-4 z-[70] flex flex-col items-end">
       {open && (
         <div
           className="mb-2 w-64 rounded-lg border border-(--ink)/10 bg-(--bg) p-4 shadow-lg"
@@ -53,7 +72,7 @@ export function XpHud() {
             </span>
           </div>
           <p className="mb-3 text-[10px] leading-snug text-(--ink)/40">
-            earn xp: hover the proof, open the lore, read the writing
+            earn xp: {canHover() ? "hover" : "tap"} the proof, open the lore, read the writing
           </p>
 
           <span className="mb-1.5 block text-[10px] uppercase tracking-widest text-(--ink)/35">
@@ -101,7 +120,7 @@ export function XpHud() {
         onClick={() => setOpen((p) => !p)}
         aria-expanded={open}
         title="progress"
-        className="group cursor-pointer rounded-md px-2 py-1.5 transition-colors hover:bg-(--ink)/4"
+        className="group cursor-pointer rounded-md bg-(--bg)/80 px-2 py-1.5 backdrop-blur-sm transition-colors hover:bg-(--ink)/4"
       >
         <span className="flex items-baseline gap-2 text-[11px] tabular-nums text-(--ink)/45 transition-colors group-hover:text-(--ink)/80">
           <span>

@@ -33,6 +33,12 @@ export function completionPct(total: number) {
   return Math.min(100, Math.round((total / MAX_XP) * 100));
 }
 
+/** True on devices with a real hover pointer; false on touch. Drives copy. */
+export function canHover(): boolean {
+  if (typeof window === "undefined" || typeof window.matchMedia !== "function") return true;
+  return window.matchMedia("(hover: hover)").matches;
+}
+
 export interface Level {
   name: string;
   min: number;
@@ -139,7 +145,7 @@ export function award(id: string, xp: number) {
   if (first) {
     emitXpToast({
       title: "you found the xp",
-      body: `Hovering a preview pays +${HOVER_XP}, opening things pays +${CLICK_XP}. Contact links unlock at ${SOCIAL_UNLOCK_XP} xp.`,
+      body: `${canHover() ? "Hovering" : "Inspecting"} a preview pays +${HOVER_XP}, opening things pays +${CLICK_XP}. Contact links unlock at ${SOCIAL_UNLOCK_XP} xp.`,
       kind: "info",
     });
   }

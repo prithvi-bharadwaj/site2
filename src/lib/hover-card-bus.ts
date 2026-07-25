@@ -30,8 +30,29 @@ export interface HoverCardPinDetail {
   media: HoverCardMedia;
   /** Destination the pinned card links to (same tab). */
   href: string;
+  /**
+   * Proof-inspection id (e.g. "proof:<mediaKey>"). While the card stays
+   * pinned, the dwell timer runs against this id - the touch equivalent of
+   * hover-inspecting.
+   */
+  inspectId?: string;
   x: number;
   y: number;
+}
+
+/**
+ * The dwell id owned by the currently pinned card. Source links check this
+ * before cancelling an inspect timer on pointerleave - once the card is
+ * pinned, the dwell belongs to the card, not the hover.
+ */
+let pinnedInspectId: string | null = null;
+
+export function setPinnedInspectId(id: string | null) {
+  pinnedInspectId = id;
+}
+
+export function isPinnedInspect(id: string): boolean {
+  return pinnedInspectId === id;
 }
 
 const SHOW = "hovercard:show";

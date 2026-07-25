@@ -550,12 +550,21 @@ a.project-item {
   transition: height 200ms var(--ease-out);
 }
 
-/* Caption-only note card (e.g. "link coming soon") */
+/* Caption-only note card (e.g. "link coming soon", link-confirm pins) */
 .hover-card[data-mode="note"] {
   width: auto;
   max-width: 220px;
   padding: 4px 10px 6px;
   white-space: nowrap;
+}
+
+.hover-card[data-mode="note"] .hover-card-caption {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.hover-card.pinned[data-mode="note"] {
+  max-width: 320px;
 }
 
 /* Wide banner mode for screenshot strips (e.g. a single YouTube Studio row). */

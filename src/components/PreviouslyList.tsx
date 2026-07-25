@@ -2,9 +2,10 @@
 
 import { useRef, useState } from "react";
 import type { BrandLink, InlineLink, LinkListItem } from "./LinkList";
+import type { HoverCardMedia } from "@/lib/hover-card-bus";
 import { BrandIcon, hasBrandIcon } from "./BrandIcon";
 import { WiggleWords, useWiggleDescendants } from "./WiggleWords";
-import { emitShow, emitMove, emitHide, emitPin } from "@/lib/hover-card-bus";
+import { emitShow, emitMove, emitHide, emitPin, isPinnedInspect } from "@/lib/hover-card-bus";
 import { CLICK_XP, award, inspectStart, inspectEnd, mediaKey, useXp } from "@/lib/xp";
 
 const EASE = "cubic-bezier(0.23, 1, 0.32, 1)";
@@ -12,6 +13,16 @@ const DOTTED = "1px dotted rgb(var(--ink-rgb) / 0.35)";
 
 function escapeRegex(s: string) {
   return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+/** Caption-only confirm card for links that ship no proof media. */
+function linkNote(href: string): HoverCardMedia {
+  try {
+    const u = new URL(href);
+    return { type: "note", caption: `${u.host}${u.pathname === "/" ? "" : u.pathname}` };
+  } catch {
+    return { type: "note", caption: href };
+  }
 }
 
 type Segment =
@@ -123,12 +134,19 @@ export function PreviouslyList({ label, items, proofKind = "proof" }: Previously
                         onClick={(e) => {
                           e.stopPropagation();
                           award(`click:${media ? mediaKey(media) : seg.brand.href}`, CLICK_XP);
-                          // Mouse clicks pin the preview card instead of leaving.
+                          // Mouse/touch clicks pin a confirm card instead of leaving;
+                          // the pinned card is the second click that navigates.
                           // Keyboard activation (e.detail === 0) navigates directly.
-                          if (media && e.detail > 0) {
+                          if (e.detail > 0) {
                             e.preventDefault();
-                            inspectEnd(`${proofKind}:${mediaKey(media)}`);
-                            emitPin({ media, href: seg.brand.href, x: e.clientX, y: e.clientY });
+                            if (media) inspectEnd(`${proofKind}:${mediaKey(media)}`);
+                            emitPin({
+                              media: media ?? linkNote(seg.brand.href),
+                              href: seg.brand.href,
+                              inspectId: media ? `${proofKind}:${mediaKey(media)}` : undefined,
+                              x: e.clientX,
+                              y: e.clientY,
+                            });
                           }
                         }}
                         onPointerEnter={(e) => {
@@ -143,7 +161,10 @@ export function PreviouslyList({ label, items, proofKind = "proof" }: Previously
                         onPointerLeave={(e) => {
                           if (media && e.pointerType === "mouse") {
                             emitHide();
-                            inspectEnd(`${proofKind}:${mediaKey(media)}`);
+                            // Once pinned, the dwell belongs to the card - leaving
+                            // the source link must not cancel it.
+                            const id = `${proofKind}:${mediaKey(media)}`;
+                            if (!isPinnedInspect(id)) inspectEnd(id);
                           }
                         }}
                         className="brand-link wl-unit inline-flex items-baseline gap-1 align-baseline"
@@ -173,10 +194,16 @@ export function PreviouslyList({ label, items, proofKind = "proof" }: Previously
                         onClick={(e) => {
                           e.stopPropagation();
                           award(`click:${media ? mediaKey(media) : seg.link.href}`, CLICK_XP);
-                          if (media && e.detail > 0) {
+                          if (e.detail > 0) {
                             e.preventDefault();
-                            inspectEnd(`${proofKind}:${mediaKey(media)}`);
-                            emitPin({ media, href: seg.link.href, x: e.clientX, y: e.clientY });
+                            if (media) inspectEnd(`${proofKind}:${mediaKey(media)}`);
+                            emitPin({
+                              media: media ?? linkNote(seg.link.href),
+                              href: seg.link.href,
+                              inspectId: media ? `${proofKind}:${mediaKey(media)}` : undefined,
+                              x: e.clientX,
+                              y: e.clientY,
+                            });
                           }
                         }}
                         onPointerEnter={(e) => {
@@ -191,7 +218,10 @@ export function PreviouslyList({ label, items, proofKind = "proof" }: Previously
                         onPointerLeave={(e) => {
                           if (media && e.pointerType === "mouse") {
                             emitHide();
-                            inspectEnd(`${proofKind}:${mediaKey(media)}`);
+                            // Once pinned, the dwell belongs to the card - leaving
+                            // the source link must not cancel it.
+                            const id = `${proofKind}:${mediaKey(media)}`;
+                            if (!isPinnedInspect(id)) inspectEnd(id);
                           }
                         }}
                         data-repel
