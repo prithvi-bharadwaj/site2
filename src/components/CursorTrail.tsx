@@ -61,7 +61,9 @@ export function CursorTrail() {
 
     let dpr = 1;
     function resize() {
-      dpr = window.devicePixelRatio || 1;
+      // Cap at 2x: on 3x displays the trail is imperceptibly different but the
+      // canvas would be 2.25x the pixels to clear and rasterize every frame.
+      dpr = Math.min(window.devicePixelRatio || 1, 2);
       canvas!.width = window.innerWidth * dpr;
       canvas!.height = window.innerHeight * dpr;
     }
@@ -191,7 +193,7 @@ export function CursorTrail() {
       }
     }
 
-    document.addEventListener("mousemove", onMove);
+    document.addEventListener("mousemove", onMove, { passive: true });
     return () => {
       document.removeEventListener("mousemove", onMove);
       window.removeEventListener("resize", resize);
