@@ -28,6 +28,13 @@ describe("burstTopPx", () => {
     expect(burstTopPx(360, font, vh, { top: 100, bottom: 300 })).toBe(300 + 80 + 8);
   });
 
+  it("reserves the full height of wrapped multi-line bursts", () => {
+    // One line clears the card; two wrapped lines (2 × 162 + 10 = 334 tall) don't.
+    expect(burstTopPx(360, font, vh, { top: 550, bottom: 700 }, 1)).toBe(360);
+    // Band with 2 lines: [280, 360 + 324 + 10 = 694] overlaps card at 550.
+    expect(burstTopPx(360, font, vh, { top: 550, bottom: 700 }, 2)).toBe(550 - 2 * textH - 10 - 8);
+  });
+
   it("never leaves the viewport", () => {
     // Above placement clamps to the top edge pad.
     expect(burstTopPx(360, font, vh, { top: 120, bottom: 790 })).toBe(8);

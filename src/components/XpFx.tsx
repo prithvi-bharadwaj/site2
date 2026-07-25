@@ -33,9 +33,10 @@ export function burstTopPx(
   preferred: number,
   fontPx: number,
   viewportH: number,
-  card: { top: number; bottom: number } | null
+  card: { top: number; bottom: number } | null,
+  lines = 1
 ): number {
-  const textH = fontPx * LINE_HEIGHT;
+  const textH = fontPx * LINE_HEIGHT * lines;
   if (!card || preferred - DRIFT_UP >= card.bottom || preferred + textH + DROP_IN <= card.top) {
     return preferred;
   }
@@ -74,11 +75,15 @@ export function XpFx() {
         const jitterPx = ((Math.random() - 0.5) * 30 * vh) / 100;
         const card = document.querySelector(".hover-card.visible");
         const rect = card ? card.getBoundingClientRect() : null;
+        // Long achievement names wrap on narrow screens - reserve every line.
+        // 0.6em per bold glyph overestimates slightly, which is the safe side.
+        const usableW = window.innerWidth - 32; // px-4 both sides
+        const lines = Math.max(1, Math.ceil((text.length * fontPx * 0.6) / usableW));
         const id = nextId.current++;
         const p: Particle = {
           id,
           text,
-          topPx: burstTopPx(0.45 * vh + jitterPx, fontPx, vh, rect),
+          topPx: burstTopPx(0.45 * vh + jitterPx, fontPx, vh, rect, lines),
           tilt: (Math.random() - 0.5) * 6,
           big,
         };
