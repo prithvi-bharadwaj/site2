@@ -23,6 +23,8 @@ html {
   --bg: #FFFFFF;
   --card-bg: #ffffff;
   --card-media-bg: #f5f5f5;
+  /* Light is the default regardless of OS preference; dark is opt-in via the toggle. */
+  color-scheme: light;
 }
 
 html.dark {
