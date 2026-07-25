@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { WiggleWords, useWiggleDescendants } from "./WiggleWords";
-import { emitShow, emitMove, emitHide, emitPin, type HoverCardMedia } from "@/lib/hover-card-bus";
+import { emitShow, emitMove, emitHide, emitPin, isPinnedInspect, type HoverCardMedia } from "@/lib/hover-card-bus";
 import { CLICK_XP, award, inspectStart, inspectEnd, mediaKey } from "@/lib/xp";
 
 export interface BrandLink {
@@ -123,7 +123,10 @@ function renderTitleWithBrands(
           onPointerLeave={(e) => {
             if (media && e.pointerType === "mouse") {
               emitHide();
-              if (xpKind) inspectEnd(`${xpKind}-proof:${mediaKey(media)}`);
+              if (xpKind) {
+                const id = `${xpKind}-proof:${mediaKey(media)}`;
+                if (!isPinnedInspect(id)) inspectEnd(id);
+              }
             }
           }}
           className="brand-link wl-unit inline-flex items-baseline gap-1"
@@ -236,7 +239,10 @@ export function LinkList({ label, items, columns = 1, variant = "compact", point
               onPointerLeave={(e) => {
                 if (item.media && e.pointerType === "mouse") {
                   emitHide();
-                  if (xpKind) inspectEnd(`${xpKind}-proof:${mediaKey(item.media)}`);
+                  if (xpKind) {
+                    const id = `${xpKind}-proof:${mediaKey(item.media)}`;
+                    if (!isPinnedInspect(id)) inspectEnd(id);
+                  }
                 }
               }}
             >

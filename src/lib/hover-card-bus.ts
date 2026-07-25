@@ -40,6 +40,21 @@ export interface HoverCardPinDetail {
   y: number;
 }
 
+/**
+ * The dwell id owned by the currently pinned card. Source links check this
+ * before cancelling an inspect timer on pointerleave - once the card is
+ * pinned, the dwell belongs to the card, not the hover.
+ */
+let pinnedInspectId: string | null = null;
+
+export function setPinnedInspectId(id: string | null) {
+  pinnedInspectId = id;
+}
+
+export function isPinnedInspect(id: string): boolean {
+  return pinnedInspectId === id;
+}
+
 const SHOW = "hovercard:show";
 const MOVE = "hovercard:move";
 const HIDE = "hovercard:hide";

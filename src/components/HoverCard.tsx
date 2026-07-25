@@ -7,6 +7,7 @@ import {
   onHide,
   onPin,
   onUnpin,
+  setPinnedInspectId,
   type HoverCardMedia,
 } from "@/lib/hover-card-bus";
 import { inspectStart, inspectEnd } from "@/lib/xp";
@@ -67,6 +68,7 @@ export function HoverCard() {
       inspectEnd(inspectIdRef.current);
       inspectIdRef.current = null;
     }
+    setPinnedInspectId(null);
     setPinned(null);
     setVisible(false);
     hideTimerRef.current = setTimeout(() => {
@@ -123,6 +125,7 @@ export function HoverCard() {
       // the only inspection path on touch devices, where hover doesn't exist.
       if (inspectIdRef.current) inspectEnd(inspectIdRef.current);
       inspectIdRef.current = inspectId ?? null;
+      setPinnedInspectId(inspectId ?? null);
       if (inspectId) inspectStart(inspectId);
       setMedia(m);
       setVisible(true);

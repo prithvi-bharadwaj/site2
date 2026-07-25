@@ -5,7 +5,7 @@ import type { BrandLink, InlineLink, LinkListItem } from "./LinkList";
 import type { HoverCardMedia } from "@/lib/hover-card-bus";
 import { BrandIcon, hasBrandIcon } from "./BrandIcon";
 import { WiggleWords, useWiggleDescendants } from "./WiggleWords";
-import { emitShow, emitMove, emitHide, emitPin } from "@/lib/hover-card-bus";
+import { emitShow, emitMove, emitHide, emitPin, isPinnedInspect } from "@/lib/hover-card-bus";
 import { CLICK_XP, award, inspectStart, inspectEnd, mediaKey, useXp } from "@/lib/xp";
 
 const EASE = "cubic-bezier(0.23, 1, 0.32, 1)";
@@ -161,7 +161,10 @@ export function PreviouslyList({ label, items, proofKind = "proof" }: Previously
                         onPointerLeave={(e) => {
                           if (media && e.pointerType === "mouse") {
                             emitHide();
-                            inspectEnd(`${proofKind}:${mediaKey(media)}`);
+                            // Once pinned, the dwell belongs to the card - leaving
+                            // the source link must not cancel it.
+                            const id = `${proofKind}:${mediaKey(media)}`;
+                            if (!isPinnedInspect(id)) inspectEnd(id);
                           }
                         }}
                         className="brand-link wl-unit inline-flex items-baseline gap-1 align-baseline"
@@ -215,7 +218,10 @@ export function PreviouslyList({ label, items, proofKind = "proof" }: Previously
                         onPointerLeave={(e) => {
                           if (media && e.pointerType === "mouse") {
                             emitHide();
-                            inspectEnd(`${proofKind}:${mediaKey(media)}`);
+                            // Once pinned, the dwell belongs to the card - leaving
+                            // the source link must not cancel it.
+                            const id = `${proofKind}:${mediaKey(media)}`;
+                            if (!isPinnedInspect(id)) inspectEnd(id);
                           }
                         }}
                         data-repel

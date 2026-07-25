@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { act, cleanup, render } from "@testing-library/react";
 import { HoverCard } from "@/components/HoverCard";
-import { emitShow, emitHide, emitPin } from "@/lib/hover-card-bus";
+import { emitShow, emitHide, emitPin, isPinnedInspect } from "@/lib/hover-card-bus";
 import { resetXp } from "@/lib/xp";
 
 beforeEach(() => vi.useFakeTimers());
@@ -103,6 +103,25 @@ describe("HoverCard", () => {
       vi.advanceTimersByTime(1000);
     });
     expect(earned()).not.toHaveProperty(["proof:/y.png"]);
+    resetXp();
+  });
+
+  it("registers the pinned dwell id so source pointerleave can't cancel it", () => {
+    resetXp();
+    render(<HoverCard />);
+    const media = { type: "image" as const, src: "/x.png", caption: "x.com" };
+
+    act(() => {
+      emitPin({ media, href: "https://x.com", inspectId: "proof:/x.png", x: 100, y: 100 });
+    });
+    // While pinned, the source link's pointerleave checks this and skips inspectEnd.
+    expect(isPinnedInspect("proof:/x.png")).toBe(true);
+    expect(isPinnedInspect("proof:/other.png")).toBe(false);
+
+    act(() => {
+      emitPin({ media, href: "https://x.com", inspectId: "proof:/x.png", x: 100, y: 100 }); // toggle off
+    });
+    expect(isPinnedInspect("proof:/x.png")).toBe(false);
     resetXp();
   });
 });

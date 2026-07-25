@@ -12,11 +12,16 @@ interface Particle {
 
 const LIFETIME_MS = 1300;
 const EDGE_PAD = 8;
+// The burst's real footprint: inherited line-height, plus the xp-burst
+// keyframes translate it from +10px down to -80px up over its lifetime.
+const LINE_HEIGHT = 1.62;
+const DRIFT_UP = 80;
+const DROP_IN = 10;
 
 /**
  * Where to draw a burst so it isn't hidden behind a visible hover/pinned
- * card. If the preferred band overlaps the card, move to whichever side
- * (above/below) has more room. Exported for tests.
+ * card at any point of its animation. If the travel band overlaps the card,
+ * move to whichever side (above/below) has more room. Exported for tests.
  */
 export function burstTopPx(
   preferred: number,
@@ -24,12 +29,17 @@ export function burstTopPx(
   viewportH: number,
   card: { top: number; bottom: number } | null
 ): number {
-  if (!card || preferred >= card.bottom || preferred + fontPx <= card.top) return preferred;
+  const textH = fontPx * LINE_HEIGHT;
+  if (!card || preferred - DRIFT_UP >= card.bottom || preferred + textH + DROP_IN <= card.top) {
+    return preferred;
+  }
   const above = card.top;
   const below = viewportH - card.bottom;
   return above >= below
-    ? Math.max(EDGE_PAD, card.top - fontPx - EDGE_PAD)
-    : Math.min(viewportH - fontPx - EDGE_PAD, card.bottom + EDGE_PAD);
+    ? // Ends above the card even at the +10px drop-in frame.
+      Math.max(EDGE_PAD, card.top - textH - DROP_IN - EDGE_PAD)
+    : // Stays below the card even after drifting 80px up.
+      Math.min(viewportH - textH - EDGE_PAD, card.bottom + DRIFT_UP + EDGE_PAD);
 }
 
 /**
