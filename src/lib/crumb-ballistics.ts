@@ -28,7 +28,9 @@ export function launchOntoPet(
       const nodeRect = node.getBoundingClientRect();
       const petRect = pet.getBoundingClientRect();
       const sceneRect = scene.getBoundingClientRect();
-      const drop = petRect.top + 10 - nodeRect.bottom;
+      // The squashed pose's visual top sits ~26px below the pet box top
+      // (bottom-aligned sprite), so land deep enough to rest right on him.
+      const drop = petRect.top + 42 - nodeRect.bottom;
       const drift = petRect.left + petRect.width / 2 - (nodeRect.left + nodeRect.width / 2);
 
       const vx = drift / FLIGHT_S;
@@ -58,7 +60,7 @@ export function launchOntoPet(
           node.style.transform = `translate(${x}px, ${drop}px) rotate(${rotation}deg)`;
           handlers.onImpact(
             petRect.left - sceneRect.left + petRect.width / 2,
-            petRect.top - sceneRect.top + 8,
+            petRect.top - sceneRect.top + 26,
           );
           node.animate(
             [
