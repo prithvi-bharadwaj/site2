@@ -15,8 +15,8 @@ export function ExitGate() {
   const xp = useXp();
 
   useEffect(() => {
-    const onMouseOut = (e: MouseEvent) => {
-      if (e.relatedTarget || e.clientY > 0) return; // only real top-of-window exits
+    const onMouseLeave = (e: MouseEvent) => {
+      if (e.relatedTarget || e.clientY > 0) return; // only real top-of-viewport exits
       try {
         if (sessionStorage.getItem(EXIT_BAIT_KEY)) return;
         sessionStorage.setItem(EXIT_BAIT_KEY, "1");
@@ -25,8 +25,9 @@ export function ExitGate() {
       }
       setShown(true);
     };
-    document.addEventListener("mouseout", onMouseOut);
-    return () => document.removeEventListener("mouseout", onMouseOut);
+    const page = document.documentElement;
+    page.addEventListener("mouseleave", onMouseLeave);
+    return () => page.removeEventListener("mouseleave", onMouseLeave);
   }, []);
 
   if (!shown) return null;
