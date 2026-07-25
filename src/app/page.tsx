@@ -10,6 +10,7 @@ import { WiggleWords } from "@/components/WiggleWords";
 import { CursorTrail } from "@/components/CursorTrail";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { EditPanel } from "@/components/EditPanel";
+import { CookieQuest } from "@/components/CookieQuest";
 
 /* ── Default content ── */
 
@@ -352,6 +353,7 @@ export default function Home() {
             </div>
           )}
           <PretextHero greeting={content.greeting} bio={content.bio} />
+          <CookieQuest />
         </div>
 
         {/* Previously */}
