@@ -46,12 +46,17 @@ export function XpToasts() {
         >
           <div className="flex items-start gap-2.5">
             <span className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-(--ink)/8 text-sm">
-              {t.kind === "achievement" ? "★" : "👀"}
+              {t.kind === "achievement" ? "★" : t.kind === "level" ? "✦" : "👀"}
             </span>
             <div className="min-w-0">
               {t.kind === "achievement" && (
                 <span className="block text-[9px] uppercase tracking-widest text-(--ink)/40">
                   achievement unlocked
+                </span>
+              )}
+              {t.kind === "level" && (
+                <span className="block text-[9px] uppercase tracking-widest text-(--ink)/40">
+                  level up
                 </span>
               )}
               <span className="block text-xs font-medium text-(--ink)/85">{t.title}</span>
