@@ -15,6 +15,8 @@ import { InspectProgress } from "@/components/InspectProgress";
 import { XpHud } from "@/components/XpHud";
 import { XpToasts } from "@/components/XpToasts";
 import { ExitGate } from "@/components/ExitGate";
+import { PhysicsLayer } from "@/components/PhysicsLayer";
+import { ControlPanel, type PanelSection } from "@/components/ControlPanel";
 import { CLICK_XP, SOCIAL_UNLOCK_XP, award, emitXpToast, useXp } from "@/lib/xp";
 import { emitShow, emitMove, emitHide, type HoverCardMedia } from "@/lib/hover-card-bus";
 
@@ -298,6 +300,20 @@ const SOCIALS: {
   },
 ];
 
+/* ── Sitemap (also drives the controls panel's jump links) ── */
+
+const SECTIONS: PanelSection[] = [
+  { id: "intro", label: "intro" },
+  { id: "previously", label: "previously" },
+  { id: "built", label: "in 2026 i built" },
+  { id: "lore", label: "lore" },
+  { id: "writing", label: "writing" },
+  { id: "socials", label: "find me on" },
+];
+
+/** Every section shares the same column geometry. */
+const COLUMN = "w-full max-w-[min(42rem,78vw)] mx-auto md:ml-[15vw] lg:ml-[18vw] scroll-mt-12";
+
 /* ── Edit mode toolbar ── */
 
 function EditToolbar({ onSave, onReset, onCopy }: { onSave: () => void; onReset: () => void; onCopy: () => void }) {
@@ -379,6 +395,11 @@ export default function Home() {
     return () => window.clearInterval(timer);
   }, []);
 
+  const toggleGenz = useCallback((next: boolean) => {
+    setGenzMode(next);
+    if (next) award("genz:on", CLICK_XP);
+  }, []);
+
   const update = useCallback((key: keyof Content, value: string) => {
     setContent((prev) => ({ ...prev, [key]: value }));
   }, []);
@@ -410,6 +431,8 @@ export default function Home() {
       <XpToasts />
       <ExitGate />
       <ThemeToggle />
+      <PhysicsLayer />
+      <ControlPanel sections={SECTIONS} genz={genzMode} onGenzChange={toggleGenz} />
       {editMode && (
         <EditToolbar onSave={save} onReset={reset} onCopy={copyToClipboard} />
       )}
@@ -417,9 +440,10 @@ export default function Home() {
       <div
         className="relative px-8 md:px-0 pt-[18vh] md:pt-[22vh]"
         style={{ zIndex: 1 }}
+        data-physics-content
       >
         {/* Hero */}
-        <div className="w-full max-w-[min(42rem,78vw)] mx-auto md:ml-[15vw] lg:ml-[18vw]">
+        <div id="intro" className={COLUMN}>
           {editMode && (
             <div className="mb-4">
               <EditPanel label="greeting" value={content.greeting} onChange={(v) => update("greeting", v)} />
@@ -430,27 +454,27 @@ export default function Home() {
         </div>
 
         {/* Previously */}
-        <div className="w-full max-w-[min(42rem,78vw)] mx-auto md:ml-[15vw] lg:ml-[18vw] mt-10 md:mt-14">
+        <div id="previously" className={`${COLUMN} mt-10 md:mt-14`}>
           <PreviouslyList label="Previously." items={PREVIOUSLY} />
         </div>
 
         {/* Projects */}
-        <div className="w-full max-w-[min(42rem,78vw)] mx-auto md:ml-[15vw] lg:ml-[18vw] mt-10 md:mt-14">
+        <div id="built" className={`${COLUMN} mt-10 md:mt-14`}>
           <PreviouslyList label="In 2026 I built." items={PROJECTS} proofKind="project-proof" />
         </div>
 
         {/* Lore */}
-        <div className="w-full max-w-[min(42rem,78vw)] mx-auto md:ml-[15vw] lg:ml-[18vw] mt-10 md:mt-14">
+        <div id="lore" className={`${COLUMN} mt-10 md:mt-14`}>
           <LinkList label="Lore." items={LORE} variant="prose" pointer xpKind="lore" />
         </div>
 
         {/* Writing */}
-        <div className="w-full max-w-[min(42rem,78vw)] mx-auto md:ml-[15vw] lg:ml-[18vw] mt-10 md:mt-14">
+        <div id="writing" className={`${COLUMN} mt-10 md:mt-14`}>
           <LinkList label="Writing." items={WRITING} pointer xpKind="writing" />
         </div>
 
         {/* Socials */}
-        <div className="w-full max-w-[min(42rem,78vw)] mx-auto md:ml-[15vw] lg:ml-[18vw] mt-10 md:mt-14 pb-24">
+        <div id="socials" className={`${COLUMN} mt-10 md:mt-14 pb-24`}>
           <span className="text-(--ink)/35 text-xs uppercase tracking-widest block mb-6">
             <WiggleWords text="Find me on." />
           </span>
@@ -519,13 +543,7 @@ export default function Home() {
 
           {/* Gen z mode - footer easter egg */}
           <div className="mt-10">
-            <GenZToggle
-              enabled={genzMode}
-              onChange={(v) => {
-                setGenzMode(v);
-                if (v) award("genz:on", CLICK_XP);
-              }}
-            />
+            <GenZToggle enabled={genzMode} onChange={toggleGenz} />
           </div>
           {genzMode && (
             <div className="mt-4 text-sm text-(--ink)/60 leading-relaxed">
