@@ -19,7 +19,9 @@ export function SubwaySurfersPip() {
 
   return (
     <div
-      className="pointer-events-none fixed bottom-16 right-4 z-50 h-[285px] w-[160px] overflow-hidden rounded-xl shadow-2xl md:h-[498px] md:w-[280px]"
+      // Full size only at 2xl - narrower viewports don't have a free right
+      // margin, so the pip stays small enough to mostly clear the text column.
+      className="pointer-events-none fixed bottom-16 right-4 z-50 h-[285px] w-[160px] overflow-hidden rounded-xl shadow-2xl md:h-[320px] md:w-[180px] 2xl:h-[498px] 2xl:w-[280px]"
       style={{
         opacity: mounted ? 1 : 0,
         transform: mounted ? "translateY(0)" : "translateY(20px)",

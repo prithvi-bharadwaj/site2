@@ -534,6 +534,9 @@ export default function Home() {
                 <EditPanel label="genz tldr" value={content.genz} onChange={(v) => update("genz", v)} />
               )}
               <p>{content.genz}</p>
+              {/* Scroll room so the pip can't sit on top of the socials/tldr
+                  at the bottom of the page. At 2xl it lives in the free margin. */}
+              <div aria-hidden className="h-[340px] 2xl:h-0" />
             </div>
           )}
         </div>
