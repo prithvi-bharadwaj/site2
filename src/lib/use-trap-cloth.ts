@@ -14,9 +14,11 @@ import { createClothRenderer, type ClothRenderer } from "@/lib/trap-cloth-gl";
 const PAD_X = 48;
 const PAD_TOP = 8;
 const CANVAS_HEIGHT = 168;
-// Same 1px as the button border, so the cloth reads as the edge come loose.
-const THICKNESS = 1;
-const LINE_ALPHA = 0.3;
+// Taut it's the button's 1px bottom border; loose it thickens to 2px so the
+// hanging fabric stays clearly visible against the falling cookies.
+const THICKNESS_TAUT = 1;
+const THICKNESS_LOOSE = 2;
+const LINE_ALPHA = 0.45;
 
 interface TrapClothButton {
   width: number;
@@ -56,7 +58,7 @@ export function useTrapCloth(active: boolean, button: TrapClothButton) {
     const renderer = createClothRenderer(canvas, color, LINE_ALPHA);
     rendererRef.current = renderer;
     renderer?.resize(width + PAD_X * 2, CANVAS_HEIGHT, Math.min(window.devicePixelRatio || 1, 2));
-    renderer?.draw(cloth, THICKNESS);
+    renderer?.draw(cloth, THICKNESS_TAUT);
     return () => {
       cancelAnimationFrame(rafRef.current);
       renderer?.dispose();
@@ -75,7 +77,7 @@ export function useTrapCloth(active: boolean, button: TrapClothButton) {
     const frame = (now: number) => {
       stepTrapCloth(cloth, now - previous);
       previous = now;
-      renderer.draw(cloth, THICKNESS);
+      renderer.draw(cloth, THICKNESS_LOOSE);
       rafRef.current = requestAnimationFrame(frame);
     };
     rafRef.current = requestAnimationFrame(frame);

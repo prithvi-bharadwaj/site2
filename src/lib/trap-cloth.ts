@@ -16,7 +16,7 @@ export interface TrapCloth {
   age: number;
 }
 
-export const CLOTH_GRAVITY = 980;
+export const CLOTH_GRAVITY = 760;
 const MAX_STEP_MS = 32;
 const CONSTRAINT_PASSES = 4;
 const DRAG = 0.985;
@@ -72,8 +72,8 @@ export function stepTrapCloth(cloth: TrapCloth, dtMs: number): void {
   if (dt === 0) return;
   cloth.age += dt;
 
-  // Big flutter right after release, settling into a faint perpetual sway.
-  const flutter = 2400 * Math.exp(-cloth.age * 1.4) + 160;
+  // Big flutter right after release, settling into a visible perpetual sway.
+  const flutter = 2400 * Math.exp(-cloth.age * 1.1) + 300;
 
   cloth.flaps.forEach((flap, flapIndex) => {
     const n = flap.length - 1;

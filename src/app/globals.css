@@ -908,16 +908,6 @@ main.crumb-page-blurred {
   will-change: opacity;
 }
 
-.crumb-save-note {
-  display: block;
-  margin-top: 9px;
-  color: rgb(var(--ink-rgb) / 0.32);
-  font-family: "SFMono-Regular", Consolas, monospace;
-  font-size: 8px;
-  line-height: 1;
-  letter-spacing: 0.01em;
-}
-
 .crumb-scene[data-phase="opening"] .crumb-brick {
   animation: crumb-brick-compress 220ms var(--ease-out) both;
 }

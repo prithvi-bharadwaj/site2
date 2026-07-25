@@ -378,6 +378,17 @@ export function CookieQuest() {
     dropOnPet(closeRef.current, 1200);
   }
 
+  // Hovering "allow cookies" makes the pet perk up and watch the button.
+  function petWatchButton() {
+    if (phase !== "idle") return;
+    setPetMood((mood) => (mood === "sad" ? "alert" : mood));
+  }
+
+  function petStopWatching() {
+    if (phase !== "idle") return;
+    setPetMood((mood) => (mood === "alert" ? "sad" : mood));
+  }
+
   function blushPet() {
     if (petMood === "blush" || petMood === "bonked" || petMood === "startle" || petMood === "squash") return;
     const previous = petMood;
@@ -441,6 +452,10 @@ export function CookieQuest() {
                       type="button"
                       className="crumb-brick"
                       onClick={allowCookies}
+                      onMouseEnter={petWatchButton}
+                      onMouseLeave={petStopWatching}
+                      onFocus={petWatchButton}
+                      onBlur={petStopWatching}
                       disabled={phase !== "idle"}
                       aria-label="Allow cookies and save game progress"
                     >
@@ -471,7 +486,6 @@ export function CookieQuest() {
                     {"don't allow"}
                   </button>
                 </div>
-                <span className="crumb-save-note">cookies store game progress</span>
               </div>
 
               {particles.map((particle) => (
