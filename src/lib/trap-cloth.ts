@@ -118,6 +118,25 @@ export function stepTrapCloth(cloth: TrapCloth, dtMs: number): void {
   }
 }
 
+/**
+ * Polyline along a circular arc, angles in radians with y pointing down.
+ * Used for the button's lower corner-arc segments, which CSS stops painting
+ * once border-bottom goes transparent (each corner is split at its diagonal).
+ */
+export function arcPoints(
+  cx: number,
+  cy: number,
+  radius: number,
+  startAngle: number,
+  endAngle: number,
+  segments = 8,
+): { x: number; y: number }[] {
+  return Array.from({ length: segments + 1 }, (_, i) => {
+    const angle = startAngle + ((endAngle - startAngle) * i) / segments;
+    return { x: cx + radius * Math.cos(angle), y: cy + radius * Math.sin(angle) };
+  });
+}
+
 /** Nudge cloth points near (x, y), e.g. a cookie brushing past on its way down. */
 export function disturbTrapCloth(cloth: TrapCloth, x: number, y: number, radius: number, ix: number, iy: number): void {
   if (!cloth.released) return;

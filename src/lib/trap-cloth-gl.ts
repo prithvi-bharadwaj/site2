@@ -1,8 +1,20 @@
-import type { ClothPoint, TrapCloth } from "@/lib/trap-cloth";
+export interface StripPoint {
+  x: number;
+  y: number;
+}
+
+/** One polyline to render as an anti-aliased ribbon. */
+export interface RenderStrip {
+  points: StripPoint[];
+  thickness: number;
+  alpha: number;
+  /** Cloth-style crease shading + tip fade; leave false for flat border strokes. */
+  shaded?: boolean;
+}
 
 export interface ClothRenderer {
   resize(width: number, height: number, dpr: number): void;
-  draw(cloth: TrapCloth, thickness: number): void;
+  draw(strips: RenderStrip[]): void;
   dispose(): void;
 }
 
@@ -56,17 +68,17 @@ function compileProgram(gl: WebGLRenderingContext): WebGLProgram | null {
 }
 
 /**
- * Expand a flap polyline into a ribbon triangle strip. Each point emits two
+ * Expand a polyline into a ribbon triangle strip. Each point emits two
  * vertices offset along the local normal, carrying a signed edge coordinate
  * for anti-aliasing and a fold-based shade so bends read as cloth creases.
  * Layout per vertex: [x, y, edge, shade].
  */
-function buildRibbon(flap: ClothPoint[], halfWidth: number): Float32Array {
-  const count = flap.length;
+function buildRibbon(points: StripPoint[], halfWidth: number, shaded: boolean): Float32Array {
+  const count = points.length;
   const data = new Float32Array(count * 2 * 4);
   for (let i = 0; i < count; i++) {
-    const previous = flap[Math.max(i - 1, 0)];
-    const next = flap[Math.min(i + 1, count - 1)];
+    const previous = points[Math.max(i - 1, 0)];
+    const next = points[Math.min(i + 1, count - 1)];
     let tx = next.x - previous.x;
     let ty = next.y - previous.y;
     const tangentLength = Math.hypot(tx, ty) || 1;
@@ -75,8 +87,8 @@ function buildRibbon(flap: ClothPoint[], halfWidth: number): Float32Array {
 
     // Signed curvature via the cross product of adjacent segment directions.
     let fold = 0;
-    if (i > 0 && i < count - 1) {
-      const current = flap[i];
+    if (shaded && i > 0 && i < count - 1) {
+      const current = points[i];
       const ax = current.x - previous.x;
       const ay = current.y - previous.y;
       const bx = next.x - current.x;
@@ -84,18 +96,18 @@ function buildRibbon(flap: ClothPoint[], halfWidth: number): Float32Array {
       const lengths = (Math.hypot(ax, ay) * Math.hypot(bx, by)) || 1;
       fold = (ax * by - ay * bx) / lengths;
     }
-    const tip = i / (count - 1);
+    const tip = shaded ? i / (count - 1) : 0;
     const shade = Math.min(Math.max(1 + fold * 0.9, 0.6), 1.25) * (1 - tip * 0.22);
 
     const nx = -ty * halfWidth;
     const ny = tx * halfWidth;
     const base = i * 8;
-    data[base] = flap[i].x + nx;
-    data[base + 1] = flap[i].y + ny;
+    data[base] = points[i].x + nx;
+    data[base + 1] = points[i].y + ny;
     data[base + 2] = 1;
     data[base + 3] = shade;
-    data[base + 4] = flap[i].x - nx;
-    data[base + 5] = flap[i].y - ny;
+    data[base + 4] = points[i].x - nx;
+    data[base + 5] = points[i].y - ny;
     data[base + 6] = -1;
     data[base + 7] = shade;
   }
@@ -105,7 +117,6 @@ function buildRibbon(flap: ClothPoint[], halfWidth: number): Float32Array {
 function createWebGLRenderer(
   canvas: HTMLCanvasElement,
   color: [number, number, number],
-  alpha: number,
 ): ClothRenderer | null {
   const gl = canvas.getContext("webgl", { alpha: true, antialias: false, premultipliedAlpha: false });
   if (!gl) return null;
@@ -124,7 +135,6 @@ function createWebGLRenderer(
   const uAlpha = gl.getUniformLocation(program, "uAlpha");
   const uInner = gl.getUniformLocation(program, "uInner");
   gl.uniform3fv(uColor, color);
-  gl.uniform1f(uAlpha, alpha);
 
   gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
   const STRIDE = 4 * 4;
@@ -142,13 +152,14 @@ function createWebGLRenderer(
       gl.viewport(0, 0, canvas.width, canvas.height);
       gl.uniform2f(uSize, width, height);
     },
-    draw(cloth, thickness) {
-      const halfWidth = thickness / 2 + 1;
-      gl.uniform1f(uInner, Math.max(thickness / 2 - 0.5, 0) / halfWidth);
+    draw(strips) {
       gl.clearColor(0, 0, 0, 0);
       gl.clear(gl.COLOR_BUFFER_BIT);
-      for (const flap of cloth.flaps) {
-        const ribbon = buildRibbon(flap, halfWidth);
+      for (const strip of strips) {
+        const halfWidth = strip.thickness / 2 + 1;
+        gl.uniform1f(uAlpha, strip.alpha);
+        gl.uniform1f(uInner, Math.max(strip.thickness / 2 - 0.5, 0) / halfWidth);
+        const ribbon = buildRibbon(strip.points, halfWidth, strip.shaded === true);
         gl.bufferData(gl.ARRAY_BUFFER, ribbon, gl.DYNAMIC_DRAW);
         gl.drawArrays(gl.TRIANGLE_STRIP, 0, ribbon.length / 4);
       }
@@ -163,11 +174,10 @@ function createWebGLRenderer(
 function create2DRenderer(
   canvas: HTMLCanvasElement,
   color: [number, number, number],
-  alpha: number,
 ): ClothRenderer | null {
   const ctx = canvas.getContext("2d");
   if (!ctx) return null;
-  const stroke = `rgb(${color.map((channel) => Math.round(channel * 255)).join(" ")} / ${alpha})`;
+  const rgb = color.map((channel) => Math.round(channel * 255)).join(" ");
   let deviceRatio = 1;
   return {
     resize(width, height, dpr) {
@@ -175,17 +185,17 @@ function create2DRenderer(
       canvas.width = Math.round(width * dpr);
       canvas.height = Math.round(height * dpr);
     },
-    draw(cloth, thickness) {
+    draw(strips) {
       ctx.setTransform(deviceRatio, 0, 0, deviceRatio, 0, 0);
       ctx.clearRect(0, 0, canvas.width, canvas.height);
-      ctx.strokeStyle = stroke;
-      ctx.lineWidth = thickness;
       ctx.lineJoin = "round";
       ctx.lineCap = "round";
-      for (const flap of cloth.flaps) {
+      for (const strip of strips) {
+        ctx.strokeStyle = `rgb(${rgb} / ${strip.alpha})`;
+        ctx.lineWidth = strip.thickness;
         ctx.beginPath();
-        ctx.moveTo(flap[0].x, flap[0].y);
-        for (let i = 1; i < flap.length; i++) ctx.lineTo(flap[i].x, flap[i].y);
+        ctx.moveTo(strip.points[0].x, strip.points[0].y);
+        for (let i = 1; i < strip.points.length; i++) ctx.lineTo(strip.points[i].x, strip.points[i].y);
         ctx.stroke();
       }
     },
@@ -196,7 +206,6 @@ function create2DRenderer(
 export function createClothRenderer(
   canvas: HTMLCanvasElement,
   color: [number, number, number],
-  alpha: number,
 ): ClothRenderer | null {
-  return createWebGLRenderer(canvas, color, alpha) ?? create2DRenderer(canvas, color, alpha);
+  return createWebGLRenderer(canvas, color) ?? create2DRenderer(canvas, color);
 }

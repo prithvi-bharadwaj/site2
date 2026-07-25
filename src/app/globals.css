@@ -866,6 +866,13 @@ main.crumb-page-blurred {
   background: var(--bg);
 }
 
+/* The cloth canvas draws the brick's whole bottom edge (taut line + lower
+   corner arcs), so the real border-bottom stays transparent. Painting both
+   leaves a notch at the corners the moment the cloth releases. */
+.crumb-brick {
+  border-bottom-color: transparent;
+}
+
 /* The button's bottom edge, redrawn as a cloth sim. Geometry (48px side
    padding, 8px above the button, 168px tall) is mirrored in use-trap-cloth.ts. */
 .crumb-trap-cloth {
@@ -910,12 +917,6 @@ main.crumb-page-blurred {
 
 .crumb-scene[data-phase="opening"] .crumb-brick {
   animation: crumb-brick-compress 220ms var(--ease-out) both;
-}
-
-.crumb-scene[data-phase="opening"] .crumb-brick,
-.crumb-scene[data-phase="falling"] .crumb-brick,
-.crumb-scene[data-phase="complete"] .crumb-brick {
-  border-bottom-color: transparent;
 }
 
 .crumb-particle {
