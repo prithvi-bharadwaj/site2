@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { CookieQuest } from "@/components/CookieQuest";
 
 vi.mock("@/lib/pretext-layout", () => ({
@@ -52,7 +52,8 @@ describe("cookie popup", () => {
     expect(screen.getByRole("dialog")).toBeInTheDocument();
 
     fireEvent.mouseDown(backdrop!);
-    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    // The dialog animates out before unmounting.
+    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
   });
 
   it("closes with Escape", async () => {
@@ -60,6 +61,6 @@ describe("cookie popup", () => {
     fireEvent.click(await screen.findByRole("button", { name: "cookies" }));
 
     fireEvent.keyDown(document, { key: "Escape" });
-    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
   });
 });

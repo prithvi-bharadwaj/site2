@@ -48,13 +48,14 @@ export function createCookieParticles(
     return {
       ...letter,
       id,
-      vx: (a - 0.5) * 120,
-      // Upward kick: letters leap out of the button, then gravity takes over.
-      vy: -(420 + b * 180),
+      // Subtle burst: a small outward-and-up pop, like the letters spilling
+      // loose when the button's floor gives way.
+      vx: (a - 0.5) * 150,
+      vy: -(60 + b * 110),
       rotation: (c - 0.5) * 18,
       angularVelocity: (b - 0.5) * 260,
       phase: a * Math.PI * 2,
-      startDelay: id * 40 + c * 60,
+      startDelay: id * 14 + c * 40,
       morph: 0,
       morphAt: -1,
       bounces: 0,

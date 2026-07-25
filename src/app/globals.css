@@ -955,8 +955,8 @@ main.crumb-page-blurred {
   top: 0;
   left: 0;
   z-index: 84;
-  width: 28px;
-  height: 28px;
+  width: 22px;
+  height: 22px;
   opacity: 0;
   pointer-events: none;
   will-change: transform, opacity;
@@ -986,17 +986,26 @@ main.crumb-page-blurred {
 
 .crumb-particle-cookie i {
   position: absolute;
-  width: 3px;
-  height: 3px;
+  width: 2.5px;
+  height: 2.5px;
   border-radius: 50%;
   background: currentColor;
 }
 
-.crumb-particle-cookie i:nth-child(1) { top: 5px; left: 8px; }
-.crumb-particle-cookie i:nth-child(2) { top: 8px; right: 5px; }
-.crumb-particle-cookie i:nth-child(3) { right: 9px; bottom: 5px; }
-.crumb-particle-cookie i:nth-child(4) { bottom: 7px; left: 5px; }
-.crumb-particle-cookie i:nth-child(5) { top: 12px; left: 12px; }
+.crumb-particle-cookie i:nth-child(1) { top: 4px; left: 6px; }
+.crumb-particle-cookie i:nth-child(2) { top: 6px; right: 4px; }
+.crumb-particle-cookie i:nth-child(3) { right: 7px; bottom: 4px; }
+.crumb-particle-cookie i:nth-child(4) { bottom: 5px; left: 4px; }
+.crumb-particle-cookie i:nth-child(5) { top: 9px; left: 9px; }
+
+.crumb-plus-one {
+  position: absolute;
+  z-index: 88;
+  color: var(--ink);
+  font: 600 11px/1 "SFMono-Regular", Consolas, monospace;
+  pointer-events: none;
+  animation: crumb-plus-one 620ms var(--ease-out) both;
+}
 
 @property --pet-step-x {
   syntax: "<length>";
@@ -1159,6 +1168,28 @@ main.crumb-page-blurred {
 @keyframes crumb-backdrop-in {
   from { opacity: 0; }
   to { opacity: 1; }
+}
+
+@keyframes crumb-plus-one {
+  0% { opacity: 0; transform: translate(-50%, 2px) scale(0.8); }
+  18% { opacity: 0.9; transform: translate(-50%, -5px) scale(1); }
+  100% { opacity: 0; transform: translate(-50%, -30px) scale(1); }
+}
+
+.crumb-backdrop[data-leaving="true"] {
+  animation: crumb-backdrop-out 220ms ease both;
+}
+
+.crumb-backdrop[data-leaving="true"] .crumb-dialog {
+  animation: crumb-dialog-out 220ms var(--ease-out) both;
+}
+
+@keyframes crumb-backdrop-out {
+  to { opacity: 0; }
+}
+
+@keyframes crumb-dialog-out {
+  to { opacity: 0; transform: translateY(8px) scale(0.97); }
 }
 
 @keyframes crumb-dialog-in {

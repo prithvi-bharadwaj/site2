@@ -40,6 +40,8 @@ export function CookieQuest() {
   const [letters, setLetters] = useState<PositionedWord[]>([]);
   const [particles, setParticles] = useState<CookieParticle[]>([]);
   const [impact, setImpact] = useState<{ x: number; y: number } | null>(null);
+  const [leaving, setLeaving] = useState(false);
+  const leavingRef = useRef(false);
   const letterRefs = useRef(new Map<number, HTMLSpanElement>());
   const particleRefs = useRef(new Map<number, HTMLDivElement>());
   const petRef = useRef<HTMLDivElement>(null);
@@ -82,15 +84,23 @@ export function CookieQuest() {
   }, [clearTimers]);
 
   const closeDialog = useCallback(() => {
-    clearTimers();
-    particleRefs.current.clear();
-    completedRef.current = false;
-    setParticles([]);
-    setImpact(null);
-    setPetMood("sad");
-    setPhase("idle");
-    setVisible(false);
-    requestAnimationFrame(() => triggerRef.current?.focus());
+    if (leavingRef.current) return;
+    leavingRef.current = true;
+    setLeaving(true);
+    // Let the exit animation play before tearing the dialog down.
+    window.setTimeout(() => {
+      leavingRef.current = false;
+      setLeaving(false);
+      clearTimers();
+      particleRefs.current.clear();
+      completedRef.current = false;
+      setParticles([]);
+      setImpact(null);
+      setPetMood("sad");
+      setPhase("idle");
+      setVisible(false);
+      requestAnimationFrame(() => triggerRef.current?.focus());
+    }, 230);
   }, [clearTimers]);
 
   useEffect(() => {
@@ -155,7 +165,7 @@ export function CookieQuest() {
           ? petRect.top - currentSceneRect.top + petRect.height * 0.72
           : (currentSceneRect?.height ?? 600) - 80;
         const floorY = petRect && currentSceneRect
-          ? petRect.bottom - currentSceneRect.top - 13
+          ? petRect.bottom - currentSceneRect.top - 11
           : (currentSceneRect?.height ?? 600) - 46;
         const result = stepCookiePhysics(nextParticles, now - previous, elapsed, { mouthX, mouthY, floorY });
         previous = now;
@@ -173,7 +183,7 @@ export function CookieQuest() {
             }
           }
           node.style.opacity = particle.active && !particle.eaten ? "1" : node.style.opacity;
-          node.style.transform = `translate3d(${particle.x - 14}px, ${particle.y - 14}px, 0) rotate(${particle.rotation}deg)`;
+          node.style.transform = `translate3d(${particle.x - 11}px, ${particle.y - 11}px, 0) rotate(${particle.rotation}deg)`;
           const letter = node.querySelector<HTMLElement>(".crumb-particle-letter");
           const cookie = node.querySelector<HTMLElement>(".crumb-particle-cookie");
           if (letter) {
@@ -223,6 +233,17 @@ export function CookieQuest() {
             const node = particleRefs.current.get(particle.id);
             if (!node || node.dataset.eaten === "true") continue;
             node.dataset.eaten = "true";
+            // Score pop: a little +1 drifts up from where the cookie vanished.
+            const scoreScene = sceneRef.current;
+            if (scoreScene) {
+              const plusOne = document.createElement("span");
+              plusOne.className = "crumb-plus-one";
+              plusOne.textContent = "+1";
+              plusOne.style.left = `${particle.x}px`;
+              plusOne.style.top = `${particle.y - 18}px`;
+              scoreScene.appendChild(plusOne);
+              plusOne.addEventListener("animationend", () => plusOne.remove(), { once: true });
+            }
             node.animate(
               [
                 { opacity: 1, transform: `${node.style.transform} scale(1)` },
@@ -285,8 +306,8 @@ export function CookieQuest() {
     const scene = sceneRef.current;
     const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     if (!node || !pet || !scene || reducedMotion || typeof node.animate !== "function") {
-      // No flight to watch: brief bonk beat, then get out of the way.
-      setPetMood("bonked");
+      // No flight to watch: brief squash beat, then get out of the way.
+      setPetMood("squash");
       timersRef.current.push(window.setTimeout(closeDialog, 350));
       return;
     }
@@ -294,8 +315,8 @@ export function CookieQuest() {
     dropCancelRef.current = launchOntoPet(node, pet, scene, {
       onStartle: () => setPetMood("startle"),
       onImpact: (x, y) => {
+        // He stays flattened under the button until the dialog leaves.
         setPetMood("squash");
-        timersRef.current.push(window.setTimeout(() => setPetMood("bonked"), 340));
         setImpact({ x, y });
         timersRef.current.push(window.setTimeout(closeDialog, closeDelay));
       },
@@ -350,6 +371,7 @@ export function CookieQuest() {
       {visible && createPortal(
         <div
           className="crumb-backdrop"
+          data-leaving={leaving || undefined}
           onMouseDown={(event) => {
             if (event.target === event.currentTarget) closeDialog();
           }}
