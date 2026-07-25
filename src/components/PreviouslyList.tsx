@@ -140,7 +140,13 @@ export function PreviouslyList({ label, items, proofKind = "proof" }: Previously
                           if (e.detail > 0) {
                             e.preventDefault();
                             if (media) inspectEnd(`${proofKind}:${mediaKey(media)}`);
-                            emitPin({ media: media ?? linkNote(seg.brand.href), href: seg.brand.href, x: e.clientX, y: e.clientY });
+                            emitPin({
+                              media: media ?? linkNote(seg.brand.href),
+                              href: seg.brand.href,
+                              inspectId: media ? `${proofKind}:${mediaKey(media)}` : undefined,
+                              x: e.clientX,
+                              y: e.clientY,
+                            });
                           }
                         }}
                         onPointerEnter={(e) => {
@@ -188,7 +194,13 @@ export function PreviouslyList({ label, items, proofKind = "proof" }: Previously
                           if (e.detail > 0) {
                             e.preventDefault();
                             if (media) inspectEnd(`${proofKind}:${mediaKey(media)}`);
-                            emitPin({ media: media ?? linkNote(seg.link.href), href: seg.link.href, x: e.clientX, y: e.clientY });
+                            emitPin({
+                              media: media ?? linkNote(seg.link.href),
+                              href: seg.link.href,
+                              inspectId: media ? `${proofKind}:${mediaKey(media)}` : undefined,
+                              x: e.clientX,
+                              y: e.clientY,
+                            });
                           }
                         }}
                         onPointerEnter={(e) => {

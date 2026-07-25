@@ -25,6 +25,9 @@ export function InspectProgress() {
       }
     };
     window.addEventListener("pointermove", onMove, { passive: true });
+    // Touch has no move stream - the tap that pins a proof card is the only
+    // position signal, so the meter anchors to it.
+    window.addEventListener("pointerdown", onMove, { passive: true });
 
     let clearTimer: number | undefined;
     const offStart = onInspectStart(({ ms }) => {
@@ -40,6 +43,7 @@ export function InspectProgress() {
 
     return () => {
       window.removeEventListener("pointermove", onMove);
+      window.removeEventListener("pointerdown", onMove);
       window.clearTimeout(clearTimer);
       offStart();
       offEnd();

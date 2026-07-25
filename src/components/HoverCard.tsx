@@ -9,6 +9,7 @@ import {
   onUnpin,
   type HoverCardMedia,
 } from "@/lib/hover-card-bus";
+import { inspectStart, inspectEnd } from "@/lib/xp";
 
 const CARD_WIDTH = 296;
 const CARD_HEIGHT = 230;
@@ -52,6 +53,7 @@ export function HoverCard() {
   const videoRef = useRef<HTMLVideoElement>(null);
   const shapeRef = useRef<CardShape>("default");
   const pinnedRef = useRef<string | null>(null);
+  const inspectIdRef = useRef<string | null>(null);
   const hideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const setPinned = (href: string | null) => {
@@ -61,6 +63,10 @@ export function HoverCard() {
 
   const unpin = useCallback(() => {
     if (!pinnedRef.current) return;
+    if (inspectIdRef.current) {
+      inspectEnd(inspectIdRef.current);
+      inspectIdRef.current = null;
+    }
     setPinned(null);
     setVisible(false);
     hideTimerRef.current = setTimeout(() => {
@@ -106,13 +112,18 @@ export function HoverCard() {
         hideTimerRef.current = null;
       }, 250);
     });
-    const offPin = onPin(({ media: m, href, x, y }) => {
+    const offPin = onPin(({ media: m, href, inspectId, x, y }) => {
       // Re-clicking the same link toggles the pin off.
       if (pinnedRef.current === href) {
         unpin();
         return;
       }
       clearHideTimer();
+      // Dwelling on a pinned card counts as inspecting the proof - this is
+      // the only inspection path on touch devices, where hover doesn't exist.
+      if (inspectIdRef.current) inspectEnd(inspectIdRef.current);
+      inspectIdRef.current = inspectId ?? null;
+      if (inspectId) inspectStart(inspectId);
       setMedia(m);
       setVisible(true);
       shapeRef.current = m.type === "note" ? "note" : m.type === "image" && m.wide ? "wide" : "default";

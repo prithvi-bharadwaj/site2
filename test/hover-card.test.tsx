@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { act, cleanup, render } from "@testing-library/react";
 import { HoverCard } from "@/components/HoverCard";
 import { emitShow, emitHide, emitPin } from "@/lib/hover-card-bus";
+import { resetXp } from "@/lib/xp";
 
 beforeEach(() => vi.useFakeTimers());
 afterEach(() => {
@@ -78,5 +79,30 @@ describe("HoverCard", () => {
     });
     expect(container.querySelector(".hover-card")!.className).not.toContain("pinned");
     expect(container.querySelector(".hover-card")!.className).not.toContain("visible");
+  });
+
+  it("awards the proof inspection after dwelling on a pinned card (touch path)", () => {
+    resetXp();
+    render(<HoverCard />);
+    const media = { type: "image" as const, src: "/x.png", caption: "x.com" };
+    const earned = () =>
+      JSON.parse(localStorage.getItem("prithvi-xp-v1") ?? '{"earned":{}}').earned;
+
+    act(() => {
+      emitPin({ media, href: "https://x.com", inspectId: "proof:/x.png", x: 100, y: 100 });
+      vi.advanceTimersByTime(1000);
+    });
+    expect(earned()).toHaveProperty(["proof:/x.png"]);
+
+    // Unpinning before the dwell completes cancels the award.
+    resetXp();
+    act(() => {
+      emitPin({ media, href: "https://y.com", inspectId: "proof:/y.png", x: 100, y: 100 });
+      vi.advanceTimersByTime(400);
+      emitPin({ media, href: "https://y.com", inspectId: "proof:/y.png", x: 100, y: 100 }); // toggle off
+      vi.advanceTimersByTime(1000);
+    });
+    expect(earned()).not.toHaveProperty(["proof:/y.png"]);
+    resetXp();
   });
 });

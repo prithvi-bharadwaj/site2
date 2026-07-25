@@ -102,7 +102,13 @@ function renderTitleWithBrands(
             if (media && e.detail > 0) {
               e.preventDefault();
               if (xpKind) inspectEnd(`${xpKind}-proof:${mediaKey(media)}`);
-              emitPin({ media, href: brand.href, x: e.clientX, y: e.clientY });
+              emitPin({
+                media,
+                href: brand.href,
+                inspectId: xpKind ? `${xpKind}-proof:${mediaKey(media)}` : undefined,
+                x: e.clientX,
+                y: e.clientY,
+              });
             }
           }}
           onPointerEnter={(e) => {

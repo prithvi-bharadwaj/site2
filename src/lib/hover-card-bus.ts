@@ -30,6 +30,12 @@ export interface HoverCardPinDetail {
   media: HoverCardMedia;
   /** Destination the pinned card links to (same tab). */
   href: string;
+  /**
+   * Proof-inspection id (e.g. "proof:<mediaKey>"). While the card stays
+   * pinned, the dwell timer runs against this id - the touch equivalent of
+   * hover-inspecting.
+   */
+  inspectId?: string;
   x: number;
   y: number;
 }
