@@ -9,6 +9,7 @@ import {
   type CookieParticle,
 } from "@/lib/cookie-physics";
 import { saveCookieChoice } from "@/lib/cookie-quest";
+import { useTrapCloth } from "@/lib/use-trap-cloth";
 import { launchOntoPet } from "@/lib/crumb-ballistics";
 import { playClick } from "@/lib/crumb-sfx";
 import { CookieParticleView, SpritePet, type PetMood } from "@/components/CrumbPet";
@@ -17,6 +18,10 @@ type Phase = "idle" | "opening" | "falling" | "complete" | "declined" | "closing
 
 const LABEL = "allow cookies";
 const BUTTON_WIDTH = 132;
+const BUTTON_HEIGHT = 38;
+// Mirrors the .crumb-brick border-radius; the cloth hinges sit where the
+// straight bottom edge meets the corner arcs.
+const BUTTON_RADIUS = 10;
 const FONT = '500 10px "SFMono-Regular", Consolas, monospace';
 
 function layoutLabel(): PositionedWord[] {
@@ -46,6 +51,7 @@ export function CookieQuest() {
   const particleRefs = useRef(new Map<number, HTMLDivElement>());
   const petRef = useRef<HTMLDivElement>(null);
   const sceneRef = useRef<HTMLDivElement>(null);
+  const trapRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const allowRef = useRef<HTMLButtonElement>(null);
   const closeRef = useRef<HTMLButtonElement>(null);
@@ -55,6 +61,16 @@ export function CookieQuest() {
   const dropCancelRef = useRef<(() => void) | null>(null);
   const timersRef = useRef<number[]>([]);
   const completedRef = useRef(false);
+  const {
+    canvasRef: clothCanvasRef,
+    release: releaseCloth,
+    disturb: disturbCloth,
+    isReleased: clothReleased,
+  } = useTrapCloth(visible, {
+    width: BUTTON_WIDTH,
+    height: BUTTON_HEIGHT,
+    radius: BUTTON_RADIUS,
+  });
 
   const clearTimers = useCallback(() => {
     timersRef.current.forEach(window.clearTimeout);
@@ -167,8 +183,27 @@ export function CookieQuest() {
         const floorY = petRect && currentSceneRect
           ? petRect.bottom - currentSceneRect.top - 11
           : (currentSceneRect?.height ?? 600) - 46;
-        const result = stepCookiePhysics(nextParticles, now - previous, elapsed, { mouthX, mouthY, floorY });
+        const frameMs = now - previous;
+        const result = stepCookiePhysics(nextParticles, frameMs, elapsed, { mouthX, mouthY, floorY });
         previous = now;
+
+        // Falling cookies brush the hanging cloth strips on their way past.
+        const trapRect = trapRef.current?.getBoundingClientRect();
+        if (trapRect && currentSceneRect && clothReleased()) {
+          const trapX = trapRect.left - currentSceneRect.left;
+          const trapY = trapRect.top - currentSceneRect.top;
+          const dtSeconds = Math.min(frameMs, 32) / 1000;
+          for (const particle of nextParticles) {
+            if (!particle.active || particle.eaten) continue;
+            disturbCloth(
+              particle.x - trapX,
+              particle.y - trapY,
+              15,
+              particle.vx * dtSeconds * 0.3,
+              particle.vy * dtSeconds * 0.3,
+            );
+          }
+        }
 
         let nearest: CookieParticle | undefined;
         for (const particle of nextParticles) {
@@ -283,7 +318,7 @@ export function CookieQuest() {
 
       rafRef.current = requestAnimationFrame(frame);
     });
-  }, [closeDialog, letters]);
+  }, [closeDialog, clothReleased, disturbCloth, letters]);
 
   function allowCookies() {
     if (phase !== "idle") return;
@@ -297,6 +332,8 @@ export function CookieQuest() {
     }
     setPhase("opening");
     setPetMood("alert");
+    // The bottom edge peels loose right as the button finishes compressing.
+    timersRef.current.push(window.setTimeout(releaseCloth, 120));
     const timer = window.setTimeout(beginPhysics, 360);
     timersRef.current.push(timer);
   }
@@ -398,7 +435,7 @@ export function CookieQuest() {
               <div className="crumb-prompt">
                 <h2 id="cookie-dialog-title">this site uses cookies to save your progress.</h2>
                 <div className="crumb-actions">
-                  <div className="crumb-trap">
+                  <div ref={trapRef} className="crumb-trap">
                     <button
                       ref={allowRef}
                       type="button"
@@ -422,8 +459,7 @@ export function CookieQuest() {
                         </span>
                       ))}
                     </button>
-                    <span className="crumb-trap-door crumb-trap-door-left" aria-hidden="true" />
-                    <span className="crumb-trap-door crumb-trap-door-right" aria-hidden="true" />
+                    <canvas ref={clothCanvasRef} className="crumb-trap-cloth" aria-hidden="true" />
                   </div>
                   <button
                     ref={declineRef}

@@ -848,7 +848,7 @@ main.crumb-page-blurred {
   padding: 0 12px;
   place-items: center;
   border: 1px solid rgb(var(--ink-rgb) / 0.18);
-  border-radius: 0;
+  border-radius: 10px;
   font: 500 10px/1 "SFMono-Regular", Consolas, monospace;
   cursor: pointer;
   transform-origin: center;
@@ -866,26 +866,16 @@ main.crumb-page-blurred {
   background: var(--bg);
 }
 
-.crumb-trap-door {
+/* The button's bottom edge, redrawn as a cloth sim. Geometry (48px side
+   padding, 8px above the button, 168px tall) is mirrored in use-trap-cloth.ts. */
+.crumb-trap-cloth {
   position: absolute;
   z-index: 2;
-  bottom: 0;
-  width: calc(50% - 1px);
-  height: 1px;
-  background: rgb(var(--ink-rgb) / 0.3);
+  top: -8px;
+  left: -48px;
+  width: 228px;
+  height: 168px;
   pointer-events: none;
-  transition: transform 420ms 110ms cubic-bezier(0.32, 0.72, 0, 1);
-  will-change: transform;
-}
-
-.crumb-trap-door-left {
-  left: 1px;
-  transform-origin: left center;
-}
-
-.crumb-trap-door-right {
-  right: 1px;
-  transform-origin: right center;
 }
 
 .crumb-brick:active:not(:disabled),
@@ -936,18 +926,6 @@ main.crumb-page-blurred {
 .crumb-scene[data-phase="falling"] .crumb-brick,
 .crumb-scene[data-phase="complete"] .crumb-brick {
   border-bottom-color: transparent;
-}
-
-.crumb-scene[data-phase="opening"] .crumb-trap-door-left,
-.crumb-scene[data-phase="falling"] .crumb-trap-door-left,
-.crumb-scene[data-phase="complete"] .crumb-trap-door-left {
-  transform: rotate(68deg);
-}
-
-.crumb-scene[data-phase="opening"] .crumb-trap-door-right,
-.crumb-scene[data-phase="falling"] .crumb-trap-door-right,
-.crumb-scene[data-phase="complete"] .crumb-trap-door-right {
-  transform: rotate(-68deg);
 }
 
 .crumb-particle {
@@ -1268,7 +1246,6 @@ main.crumb-page-blurred {
 @media (prefers-reduced-motion: reduce) {
   .crumb-backdrop,
   .crumb-dialog,
-  .crumb-trap-door,
   .crumb-particle,
   .crumb-pet {
     animation: none !important;
