@@ -3,18 +3,22 @@
 import { useEffect, useRef, useState } from "react";
 import { harvestGlyphs } from "@/lib/glyph-harvest";
 import {
-  applyImpulse,
-  assignSmashTargets,
-  beginHoming,
   createBody,
-  dropAll,
-  forceSettle,
-  resetTargets,
   stepPhysics,
   DEFAULT_PHYSICS,
   type Body,
   type PhysicsEnv,
 } from "@/lib/letter-physics";
+import {
+  applyImpulse,
+  beginHoming,
+  brushAt,
+  dropAll,
+  forceSettle,
+  markReturning,
+  pokeAt,
+  resetTargets,
+} from "@/lib/letter-effects";
 import { onPhysics, emitPhysicsSync } from "@/lib/physics-bus";
 import { CLICK_XP, award } from "@/lib/xp";
 
@@ -22,27 +26,35 @@ import { CLICK_XP, award } from "@/lib/xp";
  * The physics overlay. Two effects share one engine:
  *
  * - gravity: every letter on screen drops and stacks up at the bottom, and
- *   stays there until you switch it off.
- * - smash: a fist comes up under the page, the screen shakes, letters splash
- *   out and fall back into place - a few stay knocked over.
+ *   stays there until you put it back.
+ * - smash: a fist comes up under the page, the screen shakes, letters jump and
+ *   then fall back onto the lines they came from - a few stay leaning.
  *
- * Real text is hidden (visibility, so layout doesn't jump) while the sim runs
- * and every glyph is redrawn on a canvas, which is the only way this stays
- * smooth with ~1500 bodies.
+ * While either is running the letters are alive: the cursor shoves them around
+ * (and nudges knocked-over ones back upright), taps land as local jolts, and a
+ * button in the middle of the screen puts everything back.
+ *
+ * Real text is hidden (visibility, so layout doesn't jump) and every glyph is
+ * redrawn on a canvas, which is the only way this stays smooth with ~1500
+ * bodies.
  */
 
-/** Fist animation is 620ms; it connects at 30%. */
-const FIST_IMPACT_MS = 190;
+/** Fist animation is 620ms; it connects at 24%. */
+const FIST_IMPACT_MS = 150;
 const FIST_TOTAL_MS = 700;
-/** How long letters fly free before they start heading home. */
-const FREEFALL_MS = 430;
-/** Grace period before a scroll or click puts the page back together. */
-const INTERACT_DELAY_MS = 900;
-/** Letters left lying sideways get tidied up after this. */
-const AUTO_RESTORE_MS = 5200;
-const SMASH_POWER = 1150;
-/** Share of letters that stay knocked over after a slam. */
-const DISPLACED_RATIO = 0.16;
+/** The slam is a jolt, not an explosion. */
+const SMASH_POWER = 640;
+const SMASH_FALLOFF = 420;
+/** Share of letters that keep their tilt after a slam. */
+const KEEP_TILT_RATIO = 0.14;
+/** Taps are the same idea, closer in. */
+const POKE_POWER = 520;
+const POKE_RADIUS = 150;
+/** Cursor brushing. */
+const BRUSH_RADIUS = 78;
+const BRUSH_STRENGTH = 2600;
+/** The way out shows up once the letters have had their moment. */
+const RESTORE_BUTTON_MS = 700;
 /**
  * A page's worth of letters packs tight enough that a few end up wedged and
  * never quite qualify for sleep. Once the pile has visibly stopped, freeze it
@@ -51,7 +63,6 @@ const DISPLACED_RATIO = 0.16;
 const SETTLE_FAILSAFE_MS = 5500;
 const SHAKE_SECONDS = 0.42;
 const SHAKE_AMPLITUDE = 10;
-
 /** Ignore resizes smaller than this - scrollbar and mobile-toolbar noise. */
 const RESIZE_TOLERANCE = 48;
 
@@ -60,6 +71,8 @@ type Mode = "off" | "gravity" | "smash" | "restoring";
 export function PhysicsLayer() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [slam, setSlam] = useState(0);
+  const [showRestore, setShowRestore] = useState(false);
+  const restoreRef = useRef<() => void>(() => {});
 
   useEffect(() => {
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
@@ -77,7 +90,7 @@ export function PhysicsLayer() {
     let dpr = 1;
     let shake = 0;
     let scrollLocked = false;
-    let interactive = false;
+    let live = false;
     let timers: number[] = [];
     let settleTimer = 0;
     let env: PhysicsEnv = { ...DEFAULT_PHYSICS, width: 0, floorY: 0 };
@@ -85,6 +98,7 @@ export function PhysicsLayer() {
     // scrollbar appearing when scroll gets locked.
     let baseW = 0;
     let baseH = 0;
+    const pointer = { x: 0, y: 0, inside: false };
 
     /* ── plumbing ── */
 
@@ -104,7 +118,7 @@ export function PhysicsLayer() {
     function armSettleFailsafe() {
       clearTimeout(settleTimer);
       settleTimer = window.setTimeout(() => {
-        if (mode === "gravity") forceSettle(bodies);
+        if (mode === "gravity" || mode === "smash") forceSettle(bodies);
       }, SETTLE_FAILSAFE_MS);
     }
 
@@ -157,6 +171,11 @@ export function PhysicsLayer() {
         floorY: window.innerHeight - 4,
       };
       el.style.visibility = "hidden";
+      // Draw the copy in the same frame the real text goes away, or the page
+      // blinks empty until the first animation frame lands.
+      render();
+      attachLive();
+      later(() => setShowRestore(true), RESTORE_BUTTON_MS);
       return true;
     }
 
@@ -165,8 +184,9 @@ export function PhysicsLayer() {
       const el = contentEl();
       if (el) el.style.visibility = "";
       unlockScroll();
-      detachInteract();
+      detachLive();
       clearTimers();
+      setShowRestore(false);
       bodies = [];
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       ctx.clearRect(0, 0, window.innerWidth, window.innerHeight);
@@ -178,7 +198,8 @@ export function PhysicsLayer() {
       if (mode === "off" || mode === "restoring") return;
       const wasGravity = mode === "gravity";
       clearTimers();
-      detachInteract();
+      detachLive();
+      setShowRestore(false);
       // Scroll stays locked until the letters are home - scrolling mid-flight
       // would leave them springing to stale positions.
       resetTargets(bodies);
@@ -188,7 +209,7 @@ export function PhysicsLayer() {
       if (wasGravity) emitPhysicsSync(false);
     }
 
-    /** No animation - for resize and unmount. */
+    /** No animation - for resize, scroll and unmount. */
     function hardRestore() {
       if (mode === "off") return;
       const wasGravity = mode === "gravity";
@@ -197,6 +218,8 @@ export function PhysicsLayer() {
       finishRestore();
       if (wasGravity) emitPhysicsSync(false);
     }
+
+    restoreRef.current = beginRestore;
 
     /* ── loop ── */
 
@@ -209,19 +232,44 @@ export function PhysicsLayer() {
       ctx.clearRect(-20, -20, window.innerWidth + 40, window.innerHeight + 40);
       ctx.textBaseline = "alphabetic";
 
+      // Setting font/fillStyle is expensive enough at this body count to be
+      // worth tracking; harvest order already groups glyphs by element.
+      let font = "";
+      let color = "";
+      let alpha = 1;
+      ctx.globalAlpha = 1;
+
       for (const b of bodies) {
-        ctx.save();
-        ctx.translate(b.x, b.y);
-        if (b.angle) ctx.rotate(b.angle);
-        ctx.globalAlpha = b.alpha;
         if (b.img) {
+          ctx.save();
+          ctx.globalAlpha = b.alpha;
+          ctx.translate(b.x, b.y);
+          if (b.angle !== 0) ctx.rotate(b.angle);
           ctx.drawImage(b.img, -b.w / 2, -b.h / 2, b.w, b.h);
-        } else {
-          ctx.font = b.font;
-          ctx.fillStyle = b.color;
-          ctx.fillText(b.char, -b.w / 2, -b.h / 2 + b.ascent);
+          ctx.restore();
+          continue;
         }
-        ctx.restore();
+        if (b.font !== font) {
+          font = b.font;
+          ctx.font = font;
+        }
+        if (b.color !== color) {
+          color = b.color;
+          ctx.fillStyle = color;
+        }
+        if (b.alpha !== alpha) {
+          alpha = b.alpha;
+          ctx.globalAlpha = alpha;
+        }
+        if (b.angle === 0) {
+          ctx.fillText(b.char, b.x - b.w / 2, b.y - b.h / 2 + b.ascent);
+        } else {
+          ctx.save();
+          ctx.translate(b.x, b.y);
+          ctx.rotate(b.angle);
+          ctx.fillText(b.char, -b.w / 2, -b.h / 2 + b.ascent);
+          ctx.restore();
+        }
       }
     }
 
@@ -229,9 +277,23 @@ export function PhysicsLayer() {
       const dt = last ? Math.min((t - last) / 1000, 1 / 30) : 1 / 60;
       last = t;
       if (shake > 0) shake = Math.max(0, shake - dt);
+
+      let brushing = false;
+      if (pointer.inside && mode !== "restoring") {
+        brushing = brushAt(
+          bodies,
+          pointer.x,
+          pointer.y,
+          BRUSH_RADIUS,
+          BRUSH_STRENGTH,
+          dt,
+          mode === "smash"
+        );
+      }
+
       const moving = stepPhysics(bodies, dt, env);
       render();
-      if (moving || shake > 0) {
+      if (moving || brushing || shake > 0) {
         raf = requestAnimationFrame(frame);
       } else {
         raf = 0;
@@ -270,60 +332,82 @@ export function PhysicsLayer() {
         mode = "smash";
       }
       clearTimers();
-      detachInteract();
       setSlam((n) => n + 1);
       later(() => setSlam(0), FIST_TOTAL_MS);
+      later(() => setShowRestore(true), RESTORE_BUTTON_MS);
 
       later(() => {
+        // In a pile the letters have no line to go back to - they just get hit.
+        if (!inPile) markReturning(bodies, KEEP_TILT_RATIO);
         applyImpulse(
           bodies,
           window.innerWidth / 2,
           window.innerHeight - 8,
-          SMASH_POWER
+          SMASH_POWER,
+          SMASH_FALLOFF
         );
         shake = SHAKE_SECONDS;
+        armSettleFailsafe();
         ensureLoop();
-        // In a pile the letters have nowhere to go back to - they just get hit.
-        if (inPile) {
-          armSettleFailsafe();
-          return;
-        }
-        later(() => {
-          assignSmashTargets(bodies, DISPLACED_RATIO);
-          beginHoming(bodies);
-        }, FREEFALL_MS);
-        later(attachInteract, INTERACT_DELAY_MS);
-        later(beginRestore, AUTO_RESTORE_MS);
       }, FIST_IMPACT_MS);
 
       award("smash:first", CLICK_XP);
     }
 
-    /* ── input ── */
+    /* ── input while the letters are alive ── */
 
-    function onPointerRestore(e: Event) {
+    function onPointerMove(e: PointerEvent) {
+      pointer.x = e.clientX;
+      pointer.y = e.clientY;
+      pointer.inside = true;
+      ensureLoop();
+    }
+
+    function onPointerOut(e: PointerEvent) {
+      if (e.relatedTarget === null) pointer.inside = false;
+    }
+
+    function onPointerDown(e: PointerEvent) {
       const target = e.target;
       if (target instanceof Element && target.closest("[data-no-physics]")) return;
-      beginRestore();
+      pointer.x = e.clientX;
+      pointer.y = e.clientY;
+      pointer.inside = true;
+      pokeAt(
+        bodies,
+        e.clientX,
+        e.clientY,
+        POKE_POWER,
+        POKE_RADIUS,
+        mode === "smash",
+        KEEP_TILT_RATIO
+      );
+      armSettleFailsafe();
+      ensureLoop();
     }
 
     /** Bodies live in viewport coordinates, so a scroll has to end it now. */
-    function onScrollRestore() {
+    function onScroll() {
       hardRestore();
     }
 
-    function attachInteract() {
-      if (interactive) return;
-      interactive = true;
-      window.addEventListener("scroll", onScrollRestore, { passive: true });
-      window.addEventListener("pointerdown", onPointerRestore);
+    function attachLive() {
+      if (live) return;
+      live = true;
+      window.addEventListener("pointermove", onPointerMove, { passive: true });
+      window.addEventListener("pointerout", onPointerOut, { passive: true });
+      window.addEventListener("pointerdown", onPointerDown);
+      window.addEventListener("scroll", onScroll, { passive: true });
     }
 
-    function detachInteract() {
-      if (!interactive) return;
-      interactive = false;
-      window.removeEventListener("scroll", onScrollRestore);
-      window.removeEventListener("pointerdown", onPointerRestore);
+    function detachLive() {
+      if (!live) return;
+      live = false;
+      pointer.inside = false;
+      window.removeEventListener("pointermove", onPointerMove);
+      window.removeEventListener("pointerout", onPointerOut);
+      window.removeEventListener("pointerdown", onPointerDown);
+      window.removeEventListener("scroll", onScroll);
     }
 
     function onKeyDown(e: KeyboardEvent) {
@@ -333,7 +417,7 @@ export function PhysicsLayer() {
     const offBus = onPhysics((cmd) => {
       if (cmd.type === "smash") smash();
       else if (cmd.on) startGravity();
-      else if (mode === "gravity") beginRestore();
+      else if (mode === "gravity" || mode === "smash") beginRestore();
     });
 
     function onResize() {
@@ -358,7 +442,7 @@ export function PhysicsLayer() {
       cancelAnimationFrame(raf);
       clearTimers();
       clearTimeout(settleTimer);
-      detachInteract();
+      detachLive();
       const el = contentEl();
       if (el) el.style.visibility = "";
       unlockScroll();
@@ -377,6 +461,16 @@ export function PhysicsLayer() {
         <div key={slam} className="physics-fist" data-no-physics aria-hidden="true">
           ✊
         </div>
+      )}
+      {showRestore && (
+        <button
+          onClick={() => restoreRef.current()}
+          className="physics-restore"
+          data-no-physics
+        >
+          put it back
+          <kbd className="panel-key">esc</kbd>
+        </button>
       )}
     </>
   );

@@ -1,18 +1,22 @@
 import { describe, expect, it } from "vitest";
 import {
-  applyImpulse,
-  assignSmashTargets,
-  beginHoming,
   createBody,
-  dropAll,
-  forceSettle,
-  resetTargets,
   stepPhysics,
   DEFAULT_PHYSICS,
   type Body,
   type GlyphSource,
   type PhysicsEnv,
 } from "@/lib/letter-physics";
+import {
+  applyImpulse,
+  beginHoming,
+  brushAt,
+  dropAll,
+  forceSettle,
+  markReturning,
+  pokeAt,
+  resetTargets,
+} from "@/lib/letter-effects";
 
 /** Deterministic rng so pile layouts are reproducible. */
 function seeded(seed: number) {
@@ -40,6 +44,22 @@ function settle(bodies: Body[], env = ENV, maxFrames = 900) {
 
 const bottom = (b: Body) => b.y + b.eh / 2;
 
+function deepestOverlap(bodies: Body[]): number {
+  let worst = 0;
+  for (let i = 0; i < bodies.length; i++) {
+    for (let j = i + 1; j < bodies.length; j++) {
+      const a = bodies[i];
+      const b = bodies[j];
+      const px = (a.ew + b.ew) / 2 - Math.abs(b.x - a.x);
+      if (px <= 0) continue;
+      const py = (a.eh + b.eh) / 2 - Math.abs(b.y - a.y);
+      if (py <= 0) continue;
+      worst = Math.max(worst, Math.min(px, py));
+    }
+  }
+  return worst;
+}
+
 describe("letter physics", () => {
   it("drops a letter to the floor and puts it to sleep", () => {
     const bodies = [createBody(glyph(100, 40))];
@@ -52,9 +72,11 @@ describe("letter physics", () => {
   });
 
   it("stacks letters instead of letting them overlap", () => {
-    // A narrow well: there's no floor to spread across, so they have to pile up.
-    const env: PhysicsEnv = { ...ENV, width: 14 };
-    const bodies = [0, 40, 80, 120].map((y) => createBody(glyph(3, y)));
+    // A narrow well: only a few letters fit side by side, so they pile up.
+    const env: PhysicsEnv = { ...ENV, width: 40 };
+    const bodies = Array.from({ length: 12 }, (_, i) =>
+      createBody(glyph(4 + (i % 3) * 10, i * 30))
+    );
     dropAll(bodies, env, seeded(2));
     settle(bodies, env);
 
@@ -63,8 +85,8 @@ describe("letter physics", () => {
       // Nothing sinks through the floor.
       expect(bottom(b)).toBeLessThanOrEqual(env.floorY + 1);
     }
-    // Four letters, one letter of floor: the pile is a couple of letters tall.
-    expect(env.floorY - Math.min(...bodies.map((b) => b.y))).toBeGreaterThan(28);
+    // Twelve letters, three-wide floor: the pile is several letters tall.
+    expect(env.floorY - Math.min(...bodies.map((b) => b.y))).toBeGreaterThan(45);
   });
 
   it("leaves letters resting against each other, not inside each other", () => {
@@ -73,15 +95,7 @@ describe("letter physics", () => {
     dropAll(bodies, ENV, seeded(13));
     settle(bodies);
 
-    for (let i = 0; i < bodies.length; i++) {
-      for (let j = i + 1; j < bodies.length; j++) {
-        const a = bodies[i];
-        const b = bodies[j];
-        const px = (a.ew + b.ew) / 2 - Math.abs(b.x - a.x);
-        const py = (a.eh + b.eh) / 2 - Math.abs(b.y - a.y);
-        expect(Math.min(px, py)).toBeLessThan(2);
-      }
-    }
+    expect(deepestOverlap(bodies)).toBeLessThan(2);
   });
 
   it("freezes a jammed pile when the caller gives up on it", () => {
@@ -99,7 +113,7 @@ describe("letter physics", () => {
     const bodies = [left, right];
     for (const b of bodies) b.sleeping = true;
 
-    applyImpulse(bodies, 200, ENV.floorY, 1000, seeded(3));
+    applyImpulse(bodies, 200, ENV.floorY, 800, 420, seeded(3));
 
     expect(left.sleeping).toBe(false);
     expect(left.vx).toBeLessThan(0);
@@ -109,10 +123,65 @@ describe("letter physics", () => {
     expect(right.vy).toBeLessThan(0);
   });
 
+  it("lands slammed letters back on the line they came from", () => {
+    // Two lines of letters, so a body can only settle on its own baseline.
+    const bodies: Body[] = [];
+    for (let i = 0; i < 12; i++) bodies.push(createBody(glyph(150 + i * 9, 200)));
+    for (let i = 0; i < 12; i++) bodies.push(createBody(glyph(150 + i * 9, 300)));
+    const homes = bodies.map((b) => ({ x: b.homeX, y: b.homeY }));
+
+    markReturning(bodies, 0, seeded(21));
+    applyImpulse(bodies, 200, ENV.floorY, 800, 420, seeded(22));
+    // It has to actually leave home first, or this proves nothing.
+    settle(bodies, ENV, 12);
+    expect(Math.max(...bodies.map((b, i) => Math.abs(b.y - homes[i].y)))).toBeGreaterThan(4);
+
+    const frames = settle(bodies);
+    expect(frames).toBeLessThan(900);
+    bodies.forEach((b, i) => {
+      // Back on its own line, near its own column, standing upright again.
+      expect(Math.abs(bottom(b) - (homes[i].y + b.h / 2))).toBeLessThan(3);
+      expect(Math.abs(b.x - homes[i].x)).toBeLessThan(6);
+      expect(Math.abs(b.angle)).toBeLessThan(0.12);
+    });
+  });
+
+  it("leaves a few letters knocked over, and lets the cursor tidy them up", () => {
+    const bodies = Array.from({ length: 300 }, (_, i) => createBody(glyph(i % 40 * 9, 200)));
+    markReturning(bodies, 1, seeded(31));
+    expect(bodies.every((b) => b.levelPull === 0)).toBe(true);
+
+    const tilted = createBody(glyph(100, 200));
+    tilted.angle = 1.2;
+    markReturning([tilted], 1, seeded(32));
+    expect(tilted.levelPull).toBe(0);
+
+    // Brushing it engages the springs that stand it back up.
+    brushAt([tilted], tilted.x + 4, tilted.y, 78, 2600, 1 / 60, true);
+    expect(tilted.levelPull).toBeGreaterThan(0);
+    settle([tilted]);
+    expect(tilted.angle).toBe(0);
+    expect(tilted.x).toBeCloseTo(tilted.homeX, 0);
+  });
+
+  it("pokes only the letters near the tap", () => {
+    const near = createBody(glyph(200, 300));
+    const far = createBody(glyph(200, 500));
+    const bodies = [near, far];
+    for (const b of bodies) b.sleeping = true;
+
+    pokeAt(bodies, 204, 308, 520, 150, false, 0, seeded(41));
+
+    expect(near.sleeping).toBe(false);
+    expect(Math.abs(near.vx) + Math.abs(near.vy)).toBeGreaterThan(0);
+    expect(far.sleeping).toBe(true);
+    expect(far.vx).toBe(0);
+  });
+
   it("springs letters back to exactly where they started", () => {
     const bodies = [createBody(glyph(120, 200)), createBody(glyph(140, 200))];
     const homes = bodies.map((b) => ({ x: b.homeX, y: b.homeY }));
-    applyImpulse(bodies, 200, ENV.floorY, 1400, seeded(4));
+    applyImpulse(bodies, 200, ENV.floorY, 1400, 420, seeded(4));
     settle(bodies, ENV, 60);
 
     resetTargets(bodies);
@@ -127,31 +196,8 @@ describe("letter physics", () => {
     });
   });
 
-  it("sends most letters home after a slam and leaves a few knocked over", () => {
-    const bodies = Array.from({ length: 200 }, (_, i) => createBody(glyph(i * 2, 100)));
-
-    const none = assignSmashTargets(bodies, 0, seeded(5));
-    expect(none.every((f) => f === "home")).toBe(true);
-    expect(bodies.every((b) => b.targetAngle === 0 && b.targetX === b.homeX)).toBe(true);
-
-    const fates = assignSmashTargets(bodies, 1, seeded(6));
-    expect(fates.some((f) => f === "fallen")).toBe(true);
-    expect(fates.every((f) => f !== "home")).toBe(true);
-    // A letter lying on its side keeps its bottom edge on the baseline.
-    const flat = bodies[fates.indexOf("fallen")];
-    expect(Math.abs(flat.targetAngle)).toBeGreaterThan(1.3);
-    expect(flat.targetY).toBeCloseTo(flat.homeY + (flat.h - flat.w) / 2, 5);
-
-    const mixed = assignSmashTargets(bodies, 0.16, seeded(8));
-    const displaced = mixed.filter((f) => f !== "home").length;
-    expect(displaced).toBeGreaterThan(0);
-    expect(displaced).toBeLessThan(bodies.length / 3);
-  });
-
   it("keeps a wide pile inside the viewport", () => {
-    const bodies = Array.from({ length: 40 }, (_, i) =>
-      createBody(glyph(-20 + i * 12, 100))
-    );
+    const bodies = Array.from({ length: 40 }, (_, i) => createBody(glyph(-20 + i * 12, 100)));
     dropAll(bodies, ENV, seeded(9));
     settle(bodies);
 

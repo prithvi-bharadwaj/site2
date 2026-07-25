@@ -883,3 +883,47 @@ html.dark .control-panel {
   font-size: 10px;
   color: rgb(var(--ink-rgb) / 0.35);
 }
+
+/* Way out of a physics session - sits in the middle of the screen so it can't
+   be missed while the letters are loose. */
+.physics-restore {
+  position: fixed;
+  left: 50%;
+  top: 46%;
+  z-index: 68;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 7px 9px 7px 14px;
+  border: 1px solid rgb(var(--ink-rgb) / 0.12);
+  border-radius: 999px;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 11.5px;
+  color: rgb(var(--ink-rgb) / 0.7);
+  background: var(--card-bg);
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.06), 0 10px 30px rgb(0 0 0 / 0.14);
+  animation: restore-in 260ms var(--ease-out) both;
+  transition: color 160ms var(--ease-out), border-color 160ms var(--ease-out);
+}
+
+.physics-restore:hover {
+  color: var(--ink);
+  border-color: rgb(var(--ink-rgb) / 0.3);
+}
+
+html.dark .physics-restore {
+  border-color: rgb(var(--ink-rgb) / 0.14);
+  box-shadow: 0 2px 6px rgb(0 0 0 / 0.5), 0 14px 36px rgb(0 0 0 / 0.5);
+}
+
+@keyframes restore-in {
+  from {
+    opacity: 0;
+    transform: translate(-50%, calc(-50% + 6px));
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, -50%);
+  }
+}
