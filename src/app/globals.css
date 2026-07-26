@@ -867,34 +867,23 @@ main.crumb-page-blurred {
   background: var(--bg);
 }
 
-/* The CSS border owns the bottom edge until the trap opens, so idle the button
-   is one continuous stroke with pixel-perfect corners. On release this strip
-   (bg-coloured, spanning only the straight run between the corner arcs) hides
-   the part the cloth takes over; the arcs stay CSS all the way down. */
-.crumb-brick::after {
-  content: "";
-  position: absolute;
-  bottom: -1px;
-  left: 9px;
-  right: 9px;
-  height: 1px;
-  background: var(--bg);
-  opacity: 0;
+/* The CSS border owns the box until it breaks. On impact the shatter canvas
+   picks up the exact same outline as shards, so the border hands off invisibly
+   and only the crack lines are new. */
+.crumb-brick[data-shattered] {
+  border-color: transparent;
+  background: transparent;
 }
 
-.crumb-brick[data-cloth="loose"]::after {
-  opacity: 1;
-}
-
-/* The button's bottom edge, redrawn as a cloth sim. Geometry (48px side
-   padding, 8px above the button, 168px tall) is mirrored in use-trap-cloth.ts. */
-.crumb-trap-cloth {
+/* The broken box, drawn as shards. The canvas's own size comes from the
+   renderer (see sizeCanvas); only its offset lives here, and it must match
+   PAD_X / PAD_TOP in use-box-shatter.ts. The canvas runs past the dialog's
+   bottom edge so falling pieces are clipped by the dialog, not by the canvas. */
+.crumb-shatter {
   position: absolute;
   z-index: 2;
-  top: -8px;
-  left: -48px;
-  width: 228px;
-  height: 168px;
+  top: -40px;
+  left: -60px;
   pointer-events: none;
 }
 

@@ -8,7 +8,7 @@ import {
   stepCookiePhysics,
   type CookieParticle,
 } from "@/lib/cookie-physics";
-import { useTrapCloth } from "@/lib/use-trap-cloth";
+import { useBoxShatter } from "@/lib/use-box-shatter";
 import { launchOntoPet } from "@/lib/crumb-ballistics";
 import { playClick } from "@/lib/crumb-sfx";
 import { CookieParticleView, SpritePet, type PetMood } from "@/components/CrumbPet";
@@ -19,8 +19,7 @@ type Phase = "idle" | "opening" | "falling" | "complete" | "declined" | "closing
 const LABEL = "feed cookies";
 const BUTTON_WIDTH = 132;
 const BUTTON_HEIGHT = 38;
-// Mirrors the .crumb-brick border-radius; the cloth hinges sit where the
-// straight bottom edge meets the corner arcs.
+// Mirrors the .crumb-brick border-radius so the shards trace the same outline.
 const BUTTON_RADIUS = 10;
 const FONT = '500 10px "SFMono-Regular", Consolas, monospace';
 
@@ -51,7 +50,6 @@ export function CookieQuest() {
   const particleRefs = useRef(new Map<number, HTMLDivElement>());
   const petRef = useRef<HTMLDivElement>(null);
   const sceneRef = useRef<HTMLDivElement>(null);
-  const trapRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const allowRef = useRef<HTMLButtonElement>(null);
   const closeRef = useRef<HTMLButtonElement>(null);
@@ -61,12 +59,7 @@ export function CookieQuest() {
   const dropCancelRef = useRef<(() => void) | null>(null);
   const timersRef = useRef<number[]>([]);
   const completedRef = useRef(false);
-  const {
-    canvasRef: clothCanvasRef,
-    release: releaseCloth,
-    disturb: disturbCloth,
-    isReleased: clothReleased,
-  } = useTrapCloth(
+  const { canvasRef: shatterCanvasRef, shatter: shatterBox } = useBoxShatter(
     visible,
     { width: BUTTON_WIDTH, height: BUTTON_HEIGHT, radius: BUTTON_RADIUS },
     allowRef,
@@ -189,24 +182,6 @@ export function CookieQuest() {
         const result = stepCookiePhysics(nextParticles, frameMs, elapsed, { mouthX, mouthY, floorY });
         previous = now;
 
-        // Falling cookies brush the hanging cloth strips on their way past.
-        const trapRect = trapRef.current?.getBoundingClientRect();
-        if (trapRect && currentSceneRect && clothReleased()) {
-          const trapX = trapRect.left - currentSceneRect.left;
-          const trapY = trapRect.top - currentSceneRect.top;
-          const dtSeconds = Math.min(frameMs, 32) / 1000;
-          for (const particle of nextParticles) {
-            if (!particle.active || particle.eaten) continue;
-            disturbCloth(
-              particle.x - trapX,
-              particle.y - trapY,
-              15,
-              particle.vx * dtSeconds * 0.3,
-              particle.vy * dtSeconds * 0.3,
-            );
-          }
-        }
-
         let nearest: CookieParticle | undefined;
         for (const particle of nextParticles) {
           const node = particleRefs.current.get(particle.id);
@@ -323,7 +298,7 @@ export function CookieQuest() {
 
       rafRef.current = requestAnimationFrame(frame);
     });
-  }, [closeDialog, clothReleased, disturbCloth, letters]);
+  }, [closeDialog, letters]);
 
   function allowCookies() {
     if (phase !== "idle") return;
@@ -341,8 +316,8 @@ export function CookieQuest() {
     setPhase("opening");
     setPetMood("alert");
     // Wait out crumb-brick-compress (220ms): mid-squash the button is scaled and
-    // the unscaled cloth hinges would not sit on its corners.
-    timersRef.current.push(window.setTimeout(releaseCloth, 220));
+    // the unscaled shards would not sit on its outline.
+    timersRef.current.push(window.setTimeout(shatterBox, 220));
     const timer = window.setTimeout(beginPhysics, 360);
     timersRef.current.push(timer);
   }
@@ -471,7 +446,7 @@ export function CookieQuest() {
               <div className="crumb-prompt">
                 <h2 id="cookie-dialog-title">crumb heard there were cookies here.</h2>
                 <div className="crumb-actions">
-                  <div ref={trapRef} className="crumb-trap">
+                  <div className="crumb-trap">
                     <button
                       ref={allowRef}
                       type="button"
@@ -499,7 +474,7 @@ export function CookieQuest() {
                         </span>
                       ))}
                     </button>
-                    <canvas ref={clothCanvasRef} className="crumb-trap-cloth" aria-hidden="true" />
+                    <canvas ref={shatterCanvasRef} className="crumb-shatter" aria-hidden="true" />
                   </div>
                   <button
                     ref={declineRef}

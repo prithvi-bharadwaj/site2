@@ -8,11 +8,9 @@ export interface RenderStrip {
   points: StripPoint[];
   thickness: number;
   alpha: number;
-  /** Cloth-style crease shading + tip fade; leave false for flat border strokes. */
-  shaded?: boolean;
 }
 
-export interface ClothRenderer {
+export interface RibbonRenderer {
   resize(width: number, height: number, dpr: number): void;
   draw(strips: RenderStrip[]): void;
   dispose(): void;
@@ -21,13 +19,10 @@ export interface ClothRenderer {
 const VERTEX_SHADER = `
 attribute vec2 aPos;
 attribute float aEdge;
-attribute float aShade;
 uniform vec2 uSize;
 varying float vEdge;
-varying float vShade;
 void main() {
   vEdge = aEdge;
-  vShade = aShade;
   vec2 clip = (aPos / uSize) * 2.0 - 1.0;
   gl_Position = vec4(clip.x, -clip.y, 0.0, 1.0);
 }
@@ -39,12 +34,22 @@ uniform vec3 uColor;
 uniform float uAlpha;
 uniform float uInner;
 varying float vEdge;
-varying float vShade;
 void main() {
   float coverage = 1.0 - smoothstep(uInner, 1.0, abs(vEdge));
-  gl_FragColor = vec4(uColor, uAlpha * vShade * coverage);
+  gl_FragColor = vec4(uColor, uAlpha * coverage);
 }
 `;
+
+/**
+ * Bitmap and CSS box in one place. Letting a stylesheet declare the box while JS
+ * declares the bitmap silently stretches everything drawn when the two drift.
+ */
+function sizeCanvas(canvas: HTMLCanvasElement, width: number, height: number, dpr: number): void {
+  canvas.width = Math.round(width * dpr);
+  canvas.height = Math.round(height * dpr);
+  canvas.style.width = `${width}px`;
+  canvas.style.height = `${height}px`;
+}
 
 function compileProgram(gl: WebGLRenderingContext): WebGLProgram | null {
   const make = (type: number, source: string) => {
@@ -68,48 +73,38 @@ function compileProgram(gl: WebGLRenderingContext): WebGLProgram | null {
 }
 
 /**
- * Expand a polyline into a ribbon triangle strip. Each point emits two
- * vertices offset along the local normal, carrying a signed edge coordinate
- * for anti-aliasing and a fold-based shade so bends read as cloth creases.
- * Layout per vertex: [x, y, edge, shade].
+ * Expand a polyline into a ribbon triangle strip. Each point emits two vertices
+ * offset along the local normal, carrying a signed edge coordinate the fragment
+ * shader anti-aliases against. Layout per vertex: [x, y, edge].
+ *
+ * Closed polylines (last point on top of the first) wrap their tangents, so the
+ * seam mitres like every other joint instead of notching.
  */
-function buildRibbon(points: StripPoint[], halfWidth: number, shaded: boolean): Float32Array {
+function buildRibbon(points: StripPoint[], halfWidth: number): Float32Array {
   const count = points.length;
-  const data = new Float32Array(count * 2 * 4);
+  const data = new Float32Array(count * 2 * 3);
+  const closed =
+    count > 2 &&
+    Math.abs(points[0].x - points[count - 1].x) < 1e-6 &&
+    Math.abs(points[0].y - points[count - 1].y) < 1e-6;
   for (let i = 0; i < count; i++) {
-    const previous = points[Math.max(i - 1, 0)];
-    const next = points[Math.min(i + 1, count - 1)];
+    const previous = points[i > 0 ? i - 1 : closed ? count - 2 : 0];
+    const next = points[i < count - 1 ? i + 1 : closed ? 1 : count - 1];
     let tx = next.x - previous.x;
     let ty = next.y - previous.y;
     const tangentLength = Math.hypot(tx, ty) || 1;
     tx /= tangentLength;
     ty /= tangentLength;
 
-    // Signed curvature via the cross product of adjacent segment directions.
-    let fold = 0;
-    if (shaded && i > 0 && i < count - 1) {
-      const current = points[i];
-      const ax = current.x - previous.x;
-      const ay = current.y - previous.y;
-      const bx = next.x - current.x;
-      const by = next.y - current.y;
-      const lengths = (Math.hypot(ax, ay) * Math.hypot(bx, by)) || 1;
-      fold = (ax * by - ay * bx) / lengths;
-    }
-    const tip = shaded ? i / (count - 1) : 0;
-    const shade = Math.min(Math.max(1 + fold * 0.9, 0.6), 1.25) * (1 - tip * 0.22);
-
     const nx = -ty * halfWidth;
     const ny = tx * halfWidth;
-    const base = i * 8;
+    const base = i * 6;
     data[base] = points[i].x + nx;
     data[base + 1] = points[i].y + ny;
     data[base + 2] = 1;
-    data[base + 3] = shade;
-    data[base + 4] = points[i].x - nx;
-    data[base + 5] = points[i].y - ny;
-    data[base + 6] = -1;
-    data[base + 7] = shade;
+    data[base + 3] = points[i].x - nx;
+    data[base + 4] = points[i].y - ny;
+    data[base + 5] = -1;
   }
   return data;
 }
@@ -117,7 +112,7 @@ function buildRibbon(points: StripPoint[], halfWidth: number, shaded: boolean): 
 function createWebGLRenderer(
   canvas: HTMLCanvasElement,
   color: [number, number, number],
-): ClothRenderer | null {
+): RibbonRenderer | null {
   const gl = canvas.getContext("webgl", { alpha: true, antialias: false, premultipliedAlpha: false });
   if (!gl) return null;
   const program = compileProgram(gl);
@@ -129,7 +124,6 @@ function createWebGLRenderer(
   gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
   const aPos = gl.getAttribLocation(program, "aPos");
   const aEdge = gl.getAttribLocation(program, "aEdge");
-  const aShade = gl.getAttribLocation(program, "aShade");
   const uSize = gl.getUniformLocation(program, "uSize");
   const uColor = gl.getUniformLocation(program, "uColor");
   const uAlpha = gl.getUniformLocation(program, "uAlpha");
@@ -137,13 +131,11 @@ function createWebGLRenderer(
   gl.uniform3fv(uColor, color);
 
   gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
-  const STRIDE = 4 * 4;
+  const STRIDE = 3 * 4;
   gl.enableVertexAttribArray(aPos);
   gl.vertexAttribPointer(aPos, 2, gl.FLOAT, false, STRIDE, 0);
   gl.enableVertexAttribArray(aEdge);
   gl.vertexAttribPointer(aEdge, 1, gl.FLOAT, false, STRIDE, 8);
-  gl.enableVertexAttribArray(aShade);
-  gl.vertexAttribPointer(aShade, 1, gl.FLOAT, false, STRIDE, 12);
 
   // Anti-alias ramp, in CSS px: one device pixel, so lines land as crisp as a
   // CSS border instead of a soft band.
@@ -151,8 +143,7 @@ function createWebGLRenderer(
 
   return {
     resize(width, height, dpr) {
-      canvas.width = Math.round(width * dpr);
-      canvas.height = Math.round(height * dpr);
+      sizeCanvas(canvas, width, height, dpr);
       feather = 0.5 / dpr;
       gl.viewport(0, 0, canvas.width, canvas.height);
       gl.uniform2f(uSize, width, height);
@@ -164,9 +155,9 @@ function createWebGLRenderer(
         const halfWidth = strip.thickness / 2 + feather;
         gl.uniform1f(uAlpha, strip.alpha);
         gl.uniform1f(uInner, Math.max(strip.thickness / 2 - feather, 0) / halfWidth);
-        const ribbon = buildRibbon(strip.points, halfWidth, strip.shaded === true);
+        const ribbon = buildRibbon(strip.points, halfWidth);
         gl.bufferData(gl.ARRAY_BUFFER, ribbon, gl.DYNAMIC_DRAW);
-        gl.drawArrays(gl.TRIANGLE_STRIP, 0, ribbon.length / 4);
+        gl.drawArrays(gl.TRIANGLE_STRIP, 0, ribbon.length / 3);
       }
     },
     dispose() {
@@ -179,7 +170,7 @@ function createWebGLRenderer(
 function create2DRenderer(
   canvas: HTMLCanvasElement,
   color: [number, number, number],
-): ClothRenderer | null {
+): RibbonRenderer | null {
   const ctx = canvas.getContext("2d");
   if (!ctx) return null;
   const rgb = color.map((channel) => Math.round(channel * 255)).join(" ");
@@ -187,8 +178,7 @@ function create2DRenderer(
   return {
     resize(width, height, dpr) {
       deviceRatio = dpr;
-      canvas.width = Math.round(width * dpr);
-      canvas.height = Math.round(height * dpr);
+      sizeCanvas(canvas, width, height, dpr);
     },
     draw(strips) {
       ctx.setTransform(deviceRatio, 0, 0, deviceRatio, 0, 0);
@@ -208,9 +198,9 @@ function create2DRenderer(
   };
 }
 
-export function createClothRenderer(
+export function createRibbonRenderer(
   canvas: HTMLCanvasElement,
   color: [number, number, number],
-): ClothRenderer | null {
+): RibbonRenderer | null {
   return createWebGLRenderer(canvas, color) ?? create2DRenderer(canvas, color);
 }
