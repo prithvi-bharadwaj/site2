@@ -9,6 +9,8 @@ import type { GlyphSource } from "./letter-physics";
  * Only what's on screen is harvested - the rest can't be seen anyway.
  */
 
+const GRAPHEMES = new Intl.Segmenter(undefined, { granularity: "grapheme" });
+
 const SKIP_TAGS = new Set([
   "SCRIPT",
   "STYLE",
@@ -143,11 +145,13 @@ export function harvestGlyphs(root: HTMLElement, o: HarvestOptions): GlyphSource
     const text = node.nodeValue ?? "";
     const ascent = ascentFor(style.font);
 
-    for (let i = 0; i < text.length; i++) {
-      const char = text[i];
+    // Grapheme segments, not code units - indexing by UTF-16 unit splits
+    // emoji like 🔒 into lone surrogates that render as duplicate junk.
+    for (const seg of GRAPHEMES.segment(text)) {
+      const char = seg.segment;
       if (!char.trim()) continue;
-      range.setStart(node, i);
-      range.setEnd(node, i + 1);
+      range.setStart(node, seg.index);
+      range.setEnd(node, seg.index + char.length);
       const rect = range.getBoundingClientRect();
       if (!onScreen(rect)) continue;
       glyphs.push({
