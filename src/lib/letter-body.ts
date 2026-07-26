@@ -18,6 +18,8 @@ export interface GlyphSource {
   alpha: number;
   /** Inline images (favicons, logos) fall too. */
   img?: HTMLImageElement;
+  /** Element the glyph came from, so color can be re-resolved on theme flips. */
+  el?: Element;
 }
 
 export interface Body {
@@ -26,6 +28,7 @@ export interface Body {
   color: string;
   alpha: number;
   img?: HTMLImageElement;
+  el?: Element;
   w: number;
   h: number;
   ascent: number;
@@ -149,6 +152,7 @@ export function createBody(g: GlyphSource): Body {
     color: g.color,
     alpha: g.alpha,
     img: g.img,
+    el: g.el,
     w: g.w,
     h: g.h,
     ascent: g.ascent,

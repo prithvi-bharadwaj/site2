@@ -160,6 +160,7 @@ export function harvestGlyphs(root: HTMLElement, o: HarvestOptions): GlyphSource
         font: style.font,
         color: style.color,
         alpha: style.alpha,
+        el: parent,
       });
     }
   }

@@ -65,6 +65,8 @@ const SHAKE_SECONDS = 0.42;
 const SHAKE_AMPLITUDE = 10;
 /** Ignore resizes smaller than this - scrollbar and mobile-toolbar noise. */
 const RESIZE_TOLERANCE = 48;
+/** Page colors transition 250ms on a theme flip; track slightly past it. */
+const THEME_FADE_MS = 320;
 
 type Mode = "off" | "gravity" | "smash" | "restoring";
 
@@ -429,6 +431,41 @@ export function PhysicsLayer() {
       else if (mode === "gravity" || mode === "smash") beginRestore();
     });
 
+    // Bodies capture resolved RGB at harvest, so a theme flip would strand
+    // dark letters on a dark background. Re-resolve from the source elements,
+    // tracking the page's color transition frame by frame.
+    let recolorRaf = 0;
+    function recolorBodies() {
+      const colors = new Map<Element, string>();
+      for (const b of bodies) {
+        if (!b.el) continue;
+        let c = colors.get(b.el);
+        if (c === undefined) {
+          c = getComputedStyle(b.el).color;
+          colors.set(b.el, c);
+        }
+        b.color = c;
+      }
+    }
+
+    const themeObserver = new MutationObserver(() => {
+      if (mode === "off") return;
+      cancelAnimationFrame(recolorRaf);
+      const start = performance.now();
+      const track = (t: number) => {
+        recolorBodies();
+        // The main loop repaints on its own when running; a settled pile
+        // doesn't, so paint here.
+        if (!raf) render();
+        recolorRaf = t - start < THEME_FADE_MS ? requestAnimationFrame(track) : 0;
+      };
+      recolorRaf = requestAnimationFrame(track);
+    });
+    themeObserver.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ["class"],
+    });
+
     function onMotionChange() {
       // Turning reduced motion on mid-run ends the run; commands already
       // no-op while it holds.
@@ -456,6 +493,8 @@ export function PhysicsLayer() {
       window.removeEventListener("keydown", onKeyDown);
       window.removeEventListener("resize", onResize);
       motionQuery.removeEventListener("change", onMotionChange);
+      themeObserver.disconnect();
+      cancelAnimationFrame(recolorRaf);
       cancelAnimationFrame(raf);
       clearTimers();
       clearTimeout(settleTimer);
