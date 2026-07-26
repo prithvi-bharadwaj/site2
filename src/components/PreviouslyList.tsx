@@ -7,6 +7,7 @@ import { BrandIcon, hasBrandIcon } from "./BrandIcon";
 import { WiggleWords, useWiggleDescendants } from "./WiggleWords";
 import { emitShow, emitMove, emitHide, emitPin, isPinnedInspect } from "@/lib/hover-card-bus";
 import { CLICK_XP, award, inspectStart, inspectEnd, mediaKey, useXp } from "@/lib/xp";
+import { trackInteraction } from "@/lib/analytics";
 
 const EASE = "cubic-bezier(0.23, 1, 0.32, 1)";
 const DOTTED = "1px dotted rgb(var(--ink-rgb) / 0.35)";
@@ -77,9 +78,17 @@ export function PreviouslyList({ label, items, proofKind = "proof" }: Previously
   const xp = useXp();
 
   useWiggleDescendants(ref);
+  const analyticsSection = label
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "_")
+    .replace(/^_|_$/g, "");
 
   return (
-    <div ref={ref} className="text-sm text-(--ink)/60 leading-relaxed">
+    <div
+      ref={ref}
+      data-analytics-section={analyticsSection}
+      className="text-sm text-(--ink)/60 leading-relaxed"
+    >
       <span className="text-(--ink)/35 text-xs uppercase tracking-widest block mb-6">
         <WiggleWords text={label} />
       </span>
@@ -100,7 +109,17 @@ export function PreviouslyList({ label, items, proofKind = "proof" }: Previously
           return (
             <li key={i} className="m-0 p-0 bullet-hang">
               <span
-                onClick={expandable ? () => setOpen(isOpen ? null : i) : undefined}
+                onClick={expandable ? () => {
+                  setOpen(isOpen ? null : i);
+                  trackInteraction(
+                    isOpen ? "list_item_collapsed" : "list_item_expanded",
+                    {
+                      section: analyticsSection,
+                      item_title: item.title,
+                    }
+                  );
+                } : undefined}
+                data-analytics-target={expandable ? item.title : undefined}
                 className={expandable ? "group cursor-pointer" : ""}
                 style={{ display: "inline" }}
               >

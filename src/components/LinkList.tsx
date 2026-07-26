@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 import { WiggleWords, useWiggleDescendants } from "./WiggleWords";
 import { emitShow, emitMove, emitHide, emitPin, isPinnedInspect, type HoverCardMedia } from "@/lib/hover-card-bus";
 import { CLICK_XP, award, inspectStart, inspectEnd, mediaKey } from "@/lib/xp";
+import { trackInteraction } from "@/lib/analytics";
 
 export interface BrandLink {
   name: string;
@@ -158,9 +159,13 @@ export function LinkList({ label, items, columns = 1, variant = "compact", point
     return () => clearTimeout(t);
   }, []);
 
+  const analyticsSection =
+    xpKind ?? label?.toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_|_$/g, "") ?? "list";
+
   return (
     <section
       ref={rootRef}
+      data-analytics-section={analyticsSection}
       style={{
         opacity: visible ? 1 : 0,
         transform: visible ? "translateY(0)" : "translateY(8px)",
@@ -249,8 +254,13 @@ export function LinkList({ label, items, columns = 1, variant = "compact", point
               {expandable ? (
                 <span
                   className={`${wrapperClass} cursor-pointer`}
+                  data-analytics-target={item.title}
                   onClick={() => {
                     setOpen(isOpen ? null : i);
+                    trackInteraction(isOpen ? "list_item_collapsed" : "list_item_expanded", {
+                      section: analyticsSection,
+                      item_title: item.title,
+                    });
                     if (item.media && !isOpen) {
                       emitHide();
                       // The hover-inspect timer must die with the preview, or

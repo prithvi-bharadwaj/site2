@@ -4,7 +4,7 @@ import { CookieQuest } from "@/components/CookieQuest";
 
 vi.mock("@/lib/pretext-layout", () => ({
   layoutHero: () => ({
-    words: "ALLOWCOOKIES".split("").map((text, index) => ({
+    words: "FEEDCOOKIES".split("").map((text, index) => ({
       text,
       x: index * 8,
       y: 0,
@@ -38,6 +38,13 @@ describe("cookie popup", () => {
 
     fireEvent.click(trigger);
     expect(screen.getByRole("dialog")).toBeInTheDocument();
+    expect(
+      screen.getByText("crumb heard there were cookies here.")
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Feed Crumb cookies" })
+    ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "not today" })).toBeInTheDocument();
   });
 
   it("closes when the backdrop is clicked, but not when the window is clicked", async () => {
