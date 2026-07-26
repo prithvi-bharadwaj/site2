@@ -75,7 +75,10 @@ export function PhysicsLayer() {
   const restoreRef = useRef<() => void>(() => {});
 
   useEffect(() => {
-    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    // Checked per command, not once: the preference can change mid-session and
+    // the bus subscription below has to exist either way, or the panel's
+    // gravity switch ends up talking to nobody.
+    const motionQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
     const canvasNode = canvasRef.current;
     const context = canvasNode?.getContext("2d");
     if (!canvasNode || !context) return;
@@ -310,6 +313,11 @@ export function PhysicsLayer() {
     /* ── effects ── */
 
     function startGravity() {
+      if (motionQuery.matches) {
+        // Snap the panel switch back off - the command has no effect here.
+        emitPhysicsSync(false);
+        return;
+      }
       if (mode === "gravity") return;
       if (mode !== "off") hardRestore();
       if (!harvest()) {
@@ -325,6 +333,7 @@ export function PhysicsLayer() {
     }
 
     function smash() {
+      if (motionQuery.matches) return;
       if (mode === "restoring") return;
       const inPile = mode === "gravity";
       if (mode === "off") {
@@ -420,6 +429,13 @@ export function PhysicsLayer() {
       else if (mode === "gravity" || mode === "smash") beginRestore();
     });
 
+    function onMotionChange() {
+      // Turning reduced motion on mid-run ends the run; commands already
+      // no-op while it holds.
+      if (motionQuery.matches) hardRestore();
+    }
+    motionQuery.addEventListener("change", onMotionChange);
+
     function onResize() {
       if (mode === "off") {
         sizeCanvas();
@@ -439,6 +455,7 @@ export function PhysicsLayer() {
       offBus();
       window.removeEventListener("keydown", onKeyDown);
       window.removeEventListener("resize", onResize);
+      motionQuery.removeEventListener("change", onMotionChange);
       cancelAnimationFrame(raf);
       clearTimers();
       clearTimeout(settleTimer);
