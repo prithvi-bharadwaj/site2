@@ -78,7 +78,7 @@ export interface XpFxDetail {
 export interface XpToastDetail {
   title: string;
   body: string;
-  kind: "achievement" | "info";
+  kind: "achievement" | "info" | "level";
 }
 
 const EMPTY: XpState = { total: 0, earned: {} };
@@ -180,7 +180,18 @@ export function award(id: string, xp: number) {
         total_xp: state.total,
       });
       emitXpToast({ title: a.name, body: a.desc, kind: "achievement" });
+      emitXpFx({ text: `★ ${a.name}`, big: true });
     }
+  }
+  if (nextLevel.index > previousLevel.index) {
+    emitXpToast({
+      title: `lv${nextLevel.index} · ${nextLevel.name}`,
+      body: nextLevel.next
+        ? `next: ${nextLevel.next.name} at ${nextLevel.next.min} xp`
+        : "max level reached",
+      kind: "level",
+    });
+    emitXpFx({ text: `lv${nextLevel.index} ${nextLevel.name}`, big: true });
   }
 }
 

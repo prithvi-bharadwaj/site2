@@ -8,9 +8,15 @@ interface Particle {
   text: string;
   topPx: number;
   tilt: number;
+  big: boolean;
 }
 
 const LIFETIME_MS = 1300;
+const BIG_LIFETIME_MS = 1800;
+// Bursts fired in the same award (xp + achievement + level up) play staggered,
+// not stacked on top of each other.
+const STAGGER_MS = 550;
+const BIG_STAGGER_MS = 900;
 const EDGE_PAD = 8;
 // The burst's real footprint: inherited line-height, plus the xp-burst
 // keyframes translate it from +10px down to -80px up over its lifetime.
@@ -27,9 +33,10 @@ export function burstTopPx(
   preferred: number,
   fontPx: number,
   viewportH: number,
-  card: { top: number; bottom: number } | null
+  card: { top: number; bottom: number } | null,
+  lines = 1
 ): number {
-  const textH = fontPx * LINE_HEIGHT;
+  const textH = fontPx * LINE_HEIGHT * lines;
   if (!card || preferred - DRIFT_UP >= card.bottom || preferred + textH + DROP_IN <= card.top) {
     return preferred;
   }
@@ -51,30 +58,48 @@ export function XpFx() {
   const [particles, setParticles] = useState<Particle[]>([]);
   const nextId = useRef(0);
 
+  const nextSlotAt = useRef(0);
+
   useEffect(() => {
     let disposed = false;
-    const off = onXpFx(({ text }) => {
+
+    const spawn = (text: string, big: boolean) => {
       // Next frame: a click that awards xp often pins the proof card in the
       // same handler, and the burst must dodge where the card ends up.
       requestAnimationFrame(() => {
         if (disposed) return;
         const vh = window.innerHeight;
-        const fontPx = Math.min(140, Math.max(48, window.innerWidth * 0.09));
+        const fontPx = big
+          ? Math.min(72, Math.max(32, window.innerWidth * 0.05))
+          : Math.min(140, Math.max(48, window.innerWidth * 0.09));
         const jitterPx = ((Math.random() - 0.5) * 30 * vh) / 100;
         const card = document.querySelector(".hover-card.visible");
         const rect = card ? card.getBoundingClientRect() : null;
+        // Long achievement names wrap on narrow screens - reserve every line.
+        // 0.6em per bold glyph overestimates slightly, which is the safe side.
+        const usableW = window.innerWidth - 32; // px-4 both sides
+        const lines = Math.max(1, Math.ceil((text.length * fontPx * 0.6) / usableW));
         const id = nextId.current++;
         const p: Particle = {
           id,
           text,
-          topPx: burstTopPx(0.45 * vh + jitterPx, fontPx, vh, rect),
+          topPx: burstTopPx(0.45 * vh + jitterPx, fontPx, vh, rect, lines),
           tilt: (Math.random() - 0.5) * 6,
+          big,
         };
         setParticles((prev) => [...prev, p]);
         window.setTimeout(() => {
           setParticles((prev) => prev.filter((q) => q.id !== id));
-        }, LIFETIME_MS);
+        }, big ? BIG_LIFETIME_MS : LIFETIME_MS);
       });
+    };
+
+    const off = onXpFx(({ text, big }) => {
+      const now = Date.now();
+      const delay = Math.max(0, nextSlotAt.current - now);
+      nextSlotAt.current = now + delay + (big ? BIG_STAGGER_MS : STAGGER_MS);
+      if (delay === 0) spawn(text, !!big);
+      else window.setTimeout(() => !disposed && spawn(text, !!big), delay);
     });
     return () => {
       disposed = true;
@@ -89,13 +114,13 @@ export function XpFx() {
       {particles.map((p) => (
         <span
           key={p.id}
-          className="absolute inset-x-0 text-center font-bold tabular-nums text-(--ink)/90"
+          className="absolute inset-x-0 px-4 text-center font-bold tabular-nums text-(--ink)/90"
           style={{
             top: p.topPx,
-            fontSize: "clamp(48px, 9vw, 140px)",
-            letterSpacing: "-0.02em",
+            fontSize: p.big ? "clamp(32px, 5vw, 72px)" : "clamp(48px, 9vw, 140px)",
+            letterSpacing: p.big ? "0.01em" : "-0.02em",
             rotate: `${p.tilt}deg`,
-            animation: `xp-burst ${LIFETIME_MS}ms ease-out forwards`,
+            animation: `xp-burst ${p.big ? BIG_LIFETIME_MS : LIFETIME_MS}ms ease-out forwards`,
           }}
         >
           {p.text}
