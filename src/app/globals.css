@@ -857,13 +857,159 @@ main.crumb-page-blurred {
     background-color 160ms ease,
     border-color 160ms ease,
     transform 140ms var(--ease-out),
-    opacity 180ms ease;
+    opacity 180ms ease,
+    --beam-opacity 520ms ease;
 }
 
 .crumb-brick,
 .crumb-decline {
   color: rgb(var(--ink-rgb) / 0.58);
   background: var(--bg);
+}
+
+/* Border beam, after beam.jakubantalik.com (rotate, mono, full strength, with
+   the inner glow pulsing). The original is a white beam on a dark card; here the
+   travelling highlight is ink, so the same gradient reads as the border stroke
+   inking up in light mode and lighting up in dark. */
+@property --beam-angle {
+  syntax: "<angle>";
+  inherits: true;
+  initial-value: 0deg;
+}
+
+@property --beam-opacity {
+  syntax: "<number>";
+  inherits: true;
+  initial-value: 0;
+}
+
+@property --beam-pulse {
+  syntax: "<number>";
+  inherits: true;
+  initial-value: 1;
+}
+
+/* The spin lives on the pseudo-elements, not the button: the button's own
+   animation slot is taken by crumb-brick-compress, and redeclaring the list
+   there would snap the beam back to 0deg mid-fade. */
+.crumb-brick::before,
+.crumb-brick::after,
+.crumb-decline::before,
+.crumb-decline::after {
+  animation: crumb-beam-spin 1960ms linear infinite;
+}
+
+.crumb-brick::before,
+.crumb-decline::before {
+  animation:
+    crumb-beam-spin 1960ms linear infinite,
+    crumb-beam-pulse 2400ms ease-in-out infinite;
+}
+
+.crumb-brick:hover:not(:disabled),
+.crumb-brick:focus-visible,
+.crumb-decline:hover:not(:disabled),
+.crumb-decline:focus-visible {
+  --beam-opacity: 1;
+}
+
+/* The travelling stroke. Masking the padding box out of the border box leaves a
+   1px ring that follows the button's corner radius exactly, so the beam rides
+   the real border instead of a square approximation of it. */
+.crumb-brick::after,
+.crumb-decline::after {
+  content: "";
+  position: absolute;
+  /* -1px, not 0: a pseudo-element is placed against the padding box, so inset 0
+     would land the ring just inside the border instead of on it. */
+  inset: -1px;
+  box-sizing: border-box;
+  padding: 1px;
+  border-radius: inherit;
+  background: conic-gradient(
+    from var(--beam-angle),
+    transparent 0%,
+    transparent 54%,
+    rgb(var(--ink-rgb) / 0.1) 57%,
+    rgb(var(--ink-rgb) / 0.3) 60%,
+    rgb(var(--ink-rgb) / 0.6) 63%,
+    rgb(var(--ink-rgb) / 0.75) 66%,
+    rgb(var(--ink-rgb) / 0.6) 69%,
+    rgb(var(--ink-rgb) / 0.3) 72%,
+    rgb(var(--ink-rgb) / 0.1) 75%,
+    transparent 78%,
+    transparent 100%
+  );
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  mask-composite: exclude;
+  opacity: calc(var(--beam-opacity) * 0.72);
+  pointer-events: none;
+}
+
+/* The inner glow trailing the beam head, breathing on its own cycle. */
+.crumb-brick::before,
+.crumb-decline::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  box-shadow: inset 0 0 9px 1px rgb(var(--ink-rgb) / 0.27);
+  /* Written out rather than held in a custom property: a var() inside a custom
+     property resolves against the element that declares it, so the button's
+     static --beam-angle would win over the pseudo's animated one. */
+  mask-image: conic-gradient(
+    from var(--beam-angle),
+    transparent 0%,
+    transparent 30%,
+    rgb(0 0 0 / 0.1) 36%,
+    rgb(0 0 0 / 0.35) 44%,
+    #000 52%,
+    #000 80%,
+    rgb(0 0 0 / 0.35) 86%,
+    rgb(0 0 0 / 0.1) 92%,
+    transparent 95%,
+    transparent 100%
+  );
+  opacity: calc(var(--beam-opacity) * var(--beam-pulse) * 0.5);
+  pointer-events: none;
+}
+
+/* The box is coming apart; the canvas owns its outline from here. */
+.crumb-brick[data-shattered]::before,
+.crumb-brick[data-shattered]::after {
+  opacity: 0;
+}
+
+@keyframes crumb-beam-spin {
+  to { --beam-angle: 360deg; }
+}
+
+@keyframes crumb-beam-pulse {
+  0%, 100% { --beam-pulse: 0.5; }
+  50% { --beam-pulse: 1.3; }
+}
+
+/* Without mask compositing the two mask layers add instead of subtract, which
+   floods the whole button face with the gradient rather than ringing its border.
+   Better to show no beam than that. */
+@supports not ((mask-composite: exclude) or (-webkit-mask-composite: xor)) {
+  .crumb-brick::after,
+  .crumb-decline::after {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  /* A frozen comet parked on one edge just reads as a smudge, so drop the beam
+     whole rather than showing it without the travel. */
+  .crumb-brick::before,
+  .crumb-brick::after,
+  .crumb-decline::before,
+  .crumb-decline::after {
+    display: none;
+  }
 }
 
 /* The CSS border owns the box until it breaks. On impact the shatter canvas
