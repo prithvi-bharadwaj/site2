@@ -28,6 +28,9 @@ void main() {
 }
 `;
 
+// Output is premultiplied (rgb * a, a) to match the context's premultipliedAlpha
+// and the ONE / ONE_MINUS_SRC_ALPHA blend. Emitting straight colour here instead
+// costs a factor of alpha twice over, which at ink 0.18 renders at 0.03.
 const FRAGMENT_SHADER = `
 precision mediump float;
 uniform vec3 uColor;
@@ -36,7 +39,8 @@ uniform float uInner;
 varying float vEdge;
 void main() {
   float coverage = 1.0 - smoothstep(uInner, 1.0, abs(vEdge));
-  gl_FragColor = vec4(uColor, uAlpha * coverage);
+  float a = uAlpha * coverage;
+  gl_FragColor = vec4(uColor * a, a);
 }
 `;
 
@@ -113,7 +117,7 @@ function createWebGLRenderer(
   canvas: HTMLCanvasElement,
   color: [number, number, number],
 ): RibbonRenderer | null {
-  const gl = canvas.getContext("webgl", { alpha: true, antialias: false, premultipliedAlpha: false });
+  const gl = canvas.getContext("webgl", { alpha: true, antialias: false, premultipliedAlpha: true });
   if (!gl) return null;
   const program = compileProgram(gl);
   const buffer = gl.createBuffer();
@@ -121,7 +125,7 @@ function createWebGLRenderer(
 
   gl.useProgram(program);
   gl.enable(gl.BLEND);
-  gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+  gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
   const aPos = gl.getAttribLocation(program, "aPos");
   const aEdge = gl.getAttribLocation(program, "aEdge");
   const uSize = gl.getUniformLocation(program, "uSize");
