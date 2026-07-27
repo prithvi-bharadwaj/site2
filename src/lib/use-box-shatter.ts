@@ -10,16 +10,20 @@ import {
 } from "@/lib/box-shatter";
 import { createRibbonRenderer, type RibbonRenderer } from "@/lib/ink-ribbon-gl";
 
-// Canvas geometry — mirrors .crumb-shatter in globals.css.
-const PAD_X = 60;
-const PAD_TOP = 40;
-const CANVAS_HEIGHT = 520;
+// Canvas geometry — mirrors .crumb-shatter in globals.css. Padded out past the
+// dialog on every side so the blast is clipped by .crumb-scene's edge (which is
+// the dialog's edge, and reads as debris leaving frame) rather than by the
+// canvas, which would read as debris hitting an invisible wall.
+const PAD_X = 280;
+const PAD_TOP = 200;
+const CANVAS_HEIGHT = 760;
 // Matches the .crumb-brick border stroke (1px, ink at 0.18).
 const STROKE = 1;
 const STROKE_ALPHA = 0.18;
-// Beat where the box is cracked but still standing, before it lets go.
-const HOLD_MS = 150;
-const MAX_DPR = 3;
+// One frame of intact-but-cracked box before it goes. Any longer and the hit
+// reads as a slow break instead of a bang.
+const HOLD_MS = 50;
+const MAX_DPR = 2;
 
 interface ShatterBox {
   width: number;

@@ -1020,15 +1020,15 @@ main.crumb-page-blurred {
   background: transparent;
 }
 
-/* The broken box, drawn as shards. The canvas's own size comes from the
+/* The blown-apart box, drawn as shards. The canvas's own size comes from the
    renderer (see sizeCanvas); only its offset lives here, and it must match
-   PAD_X / PAD_TOP in use-box-shatter.ts. The canvas runs past the dialog's
-   bottom edge so falling pieces are clipped by the dialog, not by the canvas. */
+   PAD_X / PAD_TOP in use-box-shatter.ts. It overhangs the dialog on every side
+   so .crumb-scene does the clipping. */
 .crumb-shatter {
   position: absolute;
   z-index: 2;
-  top: -40px;
-  left: -60px;
+  top: -200px;
+  left: -280px;
   pointer-events: none;
 }
 

@@ -308,9 +308,10 @@ export function CookieQuest() {
     setPhase("opening");
     setPetMood("alert");
     // Wait out crumb-brick-compress (220ms): mid-squash the button is scaled and
-    // the unscaled shards would not sit on its outline.
+    // the unscaled shards would not sit on its outline. The compress reads as
+    // the wind-up, then the box and its letters go in the same instant.
     timersRef.current.push(window.setTimeout(shatterBox, 220));
-    const timer = window.setTimeout(beginPhysics, 360);
+    const timer = window.setTimeout(beginPhysics, 250);
     timersRef.current.push(timer);
   }
 
