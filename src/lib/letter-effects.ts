@@ -10,6 +10,8 @@ import { PILE_PAD, updateExtents, wake, type Body, type PhysicsEnv } from "./let
 
 /** Sideways fan-out when gravity is switched on, so the pile spreads wide. */
 const FAN_OUT = 0.5;
+/** Sideways kick unrelated to position, so the fall isn't a neat fountain. */
+const DROP_SCATTER = 240;
 /** Spring that walks a letter back over its own column. */
 const HOME_PULL = 140;
 /** Spring that stands a letter back up. */
@@ -77,9 +79,12 @@ export function dropAll(
     b.facePull = 0;
     b.ghost = false;
     b.pad = PILE_PAD;
-    b.vx = (b.x - centerX) * FAN_OUT + (rng() - 0.5) * 40;
-    b.vy = rng() * 30;
-    b.va = (rng() - 0.5) * 1.4;
+    // Each letter gets its own share of the fan plus a sideways kick and a
+    // spread of fall speeds, so the pile lands ragged instead of as the same
+    // symmetric parabola every time.
+    b.vx = (b.x - centerX) * FAN_OUT * (0.3 + rng() * 1.4) + (rng() - 0.5) * DROP_SCATTER;
+    b.vy = (rng() - 0.3) * 240;
+    b.va = (rng() - 0.5) * 3.2;
     updateExtents(b);
   }
 }

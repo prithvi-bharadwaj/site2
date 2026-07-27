@@ -211,6 +211,17 @@ describe("letter physics", () => {
     expect(deepestOverlap(bodies)).toBeLessThan(2);
   });
 
+  it("drops with per-letter scatter, not a mirror-symmetric fan", () => {
+    // Two letters equidistant from the center: a deterministic fan gives them
+    // exactly opposite velocities, which is what made every pile identical.
+    const left = createBody(glyph(96, 100));
+    const right = createBody(glyph(296, 100));
+    dropAll([left, right], ENV, seeded(8));
+
+    expect(Math.abs(left.vx + right.vx)).toBeGreaterThan(5);
+    expect(left.vy).not.toBeCloseTo(right.vy, 0);
+  });
+
   it("keeps a wide pile inside the viewport", () => {
     const bodies = Array.from({ length: 40 }, (_, i) => createBody(glyph(-20 + i * 12, 100)));
     dropAll(bodies, ENV, seeded(9));
