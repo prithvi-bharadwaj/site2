@@ -164,6 +164,25 @@ describe("letter physics", () => {
     expect(tilted.x).toBeCloseTo(tilted.homeX, 0);
   });
 
+  it("still shoves letters aside after a slam, then springs them home", () => {
+    // Post-slam letters carry critically damped return springs, which used to
+    // swallow the cursor push entirely (and tidy re-armed them every frame).
+    const b = createBody(glyph(200, 300));
+    markReturning([b], 0, seeded(51));
+    const rng = seeded(52);
+    for (let i = 0; i < 30; i++) {
+      brushAt([b], b.x - 30, b.y, 78, 2600, 1 / 60, true);
+      stepPhysics([b], 1 / 60, ENV, rng);
+    }
+    // Visibly plowed off its column while the cursor sits on it...
+    expect(b.x - b.homeX).toBeGreaterThan(6);
+
+    // ...and back on its line once the cursor moves away.
+    settle([b]);
+    expect(b.x).toBeCloseTo(b.homeX, 0);
+    expect(b.angle).toBe(0);
+  });
+
   it("pokes only the letters near the tap", () => {
     const near = createBody(glyph(200, 300));
     const far = createBody(glyph(200, 500));

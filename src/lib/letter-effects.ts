@@ -186,10 +186,21 @@ export function brushAt(
     const push = strength * (1 - dist / radius) * dt;
     b.vx += (dx / dist) * push;
     b.vy += (dy / dist) * push * 0.6;
+    // A letter springing home is critically damped - it eats a velocity shove
+    // before the eye catches it. Plow those aside positionally as well, so the
+    // cursor still pushes through a slammed page; the spring brings them back.
+    if (b.homePull > 0) {
+      const plow = push * dt * 1.5;
+      b.x += (dx / dist) * plow;
+      b.y += (dy / dist) * plow * 0.6;
+    }
+    b.shoved = true;
     wake(b);
     touched = true;
-    // Brushing a knocked-over letter stands it back up.
-    if (tidy) setReturn(b, false, Math.random);
+    // Brushing a knocked-over letter stands it back up. Only knocked-over
+    // ones: re-tidying an upright letter every frame just re-arms the springs
+    // that swallow the push.
+    if (tidy && b.levelPull === 0) setReturn(b, false, Math.random);
   }
   return touched;
 }

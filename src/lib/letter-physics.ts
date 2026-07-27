@@ -117,6 +117,7 @@ function integrateFree(
     // Text only reads right if the letters land exactly back in their columns,
     // so a tidying letter closes the last fraction of a pixel outright.
     if (
+      !b.shoved &&
       b.levelPull > 0 &&
       Math.abs(b.homeX - b.x) < HOME_SNAP &&
       Math.abs(b.vx) < HOME_SNAP_SPEED
@@ -278,6 +279,8 @@ export function stepPhysics(
       moving = true;
     }
     b.contact = b.support;
+    // One frame only - brushAt re-sets it while the cursor stays on the body.
+    b.shoved = false;
   }
   return moving;
 }

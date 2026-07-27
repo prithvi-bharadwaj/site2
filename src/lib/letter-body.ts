@@ -80,6 +80,12 @@ export interface Body {
   targetX: number;
   targetY: number;
   targetAngle: number;
+  /**
+   * The cursor is pushing this body right now. Suspends the snap-to-column
+   * shortcuts for the frame - they'd re-capture the letter faster than the
+   * shove can move it, which reads as the cursor doing nothing.
+   */
+  shoved: boolean;
   sleeping: boolean;
   /** Resting on the floor or another body this frame. */
   support: boolean;
@@ -176,6 +182,7 @@ export function createBody(g: GlyphSource): Body {
     targetX: x,
     targetY: y,
     targetAngle: 0,
+    shoved: false,
     sleeping: false,
     support: false,
     contact: false,
