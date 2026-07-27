@@ -11,6 +11,7 @@ import {
   type HoverCardMedia,
 } from "@/lib/hover-card-bus";
 import { inspectStart, inspectEnd } from "@/lib/xp";
+import { trackInteraction } from "@/lib/analytics";
 
 const CARD_WIDTH = 296;
 const CARD_HEIGHT = 230;
@@ -23,8 +24,22 @@ const NOTE_CARD_HEIGHT = 36;
 const PIN_SCALE = 1.2;
 const OFFSET_X = 16;
 const OFFSET_Y = 16;
+const PREVIEW_OPEN_COOLDOWN_MS = 5_000;
 
 type CardShape = "default" | "wide" | "note";
+
+function mediaProperties(media: HoverCardMedia) {
+  return {
+    media_type: media.type,
+    media_id:
+      media.type === "youtube"
+        ? media.id
+        : media.type === "image" || media.type === "video"
+          ? media.src
+          : media.caption,
+    caption: media.caption,
+  };
+}
 
 function clampPosition(x: number, y: number, shape: CardShape, pinned = false) {
   if (typeof window === "undefined") return { x, y };
@@ -56,14 +71,19 @@ export function HoverCard() {
   const pinnedRef = useRef<string | null>(null);
   const inspectIdRef = useRef<string | null>(null);
   const hideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const previewOpenedAtRef = useRef(new Map<string, number>());
 
   const setPinned = (href: string | null) => {
     pinnedRef.current = href;
     setPinnedHref(href);
   };
 
-  const unpin = useCallback(() => {
+  const unpin = useCallback((reason = "event") => {
     if (!pinnedRef.current) return;
+    trackInteraction("preview_unpinned", {
+      href: pinnedRef.current,
+      reason,
+    });
     if (inspectIdRef.current) {
       inspectEnd(inspectIdRef.current);
       inspectIdRef.current = null;
@@ -87,6 +107,19 @@ export function HoverCard() {
 
     const offShow = onShow(({ media: m, x, y }) => {
       if (pinnedRef.current) return;
+      const properties = mediaProperties(m);
+      const previewId = String(
+        properties.media_id ?? properties.caption ?? properties.media_type
+      );
+      const now = performance.now();
+      const lastOpenedAt = previewOpenedAtRef.current.get(previewId);
+      if (
+        lastOpenedAt === undefined ||
+        now - lastOpenedAt >= PREVIEW_OPEN_COOLDOWN_MS
+      ) {
+        previewOpenedAtRef.current.set(previewId, now);
+        trackInteraction("preview_opened", properties);
+      }
       clearHideTimer();
       setMedia(m);
       setVisible(true);
@@ -117,9 +150,14 @@ export function HoverCard() {
     const offPin = onPin(({ media: m, href, inspectId, x, y }) => {
       // Re-clicking the same link toggles the pin off.
       if (pinnedRef.current === href) {
-        unpin();
+        unpin("source_reclicked");
         return;
       }
+      trackInteraction("preview_pinned", {
+        ...mediaProperties(m),
+        href,
+        inspect_id: inspectId,
+      });
       clearHideTimer();
       // Dwelling on a pinned card counts as inspecting the proof - this is
       // the only inspection path on touch devices, where hover doesn't exist.
@@ -137,7 +175,7 @@ export function HoverCard() {
         card.style.transform = `translate3d(${px}px, ${py}px, 0)`;
       }
     });
-    const offUnpin = onUnpin(unpin);
+    const offUnpin = onUnpin(() => unpin("event"));
     return () => {
       offShow();
       offMove();
@@ -155,12 +193,12 @@ export function HoverCard() {
   useEffect(() => {
     if (!pinnedHref) return;
     const onDocClick = (e: MouseEvent) => {
-      if (!cardRef.current?.contains(e.target as Node)) unpin();
+      if (!cardRef.current?.contains(e.target as Node)) unpin("outside_click");
     };
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") unpin();
+      if (e.key === "Escape") unpin("escape");
     };
-    const onScroll = () => unpin();
+    const onScroll = () => unpin("scroll");
     document.addEventListener("click", onDocClick);
     window.addEventListener("keydown", onKey);
     window.addEventListener("scroll", onScroll, { passive: true });
@@ -231,6 +269,7 @@ export function HoverCard() {
     <div
       ref={cardRef}
       className={`hover-card${visible ? " visible" : ""}${pinnedHref ? " pinned" : ""}`}
+      data-analytics-section="preview_card"
       data-mode={mode}
       data-wide={media?.type === "image" && media.wide ? "true" : undefined}
       aria-hidden={pinnedHref ? undefined : "true"}

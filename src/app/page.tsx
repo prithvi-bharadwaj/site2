@@ -10,6 +10,7 @@ import { WiggleWords } from "@/components/WiggleWords";
 import { CursorTrail } from "@/components/CursorTrail";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { EditPanel } from "@/components/EditPanel";
+import { CookieQuest } from "@/components/CookieQuest";
 import { XpFx } from "@/components/XpFx";
 import { InspectProgress } from "@/components/InspectProgress";
 import { XpHud } from "@/components/XpHud";
@@ -17,6 +18,7 @@ import { XpToasts } from "@/components/XpToasts";
 import { ExitGate } from "@/components/ExitGate";
 import { CLICK_XP, SOCIAL_UNLOCK_XP, award, emitXpToast, useXp } from "@/lib/xp";
 import { emitShow, emitMove, emitHide, type HoverCardMedia } from "@/lib/hover-card-bus";
+import { trackInteraction } from "@/lib/analytics";
 
 /* ── Default content ── */
 
@@ -303,6 +305,7 @@ const SOCIALS: {
 function EditToolbar({ onSave, onReset, onCopy }: { onSave: () => void; onReset: () => void; onCopy: () => void }) {
   return (
     <div
+      data-analytics-section="editor"
       className="fixed top-4 right-14 z-50 flex items-center gap-2"
       style={{ animation: "word-enter 200ms ease-out" }}
     >
@@ -348,7 +351,13 @@ export default function Home() {
     function onKey(e: KeyboardEvent) {
       if ((e.metaKey || e.ctrlKey) && e.key === "e") {
         e.preventDefault();
-        setEditMode((p) => !p);
+        setEditMode((previous) => {
+          trackInteraction("edit_mode_changed", {
+            enabled: !previous,
+            method: "keyboard_shortcut",
+          });
+          return !previous;
+        });
       }
     }
     window.addEventListener("keydown", onKey);
@@ -386,9 +395,11 @@ export default function Home() {
 
   const save = useCallback(() => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(content));
+    trackInteraction("edited_content_saved");
   }, [content]);
 
   const reset = useCallback(() => {
+    trackInteraction("edited_content_reset");
     setContent(DEFAULTS);
     localStorage.removeItem(STORAGE_KEY);
   }, []);
@@ -398,12 +409,13 @@ export default function Home() {
       .map(([k, v]) => `  ${k}: \`${v.replace(/`/g, "\\`")}\`,`)
       .join("\n");
     navigator.clipboard.writeText(`const CONTENT = {\n${out}\n};`);
+    trackInteraction("edited_content_copied");
   }, [content]);
 
   if (!hydrated) return null;
 
   return (
-    <main className="relative min-h-screen">
+    <main className="relative min-h-screen" data-analytics-section="home">
       <CursorTrail />
       <XpFx />
       <InspectProgress />
@@ -428,6 +440,7 @@ export default function Home() {
             </div>
           )}
           <PretextHero greeting={content.greeting} bio={content.bio} />
+          <CookieQuest />
         </div>
 
         {/* Previously */}
@@ -455,18 +468,26 @@ export default function Home() {
           <span className="text-(--ink)/35 text-xs uppercase tracking-widest block mb-6">
             <WiggleWords text="Find me on." />
           </span>
-          <div className="flex flex-wrap gap-x-5 gap-y-2 text-sm">
+          <div
+            className="flex flex-wrap gap-x-5 gap-y-2 text-sm"
+            data-analytics-section="socials"
+          >
             {SOCIALS.map((s) =>
               s.contact && xp.total < SOCIAL_UNLOCK_XP ? (
                 <button
                   key={s.label}
-                  onClick={() =>
+                  onClick={() => {
+                    trackInteraction("locked_contact_clicked", {
+                      network: s.label,
+                      current_xp: xp.total,
+                      required_xp: SOCIAL_UNLOCK_XP,
+                    });
                     emitXpToast({
                       title: "get to know me first",
                       body: `Spend time on the site before you reach out. Hover the proof, open the lore, read the writing. Contact links unlock at ${SOCIAL_UNLOCK_XP} xp.`,
                       kind: "info",
-                    })
-                  }
+                    });
+                  }}
                   title={`unlocks at ${SOCIAL_UNLOCK_XP} xp`}
                   onPointerEnter={(e) => {
                     if (s.media && e.pointerType === "mouse") emitShow({ media: s.media, x: e.clientX, y: e.clientY });
@@ -523,6 +544,7 @@ export default function Home() {
             <GenZToggle
               enabled={genzMode}
               onChange={(v) => {
+                trackInteraction("genz_mode_changed", { enabled: v });
                 setGenzMode(v);
                 if (v) {
                   setPipDismissed(false); // re-toggling brings the pip back

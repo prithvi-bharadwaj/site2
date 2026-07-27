@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useEffect, useState, useCallback } from "react";
+import { useRef, useEffect, useState, useCallback, useMemo } from "react";
 import {
   layoutHero,
   type SectionConfig,
@@ -89,16 +89,20 @@ export function PretextHero({ greeting, bio, className }: PretextHeroProps) {
 
   // Displacement
   const displacedRef = useRef<DisplacedElement[]>([]);
+  // Client (viewport) coords — converted to container space once per frame.
   const mouseRef = useRef({ x: 0, y: 0, active: false });
+  const containerRectRef = useRef<DOMRect | null>(null);
   const rafRef = useRef<number>(0);
   const animatingRef = useRef(false);
 
-  const isMobile = typeof window !== "undefined" && window.innerWidth < 768;
-  const displacementConfig: DisplacementConfig = {
-    ...DEFAULT_DISPLACEMENT_CONFIG,
-    repelRadius: isMobile ? 80 : 120,
-    maxDisplacement: isMobile ? 20 : 30,
-  };
+  const displacementConfig = useMemo<DisplacementConfig>(() => {
+    const isMobile = typeof window !== "undefined" && window.innerWidth < 768;
+    return {
+      ...DEFAULT_DISPLACEMENT_CONFIG,
+      repelRadius: isMobile ? 80 : 120,
+      maxDisplacement: isMobile ? 20 : 30,
+    };
+  }, []);
 
   const fontPxRef = useRef(BODY_FONT_REM * 16);
   const headingPxRef = useRef(HEADING_FONT_REM * 16);
@@ -116,6 +120,7 @@ export function PretextHero({ greeting, bio, className }: PretextHeroProps) {
     headingPxRef.current = headingPx;
     const sections = buildSections(greeting, bio, fontPx, linePx, headingPx);
     const result = layoutHero({ sections, containerWidth });
+    containerRectRef.current = null;
     setLayout(result);
   }, [greeting, bio]);
 
@@ -162,40 +167,6 @@ export function PretextHero({ greeting, bio, className }: PretextHeroProps) {
     });
   }, [layout]);
 
-  // Mouse tracking
-  useEffect(() => {
-    if (reducedMotion || coarsePointer) return;
-    const handleMove = (e: MouseEvent) => {
-      const container = containerRef.current;
-      if (!container) return;
-      const rect = container.getBoundingClientRect();
-      mouseRef.current = {
-        x: e.clientX - rect.left,
-        y: e.clientY - rect.top,
-        active: true,
-      };
-      if (!animatingRef.current) {
-        animatingRef.current = true;
-        rafRef.current = requestAnimationFrame(animateDisplacement);
-      }
-    };
-    const handleLeave = () => {
-      mouseRef.current = { ...mouseRef.current, active: false };
-      if (!animatingRef.current) {
-        animatingRef.current = true;
-        rafRef.current = requestAnimationFrame(animateDisplacement);
-      }
-    };
-    document.addEventListener("mousemove", handleMove);
-    document.addEventListener("mouseleave", handleLeave);
-    return () => {
-      document.removeEventListener("mousemove", handleMove);
-      document.removeEventListener("mouseleave", handleLeave);
-      cancelAnimationFrame(rafRef.current);
-      animatingRef.current = false;
-    };
-  }, [reducedMotion, coarsePointer]);
-
   const animateDisplacement = useCallback(() => {
     const mouse = mouseRef.current;
     const elements = displacedRef.current;
@@ -203,8 +174,18 @@ export function PretextHero({ greeting, bio, className }: PretextHeroProps) {
       animatingRef.current = false;
       return;
     }
+    // Rect is cached and only re-read after scroll/resize/layout invalidate it,
+    // so mousemove handlers never force layout.
+    if (!containerRectRef.current && containerRef.current) {
+      containerRectRef.current = containerRef.current.getBoundingClientRect();
+    }
+    const rect = containerRectRef.current;
     const stillMoving = updateDisplacement(
-      elements, mouse.x, mouse.y, mouse.active, displacementConfig
+      elements,
+      mouse.x - (rect?.left ?? 0),
+      mouse.y - (rect?.top ?? 0),
+      mouse.active,
+      displacementConfig,
     );
 
     if (stillMoving || mouse.active) {
@@ -213,6 +194,41 @@ export function PretextHero({ greeting, bio, className }: PretextHeroProps) {
       animatingRef.current = false;
     }
   }, [displacementConfig]);
+
+  // Mouse tracking — handlers only record coords and wake the loop; all
+  // geometry reads happen once per frame inside animateDisplacement.
+  useEffect(() => {
+    if (reducedMotion || coarsePointer) return;
+    const wake = () => {
+      if (!animatingRef.current) {
+        animatingRef.current = true;
+        rafRef.current = requestAnimationFrame(animateDisplacement);
+      }
+    };
+    const handleMove = (e: MouseEvent) => {
+      mouseRef.current = { x: e.clientX, y: e.clientY, active: true };
+      wake();
+    };
+    const handleLeave = () => {
+      mouseRef.current = { ...mouseRef.current, active: false };
+      wake();
+    };
+    const invalidateRect = () => {
+      containerRectRef.current = null;
+    };
+    document.addEventListener("mousemove", handleMove, { passive: true });
+    document.addEventListener("mouseleave", handleLeave);
+    window.addEventListener("scroll", invalidateRect, { passive: true });
+    window.addEventListener("resize", invalidateRect);
+    return () => {
+      document.removeEventListener("mousemove", handleMove);
+      document.removeEventListener("mouseleave", handleLeave);
+      window.removeEventListener("scroll", invalidateRect);
+      window.removeEventListener("resize", invalidateRect);
+      cancelAnimationFrame(rafRef.current);
+      animatingRef.current = false;
+    };
+  }, [reducedMotion, coarsePointer, animateDisplacement]);
 
   if (reducedMotion) {
     return (

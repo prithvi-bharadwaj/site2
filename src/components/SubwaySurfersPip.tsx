@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { trackInteraction } from "@/lib/analytics";
 
 const VIDEO_ID = "QPW3XwBoQlw";
 const START_SECONDS = 1;
@@ -30,9 +31,13 @@ export function SubwaySurfersPip({ onDismiss }: { onDismiss?: () => void }) {
     >
       <button
         onClick={() => {
+          trackInteraction("genz_video_dismissed", {
+            video_id: VIDEO_ID,
+          });
           setDismissed(true);
           onDismiss?.();
         }}
+        data-analytics-section="genz_video"
         className="pointer-events-auto absolute right-1.5 top-1.5 z-10 flex h-5 w-5 cursor-pointer items-center justify-center rounded-full text-xs text-white/70 transition-colors hover:text-white"
         style={{ background: "rgba(0,0,0,0.5)", border: "none" }}
       >

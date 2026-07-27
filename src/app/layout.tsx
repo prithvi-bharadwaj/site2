@@ -3,6 +3,7 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import { PromptInjection } from "@/components/PromptInjection";
 import { HoverCard } from "@/components/HoverCard";
+import { AnalyticsTracker } from "@/components/AnalyticsTracker";
 
 const sans = Inter({
   subsets: ["latin"],
@@ -69,6 +70,7 @@ export default function RootLayout({
         />
       </head>
       <body className="font-sans">
+        <AnalyticsTracker />
         <PromptInjection />
         {children}
         <HoverCard />
