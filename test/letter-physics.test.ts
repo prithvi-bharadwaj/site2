@@ -196,6 +196,21 @@ describe("letter physics", () => {
     });
   });
 
+  it("separates glyphs bigger than a broadphase cell", () => {
+    // Heading-size letters span multiple grid cells; their centers sit in
+    // non-adjacent cells while the boxes overlap deeply. The old one-cell
+    // lookup never saw this pair.
+    const big = (x: number) => createBody(glyph(x, 500, 60, 70));
+    const a = big(150);
+    const b = big(190); // 40px apart, boxes 60 wide: 20px deep overlap
+    const bodies = [a, b];
+    dropAll(bodies, ENV, seeded(5));
+    a.vx = a.vy = b.vx = b.vy = 0;
+    settle(bodies);
+
+    expect(deepestOverlap(bodies)).toBeLessThan(2);
+  });
+
   it("keeps a wide pile inside the viewport", () => {
     const bodies = Array.from({ length: 40 }, (_, i) => createBody(glyph(-20 + i * 12, 100)));
     dropAll(bodies, ENV, seeded(9));

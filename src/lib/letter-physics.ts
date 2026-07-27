@@ -35,9 +35,11 @@ export {
   type PhysicsEnv,
 } from "./letter-body";
 
-/** Collision passes per frame; drops while a lot of bodies are in flight. */
+/** Collision passes per frame; drops while a lot of bodies are in flight.
+ *  The zero-alloc broadphase is cheap enough that even the busy floor keeps
+ *  letters from visibly sinking into each other. */
 const ITERATIONS_MAX = 8;
-const ITERATIONS_MIN = 3;
+const ITERATIONS_MIN = 5;
 const BUSY_BODIES = 700;
 /** Nothing should spin like a helicopter. */
 const MAX_SPIN = 12;

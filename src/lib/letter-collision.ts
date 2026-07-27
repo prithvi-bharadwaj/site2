@@ -2,9 +2,14 @@
  * Broadphase + contact resolution for glyph bodies.
  *
  * Only awake bodies drive the loop: they look up their neighbours (awake or
- * not) in a uniform grid, so a settled pile costs nothing per frame. Contacts
- * are resolved positionally, bottom-up, so corrections propagate up through a
- * deep stack within a single frame.
+ * not) in a hashed uniform grid, so a settled pile costs nothing per frame.
+ * Contacts are resolved positionally, bottom-up, so corrections propagate up
+ * through a deep stack within a single frame.
+ *
+ * The grid is flat typed arrays - bucket heads plus a per-body chain - so
+ * rebuilding it every frame allocates nothing. Bodies larger than a cell
+ * (heading glyphs) widen their own search radius instead of silently missing
+ * pairs, which is what used to let big letters sit inside their neighbours.
  */
 
 import {
@@ -18,10 +23,25 @@ import {
   type Body,
 } from "./letter-body";
 
-// Reused across frames so stepping allocates as little as possible.
-const grid = new Map<number, number[]>();
+const HASH_BITS = 12;
+const HASH_SIZE = 1 << HASH_BITS;
+const HASH_MASK = HASH_SIZE - 1;
+/** Even a display-size glyph spans no more than a few cells. */
+const MAX_REACH = 3;
 
-function cellKey(cx: number, cy: number) {
+// Reused across frames so stepping allocates nothing once warmed up.
+const heads = new Int32Array(HASH_SIZE);
+let chain = new Int32Array(2048);
+let cellOf = new Int32Array(2048);
+/** Largest rotated extent in the current grid, for the search radius. */
+let maxExtent = 0;
+
+function hashCell(cx: number, cy: number) {
+  return (Math.imul(cx, 0x8da6b343) ^ Math.imul(cy, 0xd8163841)) & HASH_MASK;
+}
+
+/** Cells packed into one int so aliased hash buckets can be told apart. */
+function packCell(cx: number, cy: number) {
   return (cx + 4096) * 16384 + (cy + 4096);
 }
 
@@ -109,6 +129,27 @@ function resolvePair(a: Body, b: Body, restSpeed: number, rng: () => number) {
   }
 }
 
+function buildGrid(bodies: Body[]) {
+  if (chain.length < bodies.length) {
+    chain = new Int32Array(bodies.length * 2);
+    cellOf = new Int32Array(bodies.length * 2);
+  }
+  heads.fill(-1);
+  maxExtent = 0;
+  for (let i = 0; i < bodies.length; i++) {
+    const b = bodies[i];
+    if (b.homing || b.ghost) continue;
+    const extent = b.ew > b.eh ? b.ew : b.eh;
+    if (extent > maxExtent) maxExtent = extent;
+    const cx = Math.floor(b.x / CELL);
+    const cy = Math.floor(b.y / CELL);
+    const h = hashCell(cx, cy);
+    cellOf[i] = packCell(cx, cy);
+    chain[i] = heads[h];
+    heads[h] = i;
+  }
+}
+
 /**
  * `awake` holds the indices of the bodies that moved this frame, bottom-most
  * first after sorting. Sleeping bodies are still in the grid as colliders, they
@@ -121,15 +162,7 @@ export function resolveCollisions(
   iterations: number,
   rng: () => number
 ) {
-  grid.clear();
-  for (let i = 0; i < bodies.length; i++) {
-    const b = bodies[i];
-    if (b.homing || b.ghost) continue;
-    const key = cellKey(Math.floor(b.x / CELL), Math.floor(b.y / CELL));
-    const cell = grid.get(key);
-    if (cell) cell.push(i);
-    else grid.set(key, [i]);
-  }
+  buildGrid(bodies);
 
   // Bottom-up, so a pile is solved from the floor upward.
   awake.sort((i, j) => bodies[j].y - bodies[i].y);
@@ -139,12 +172,19 @@ export function resolveCollisions(
       const a = bodies[i];
       const cx = Math.floor(a.x / CELL);
       const cy = Math.floor(a.y / CELL);
-      for (let ox = -1; ox <= 1; ox++) {
-        for (let oy = -1; oy <= 1; oy++) {
-          const cell = grid.get(cellKey(cx + ox, cy + oy));
-          if (cell === undefined) continue;
-          for (const j of cell) {
-            if (j === i) continue;
+      // A pair can only overlap while the centers are within the two
+      // half-widths, so a body wider than a cell has to look further out.
+      const own = a.ew > a.eh ? a.ew : a.eh;
+      const reach = Math.min(
+        MAX_REACH,
+        Math.max(1, Math.ceil((own + maxExtent) / 2 / CELL))
+      );
+      for (let ox = -reach; ox <= reach; ox++) {
+        for (let oy = -reach; oy <= reach; oy++) {
+          const key = packCell(cx + ox, cy + oy);
+          for (let j = heads[hashCell(cx + ox, cy + oy)]; j !== -1; j = chain[j]) {
+            // Hash buckets alias distant cells; only walk the one we meant.
+            if (cellOf[j] !== key || j === i) continue;
             const other = bodies[j];
             // Two awake bodies would otherwise be resolved twice per pass.
             if (!other.sleeping && j < i) continue;
