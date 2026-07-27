@@ -6,7 +6,8 @@ import { emitPhysics, onPhysicsSync } from "@/lib/physics-bus";
 
 /**
  * Sitemap + controls. Jump to any section, flip the site's toys on and off.
- * Lives bottom-left, collapsed to a single word until you open it.
+ * A floating dock bar centered along the bottom edge, collapsed to a single
+ * word until you open it.
  */
 
 export interface PanelSection {
@@ -110,21 +111,13 @@ export function ControlPanel({ sections, genz, onGenzChange }: ControlPanelProps
   );
 
   return (
-    <div className="fixed bottom-4 left-4 z-[70]" data-no-physics>
+    <div
+      className="fixed bottom-4 inset-x-0 z-[70] flex justify-center pointer-events-none"
+      data-no-physics
+    >
       {open ? (
-        <div className="control-panel popup-enter">
-          <div className="panel-head">
-            <span>sitemap</span>
-            <button
-              onClick={() => setOpen(false)}
-              aria-label="Close sitemap"
-              className="panel-close"
-            >
-              ×
-            </button>
-          </div>
-
-          <nav className="panel-nav">
+        <div className="control-dock popup-enter pointer-events-auto">
+          <nav className="dock-nav" aria-label="Sitemap">
             {sections.map((s) => (
               <button
                 key={s.id}
@@ -138,18 +131,14 @@ export function ControlPanel({ sections, genz, onGenzChange }: ControlPanelProps
             ))}
           </nav>
 
-          <div className="panel-rule" />
+          <div className="dock-sep" />
 
-          <div className="panel-head">
-            <span>controls</span>
-          </div>
-
-          <div className="panel-row">
-            <span className="panel-label">gen z mode</span>
+          <div className="dock-control">
+            <span className="panel-label">gen z</span>
             <Switch checked={genz} onChange={onGenzChange} label="gen z mode" />
           </div>
 
-          <div className="panel-row">
+          <div className="dock-control">
             <span className="panel-label">
               gravity <KeyHint>G</KeyHint>
             </span>
@@ -161,21 +150,31 @@ export function ControlPanel({ sections, genz, onGenzChange }: ControlPanelProps
             />
           </div>
 
-          <div className="panel-row">
-            <span className="panel-label">
-              smash <KeyHint>F</KeyHint>
-            </span>
+          <div className="dock-control">
             <button onClick={smash} disabled={reduced} className="panel-button">
               slam
             </button>
+            <KeyHint>F</KeyHint>
           </div>
 
+          <button
+            onClick={() => setOpen(false)}
+            aria-label="Close sitemap"
+            className="panel-close"
+          >
+            ×
+          </button>
+
           {reduced && (
-            <p className="panel-note">physics off - reduced motion is on</p>
+            <p className="panel-note dock-note">physics off - reduced motion is on</p>
           )}
         </div>
       ) : (
-        <button onClick={() => setOpen(true)} className="panel-trigger" title="sitemap + controls">
+        <button
+          onClick={() => setOpen(true)}
+          className="panel-trigger pointer-events-auto"
+          title="sitemap + controls"
+        >
           <svg width="11" height="11" viewBox="0 0 12 12" aria-hidden="true">
             <rect x="0.5" y="0.5" width="11" height="2.4" rx="1" fill="currentColor" opacity="0.9" />
             <rect x="0.5" y="4.8" width="11" height="2.4" rx="1" fill="currentColor" opacity="0.6" />

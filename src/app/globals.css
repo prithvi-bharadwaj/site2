@@ -732,29 +732,50 @@ html.dark .switch[data-checked="true"] .switch-thumb {
   background: rgb(var(--ink-rgb) / 0.09);
 }
 
-.control-panel {
-  width: 210px;
-  padding: 10px 10px 8px;
-  border-radius: 9px;
+.control-dock {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 2px 9px;
+  max-width: calc(100vw - 24px);
+  padding: 7px 13px;
+  border-radius: 18px;
   border: 1px solid rgb(var(--ink-rgb) / 0.07);
   background: var(--card-bg);
   box-shadow: 0 1px 2px rgb(0 0 0 / 0.06), 0 12px 28px rgb(0 0 0 / 0.13);
 }
 
-html.dark .control-panel {
+html.dark .control-dock {
   border-color: rgb(var(--ink-rgb) / 0.1);
   box-shadow: 0 2px 6px rgb(0 0 0 / 0.5), 0 16px 40px rgb(0 0 0 / 0.55);
 }
 
-.panel-head {
+.dock-nav {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  justify-content: space-between;
-  padding: 0 2px 6px;
-  font-size: 9px;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  color: rgb(var(--ink-rgb) / 0.35);
+  justify-content: center;
+  column-gap: 2px;
+}
+
+.dock-sep {
+  flex: none;
+  width: 1px;
+  height: 15px;
+  background: rgb(var(--ink-rgb) / 0.12);
+}
+
+.dock-control {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.dock-note {
+  flex-basis: 100%;
+  margin: 1px 0 0;
+  text-align: center;
 }
 
 .panel-close {
@@ -770,11 +791,6 @@ html.dark .control-panel {
 
 .panel-close:hover {
   color: rgb(var(--ink-rgb) / 0.85);
-}
-
-.panel-nav {
-  display: flex;
-  flex-direction: column;
 }
 
 .panel-link {
@@ -815,21 +831,6 @@ html.dark .control-panel {
 .panel-link[data-active="true"] .panel-dot {
   opacity: 1;
   transform: scale(1.7);
-}
-
-.panel-rule {
-  height: 1px;
-  margin: 8px 2px;
-  background: rgb(var(--ink-rgb) / 0.08);
-}
-
-.panel-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  min-height: 26px;
-  padding: 2px 4px;
 }
 
 .panel-label {
