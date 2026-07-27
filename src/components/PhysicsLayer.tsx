@@ -19,6 +19,7 @@ import {
   pokeAt,
   resetTargets,
 } from "@/lib/letter-effects";
+import { SpriteCache } from "@/lib/glyph-sprites";
 import { onPhysics, emitPhysicsSync } from "@/lib/physics-bus";
 import { CLICK_XP, award } from "@/lib/xp";
 
@@ -67,6 +68,13 @@ const SHAKE_AMPLITUDE = 10;
 const RESIZE_TOLERANCE = 48;
 /** Page colors transition 250ms on a theme flip; track slightly past it. */
 const THEME_FADE_MS = 320;
+/**
+ * Room around a glyph sprite for ink that overhangs its layout box - italic
+ * tails, antialiasing fringe.
+ */
+const SPRITE_PAD = 4;
+/** A theme flip mints a new sprite per color; don't hoard the old ones. */
+const SPRITE_CACHE_MAX = 4000;
 
 type Mode = "off" | "gravity" | "smash" | "restoring";
 
@@ -104,6 +112,7 @@ export function PhysicsLayer() {
     let baseW = 0;
     let baseH = 0;
     const pointer = { x: 0, y: 0, inside: false };
+    const sprites = new SpriteCache({ pad: SPRITE_PAD, max: SPRITE_CACHE_MAX });
 
     /* ── plumbing ── */
 
@@ -129,6 +138,7 @@ export function PhysicsLayer() {
 
     function sizeCanvas() {
       dpr = Math.min(window.devicePixelRatio || 1, 2);
+      sprites.setDpr(dpr);
       canvas.width = Math.floor(window.innerWidth * dpr);
       canvas.height = Math.floor(window.innerHeight * dpr);
       // 100vw would include the scrollbar we're about to hide.
@@ -233,14 +243,14 @@ export function PhysicsLayer() {
         shake > 0 ? SHAKE_AMPLITUDE * Math.pow(shake / SHAKE_SECONDS, 2) : 0;
       const ox = shakeAmp ? (Math.random() - 0.5) * shakeAmp : 0;
       const oy = shakeAmp ? (Math.random() - 0.5) * shakeAmp : 0;
-      ctx.setTransform(dpr, 0, 0, dpr, ox * dpr, oy * dpr);
+      const tx = ox * dpr;
+      const ty = oy * dpr;
+      ctx.setTransform(dpr, 0, 0, dpr, tx, ty);
       ctx.clearRect(-20, -20, window.innerWidth + 40, window.innerHeight + 40);
       ctx.textBaseline = "alphabetic";
 
-      // Setting font/fillStyle is expensive enough at this body count to be
-      // worth tracking; harvest order already groups glyphs by element.
-      let font = "";
-      let color = "";
+      // Glyphs draw as cached sprites - shaping and filling text ~1500 times
+      // a frame is what used to eat the frame budget.
       let alpha = 1;
       ctx.globalAlpha = 1;
 
@@ -254,26 +264,28 @@ export function PhysicsLayer() {
           ctx.restore();
           continue;
         }
-        if (b.font !== font) {
-          font = b.font;
-          ctx.font = font;
-        }
-        if (b.color !== color) {
-          color = b.color;
-          ctx.fillStyle = color;
-        }
         if (b.alpha !== alpha) {
           alpha = b.alpha;
           ctx.globalAlpha = alpha;
         }
-        if (b.angle === 0) {
+        const s = sprites.get(b);
+        if (!s) {
+          // No 2d context for the sprite - draw the slow way.
+          ctx.font = b.font;
+          ctx.fillStyle = b.color;
           ctx.fillText(b.char, b.x - b.w / 2, b.y - b.h / 2 + b.ascent);
+          continue;
+        }
+        if (b.angle === 0) {
+          ctx.drawImage(s.canvas, b.x - b.w / 2 - s.pad, b.y - b.h / 2 - s.pad, s.w, s.h);
         } else {
-          ctx.save();
-          ctx.translate(b.x, b.y);
-          ctx.rotate(b.angle);
-          ctx.fillText(b.char, -b.w / 2, -b.h / 2 + b.ascent);
-          ctx.restore();
+          // One setTransform beats save/translate/rotate/restore, and mid-fall
+          // nearly every body is rotated.
+          const cos = Math.cos(b.angle) * dpr;
+          const sin = Math.sin(b.angle) * dpr;
+          ctx.setTransform(cos, sin, -sin, cos, b.x * dpr + tx, b.y * dpr + ty);
+          ctx.drawImage(s.canvas, -b.w / 2 - s.pad, -b.h / 2 - s.pad, s.w, s.h);
+          ctx.setTransform(dpr, 0, 0, dpr, tx, ty);
         }
       }
     }
@@ -494,6 +506,7 @@ export function PhysicsLayer() {
       window.removeEventListener("resize", onResize);
       motionQuery.removeEventListener("change", onMotionChange);
       themeObserver.disconnect();
+      sprites.clear();
       cancelAnimationFrame(recolorRaf);
       cancelAnimationFrame(raf);
       clearTimers();
