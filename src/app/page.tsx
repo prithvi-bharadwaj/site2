@@ -351,18 +351,18 @@ export default function Home() {
     function onKey(e: KeyboardEvent) {
       if ((e.metaKey || e.ctrlKey) && e.key === "e") {
         e.preventDefault();
-        setEditMode((previous) => {
-          trackInteraction("edit_mode_changed", {
-            enabled: !previous,
-            method: "keyboard_shortcut",
-          });
-          return !previous;
+        // Tracking stays out of the updater: React may re-run updaters, which
+        // double-fired this event.
+        trackInteraction("edit_mode_changed", {
+          enabled: !editMode,
+          method: "keyboard_shortcut",
         });
+        setEditMode(!editMode);
       }
     }
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, []);
+  }, [editMode]);
 
   useEffect(() => {
     function onScroll() {
