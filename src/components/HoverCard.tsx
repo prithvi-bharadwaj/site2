@@ -7,26 +7,51 @@ import {
   onHide,
   onPin,
   onUnpin,
+  setPinnedInspectId,
   type HoverCardMedia,
 } from "@/lib/hover-card-bus";
+import { inspectStart, inspectEnd } from "@/lib/xp";
+import { trackInteraction } from "@/lib/analytics";
 
 const CARD_WIDTH = 296;
 const CARD_HEIGHT = 230;
 const WIDE_CARD_WIDTH = 560;
 const WIDE_CARD_HEIGHT = 150;
+// Caption-only note chips are a fraction of a media card.
+const NOTE_CARD_WIDTH = 320;
+const NOTE_CARD_HEIGHT = 36;
 // Pinned (clicked) cards grow ~20%.
 const PIN_SCALE = 1.2;
 const OFFSET_X = 16;
 const OFFSET_Y = 16;
+const PREVIEW_OPEN_COOLDOWN_MS = 5_000;
 
-function clampPosition(x: number, y: number, wide: boolean, pinned = false) {
-  if (typeof window === "undefined") return { x, y };
-  const scale = pinned ? PIN_SCALE : 1;
-  const w = (wide ? WIDE_CARD_WIDTH : CARD_WIDTH) * scale;
-  const h = (wide ? WIDE_CARD_HEIGHT : CARD_HEIGHT) * scale;
+type CardShape = "default" | "wide" | "note";
+
+function mediaProperties(media: HoverCardMedia) {
   return {
-    x: Math.min(Math.max(8, x + OFFSET_X), window.innerWidth - w - 8),
-    y: Math.min(Math.max(8, y + OFFSET_Y), window.innerHeight - h - 8),
+    media_type: media.type,
+    media_id:
+      media.type === "youtube"
+        ? media.id
+        : media.type === "image" || media.type === "video"
+          ? media.src
+          : media.caption,
+    caption: media.caption,
+  };
+}
+
+function clampPosition(x: number, y: number, shape: CardShape, pinned = false) {
+  if (typeof window === "undefined") return { x, y };
+  // Note chips render at natural width; only media cards grow when pinned.
+  const scale = pinned && shape !== "note" ? PIN_SCALE : 1;
+  const w = (shape === "wide" ? WIDE_CARD_WIDTH : shape === "note" ? NOTE_CARD_WIDTH : CARD_WIDTH) * scale;
+  const h = (shape === "wide" ? WIDE_CARD_HEIGHT : shape === "note" ? NOTE_CARD_HEIGHT : CARD_HEIGHT) * scale;
+  // max() last: on narrow viewports the card must stay on-screen at the left/top
+  // even when it's wider than the space to the right of the cursor.
+  return {
+    x: Math.max(8, Math.min(x + OFFSET_X, window.innerWidth - w - 8)),
+    y: Math.max(8, Math.min(y + OFFSET_Y, window.innerHeight - h - 8)),
   };
 }
 
@@ -42,17 +67,28 @@ export function HoverCard() {
   const [pinnedHref, setPinnedHref] = useState<string | null>(null);
   const cardRef = useRef<HTMLDivElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
-  const wideRef = useRef(false);
+  const shapeRef = useRef<CardShape>("default");
   const pinnedRef = useRef<string | null>(null);
+  const inspectIdRef = useRef<string | null>(null);
   const hideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const previewOpenedAtRef = useRef(new Map<string, number>());
 
   const setPinned = (href: string | null) => {
     pinnedRef.current = href;
     setPinnedHref(href);
   };
 
-  const unpin = useCallback(() => {
+  const unpin = useCallback((reason = "event") => {
     if (!pinnedRef.current) return;
+    trackInteraction("preview_unpinned", {
+      href: pinnedRef.current,
+      reason,
+    });
+    if (inspectIdRef.current) {
+      inspectEnd(inspectIdRef.current);
+      inspectIdRef.current = null;
+    }
+    setPinnedInspectId(null);
     setPinned(null);
     setVisible(false);
     hideTimerRef.current = setTimeout(() => {
@@ -71,13 +107,26 @@ export function HoverCard() {
 
     const offShow = onShow(({ media: m, x, y }) => {
       if (pinnedRef.current) return;
+      const properties = mediaProperties(m);
+      const previewId = String(
+        properties.media_id ?? properties.caption ?? properties.media_type
+      );
+      const now = performance.now();
+      const lastOpenedAt = previewOpenedAtRef.current.get(previewId);
+      if (
+        lastOpenedAt === undefined ||
+        now - lastOpenedAt >= PREVIEW_OPEN_COOLDOWN_MS
+      ) {
+        previewOpenedAtRef.current.set(previewId, now);
+        trackInteraction("preview_opened", properties);
+      }
       clearHideTimer();
       setMedia(m);
       setVisible(true);
-      wideRef.current = m.type === "image" && !!m.wide;
+      shapeRef.current = m.type === "note" ? "note" : m.type === "image" && m.wide ? "wide" : "default";
       const card = cardRef.current;
       if (card) {
-        const { x: px, y: py } = clampPosition(x, y, wideRef.current);
+        const { x: px, y: py } = clampPosition(x, y, shapeRef.current);
         card.style.transform = `translate3d(${px}px, ${py}px, 0)`;
       }
     });
@@ -85,7 +134,7 @@ export function HoverCard() {
       if (pinnedRef.current) return;
       const card = cardRef.current;
       if (!card) return;
-      const { x: px, y: py } = clampPosition(x, y, wideRef.current);
+      const { x: px, y: py } = clampPosition(x, y, shapeRef.current);
       card.style.transform = `translate3d(${px}px, ${py}px, 0)`;
     });
     const offHide = onHide(() => {
@@ -98,24 +147,35 @@ export function HoverCard() {
         hideTimerRef.current = null;
       }, 250);
     });
-    const offPin = onPin(({ media: m, href, x, y }) => {
+    const offPin = onPin(({ media: m, href, inspectId, x, y }) => {
       // Re-clicking the same link toggles the pin off.
       if (pinnedRef.current === href) {
-        unpin();
+        unpin("source_reclicked");
         return;
       }
+      trackInteraction("preview_pinned", {
+        ...mediaProperties(m),
+        href,
+        inspect_id: inspectId,
+      });
       clearHideTimer();
+      // Dwelling on a pinned card counts as inspecting the proof - this is
+      // the only inspection path on touch devices, where hover doesn't exist.
+      if (inspectIdRef.current) inspectEnd(inspectIdRef.current);
+      inspectIdRef.current = inspectId ?? null;
+      setPinnedInspectId(inspectId ?? null);
+      if (inspectId) inspectStart(inspectId);
       setMedia(m);
       setVisible(true);
-      wideRef.current = m.type === "image" && !!m.wide;
+      shapeRef.current = m.type === "note" ? "note" : m.type === "image" && m.wide ? "wide" : "default";
       setPinned(href);
       const card = cardRef.current;
       if (card) {
-        const { x: px, y: py } = clampPosition(x, y, wideRef.current, true);
+        const { x: px, y: py } = clampPosition(x, y, shapeRef.current, true);
         card.style.transform = `translate3d(${px}px, ${py}px, 0)`;
       }
     });
-    const offUnpin = onUnpin(unpin);
+    const offUnpin = onUnpin(() => unpin("event"));
     return () => {
       offShow();
       offMove();
@@ -133,12 +193,12 @@ export function HoverCard() {
   useEffect(() => {
     if (!pinnedHref) return;
     const onDocClick = (e: MouseEvent) => {
-      if (!cardRef.current?.contains(e.target as Node)) unpin();
+      if (!cardRef.current?.contains(e.target as Node)) unpin("outside_click");
     };
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") unpin();
+      if (e.key === "Escape") unpin("escape");
     };
-    const onScroll = () => unpin();
+    const onScroll = () => unpin("scroll");
     document.addEventListener("click", onDocClick);
     window.addEventListener("keydown", onKey);
     window.addEventListener("scroll", onScroll, { passive: true });
@@ -209,6 +269,7 @@ export function HoverCard() {
     <div
       ref={cardRef}
       className={`hover-card${visible ? " visible" : ""}${pinnedHref ? " pinned" : ""}`}
+      data-analytics-section="preview_card"
       data-mode={mode}
       data-wide={media?.type === "image" && media.wide ? "true" : undefined}
       aria-hidden={pinnedHref ? undefined : "true"}

@@ -10,6 +10,7 @@
 
 import { useSyncExternalStore } from "react";
 import type { HoverCardMedia } from "./hover-card-bus";
+import { captureAnalyticsEvent, trackInteraction } from "./analytics";
 
 const STORAGE_KEY = "prithvi-xp-v1";
 const FX_EVENT = "xp:fx";
@@ -31,6 +32,12 @@ export const MAX_XP = 1520;
 
 export function completionPct(total: number) {
   return Math.min(100, Math.round((total / MAX_XP) * 100));
+}
+
+/** True on devices with a real hover pointer; false on touch. Drives copy. */
+export function canHover(): boolean {
+  if (typeof window === "undefined" || typeof window.matchMedia !== "function") return true;
+  return window.matchMedia("(hover: hover)").matches;
 }
 
 export interface Level {
@@ -71,7 +78,7 @@ export interface XpFxDetail {
 export interface XpToastDetail {
   title: string;
   body: string;
-  kind: "achievement" | "info";
+  kind: "achievement" | "info" | "level";
 }
 
 const EMPTY: XpState = { total: 0, earned: {} };
@@ -131,24 +138,68 @@ export function onXpToast(listener: (detail: XpToastDetail) => void) {
 export function award(id: string, xp: number) {
   if (typeof window === "undefined" || id in state.earned) return;
   const first = state.total === 0;
+  const previousTotal = state.total;
+  const previousLevel = levelFor(previousTotal);
   const before = new Set(unlockedAchievements(state).map((a) => a.id));
   state = { total: state.total + xp, earned: { ...state.earned, [id]: xp } };
+  const nextLevel = levelFor(state.total);
   persist();
   notify();
   emitXpFx({ text: `+${xp} xp` });
+  captureAnalyticsEvent("xp_earned", {
+    award_id: id,
+    xp,
+    previous_total: previousTotal,
+    total: state.total,
+  });
+  if (nextLevel.index > previousLevel.index) {
+    captureAnalyticsEvent("level_reached", {
+      level_index: nextLevel.index,
+      level_name: nextLevel.name,
+      total_xp: state.total,
+    });
+  }
+  if (previousTotal < SOCIAL_UNLOCK_XP && state.total >= SOCIAL_UNLOCK_XP) {
+    captureAnalyticsEvent("contact_links_unlocked", {
+      total_xp: state.total,
+    });
+  }
   if (first) {
     emitXpToast({
       title: "you found the xp",
-      body: `Hovering a preview pays +${HOVER_XP}, opening things pays +${CLICK_XP}. Contact links unlock at ${SOCIAL_UNLOCK_XP} xp.`,
+      body: `${canHover() ? "Hovering" : "Inspecting"} a preview pays +${HOVER_XP}, opening things pays +${CLICK_XP}. Contact links unlock at ${SOCIAL_UNLOCK_XP} xp.`,
       kind: "info",
     });
   }
   for (const a of unlockedAchievements(state)) {
-    if (!before.has(a.id)) emitXpToast({ title: a.name, body: a.desc, kind: "achievement" });
+    if (!before.has(a.id)) {
+      captureAnalyticsEvent("achievement_unlocked", {
+        achievement_id: a.id,
+        achievement_name: a.name,
+        achievement_description: a.desc,
+        total_xp: state.total,
+      });
+      emitXpToast({ title: a.name, body: a.desc, kind: "achievement" });
+      emitXpFx({ text: `★ ${a.name}`, big: true });
+    }
+  }
+  if (nextLevel.index > previousLevel.index) {
+    emitXpToast({
+      title: `lv${nextLevel.index} · ${nextLevel.name}`,
+      body: nextLevel.next
+        ? `next: ${nextLevel.next.name} at ${nextLevel.next.min} xp`
+        : "max level reached",
+      kind: "level",
+    });
+    emitXpFx({ text: `lv${nextLevel.index} ${nextLevel.name}`, big: true });
   }
 }
 
 export function resetXp() {
+  trackInteraction("xp_progress_reset", {
+    previous_total: state.total,
+    awards_cleared: Object.keys(state.earned).length,
+  });
   state = EMPTY;
   try {
     localStorage.removeItem(STORAGE_KEY);
@@ -177,6 +228,7 @@ const INSPECT_MS = 1000;
 const INSPECT_START_EVENT = "xp:inspect-start";
 const INSPECT_END_EVENT = "xp:inspect-end";
 const timers = new Map<string, number>();
+const inspectStartedAt = new Map<string, number>();
 
 export interface InspectDetail {
   id: string;
@@ -203,10 +255,19 @@ export function mediaKey(media: HoverCardMedia): string {
 
 export function inspectStart(id: string, xp = HOVER_XP) {
   if (typeof window === "undefined" || id in state.earned || timers.has(id)) return;
+  inspectStartedAt.set(id, performance.now());
   timers.set(
     id,
     window.setTimeout(() => {
       timers.delete(id);
+      const startedAt = inspectStartedAt.get(id);
+      inspectStartedAt.delete(id);
+      trackInteraction("proof_inspection_completed", {
+        inspect_id: id,
+        duration_ms: startedAt === undefined
+          ? INSPECT_MS
+          : Math.round(performance.now() - startedAt),
+      });
       award(id, xp);
     }, INSPECT_MS)
   );
@@ -220,6 +281,14 @@ export function inspectEnd(id: string) {
   if (t !== undefined) {
     clearTimeout(t);
     timers.delete(id);
+    const startedAt = inspectStartedAt.get(id);
+    inspectStartedAt.delete(id);
+    trackInteraction("proof_inspection_abandoned", {
+      inspect_id: id,
+      duration_ms: startedAt === undefined
+        ? undefined
+        : Math.round(performance.now() - startedAt),
+    });
     window.dispatchEvent(new Event(INSPECT_END_EVENT));
   }
 }

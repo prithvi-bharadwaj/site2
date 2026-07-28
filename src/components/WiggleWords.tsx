@@ -197,7 +197,7 @@ function start() {
   if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
   if (window.matchMedia("(pointer: coarse)").matches) return;
   started = true;
-  document.addEventListener("mousemove", onMove);
+  document.addEventListener("mousemove", onMove, { passive: true });
   document.documentElement.addEventListener("mouseleave", onLeave);
   if (typeof ResizeObserver !== "undefined") {
     new ResizeObserver(() => {

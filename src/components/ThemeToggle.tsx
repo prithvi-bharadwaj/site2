@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { trackInteraction } from "@/lib/analytics";
 
 const THEME_KEY = "prithvi-theme";
 
@@ -25,14 +26,18 @@ export function ThemeToggle() {
     } catch {
       /* ignore */
     }
+    trackInteraction("theme_changed", {
+      theme: next ? "dark" : "light",
+    });
   };
 
   return (
     <button
       onClick={toggle}
+      data-analytics-section="theme"
       aria-label={dark ? "Switch to light mode" : "Switch to dark mode"}
       title={dark ? "light mode" : "dark mode"}
-      className="theme-toggle fixed top-4 right-4 z-[70] h-7 w-7 rounded-full cursor-pointer flex items-center justify-center text-(--ink)/40 hover:text-(--ink)/80 transition-colors"
+      className="theme-toggle fixed top-2 right-2 z-[70] h-11 w-11 rounded-full cursor-pointer flex items-center justify-center text-(--ink)/40 hover:text-(--ink)/80 transition-colors"
     >
       {dark ? (
         // Sun - minimal dot with rays

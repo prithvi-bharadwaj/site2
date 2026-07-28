@@ -2,8 +2,9 @@
 
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { WiggleWords, useWiggleDescendants } from "./WiggleWords";
-import { emitShow, emitMove, emitHide, emitPin, type HoverCardMedia } from "@/lib/hover-card-bus";
+import { emitShow, emitMove, emitHide, emitPin, isPinnedInspect, type HoverCardMedia } from "@/lib/hover-card-bus";
 import { CLICK_XP, award, inspectStart, inspectEnd, mediaKey } from "@/lib/xp";
+import { trackInteraction } from "@/lib/analytics";
 
 export interface BrandLink {
   name: string;
@@ -102,7 +103,13 @@ function renderTitleWithBrands(
             if (media && e.detail > 0) {
               e.preventDefault();
               if (xpKind) inspectEnd(`${xpKind}-proof:${mediaKey(media)}`);
-              emitPin({ media, href: brand.href, x: e.clientX, y: e.clientY });
+              emitPin({
+                media,
+                href: brand.href,
+                inspectId: xpKind ? `${xpKind}-proof:${mediaKey(media)}` : undefined,
+                x: e.clientX,
+                y: e.clientY,
+              });
             }
           }}
           onPointerEnter={(e) => {
@@ -117,7 +124,10 @@ function renderTitleWithBrands(
           onPointerLeave={(e) => {
             if (media && e.pointerType === "mouse") {
               emitHide();
-              if (xpKind) inspectEnd(`${xpKind}-proof:${mediaKey(media)}`);
+              if (xpKind) {
+                const id = `${xpKind}-proof:${mediaKey(media)}`;
+                if (!isPinnedInspect(id)) inspectEnd(id);
+              }
             }
           }}
           className="brand-link wl-unit inline-flex items-baseline gap-1"
@@ -149,9 +159,13 @@ export function LinkList({ label, items, columns = 1, variant = "compact", point
     return () => clearTimeout(t);
   }, []);
 
+  const analyticsSection =
+    xpKind ?? label?.toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_|_$/g, "") ?? "list";
+
   return (
     <section
       ref={rootRef}
+      data-analytics-section={analyticsSection}
       style={{
         opacity: visible ? 1 : 0,
         transform: visible ? "translateY(0)" : "translateY(8px)",
@@ -230,15 +244,23 @@ export function LinkList({ label, items, columns = 1, variant = "compact", point
               onPointerLeave={(e) => {
                 if (item.media && e.pointerType === "mouse") {
                   emitHide();
-                  if (xpKind) inspectEnd(`${xpKind}-proof:${mediaKey(item.media)}`);
+                  if (xpKind) {
+                    const id = `${xpKind}-proof:${mediaKey(item.media)}`;
+                    if (!isPinnedInspect(id)) inspectEnd(id);
+                  }
                 }
               }}
             >
               {expandable ? (
                 <span
                   className={`${wrapperClass} cursor-pointer`}
+                  data-analytics-target={item.title}
                   onClick={() => {
                     setOpen(isOpen ? null : i);
+                    trackInteraction(isOpen ? "list_item_collapsed" : "list_item_expanded", {
+                      section: analyticsSection,
+                      item_title: item.title,
+                    });
                     if (item.media && !isOpen) {
                       emitHide();
                       // The hover-inspect timer must die with the preview, or

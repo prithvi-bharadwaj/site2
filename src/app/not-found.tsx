@@ -3,6 +3,7 @@ import Link from "next/link";
 export default function NotFound() {
   return (
     <div
+      data-analytics-section="not_found"
       style={{
         fontFamily: "var(--font-sans), sans-serif",
         background: "#222326",

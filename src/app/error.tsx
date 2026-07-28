@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import { captureAnalyticsEvent, trackInteraction } from "@/lib/analytics";
 
 export default function Error({
   error,
@@ -11,10 +12,15 @@ export default function Error({
 }) {
   useEffect(() => {
     console.error(error);
+    captureAnalyticsEvent("site_error", {
+      message: error.message,
+      digest: error.digest,
+    });
   }, [error]);
 
   return (
     <div
+      data-analytics-section="error"
       style={{
         fontFamily: "var(--font-sans), sans-serif",
         background: "#222326",
@@ -35,7 +41,10 @@ export default function Error({
         something broke. it happens.
       </p>
       <button
-        onClick={reset}
+        onClick={() => {
+          trackInteraction("error_retry_clicked");
+          reset();
+        }}
         style={{
           background: "transparent",
           border: "1px solid rgba(255,255,255,0.2)",
