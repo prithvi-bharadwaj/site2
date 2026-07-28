@@ -27,6 +27,8 @@ interface StyleInfo {
   font: string;
   color: string;
   alpha: number;
+  /** CSS text-transform - the DOM holds the raw text, the screen shows this. */
+  transform: string;
 }
 
 export interface HarvestOptions {
@@ -76,6 +78,7 @@ export function harvestGlyphs(root: HTMLElement, o: HarvestOptions): GlyphSource
         font: `${cs.fontStyle} ${cs.fontWeight} ${cs.fontSize} ${cs.fontFamily}`,
         color: cs.color,
         alpha,
+        transform: cs.textTransform,
       };
     }
     styleCache.set(el, info);
@@ -147,11 +150,21 @@ export function harvestGlyphs(root: HTMLElement, o: HarvestOptions): GlyphSource
 
     // Grapheme segments, not code units - indexing by UTF-16 unit splits
     // emoji like 🔒 into lone surrogates that render as duplicate junk.
+    // Word starts matter only for text-transform: capitalize.
+    let prev = " ";
     for (const seg of GRAPHEMES.segment(text)) {
-      const char = seg.segment;
-      if (!char.trim()) continue;
+      const raw = seg.segment;
+      const atWordStart = !/[\p{L}\p{N}]/u.test(prev);
+      prev = raw;
+      if (!raw.trim()) continue;
+      // The DOM keeps the untransformed text; the screen shows the transform.
+      // Range offsets still index the raw string.
+      let char = raw;
+      if (style.transform === "uppercase") char = raw.toUpperCase();
+      else if (style.transform === "lowercase") char = raw.toLowerCase();
+      else if (style.transform === "capitalize" && atWordStart) char = raw.toUpperCase();
       range.setStart(node, seg.index);
-      range.setEnd(node, seg.index + char.length);
+      range.setEnd(node, seg.index + raw.length);
       const rect = range.getBoundingClientRect();
       if (!onScreen(rect)) continue;
       glyphs.push({

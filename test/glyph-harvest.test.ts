@@ -50,6 +50,15 @@ describe("harvestGlyphs", () => {
     expect(chars).toEqual(["x", "👍🏽", "y"]);
   });
 
+  it("applies text-transform so the canvas matches the screen", () => {
+    // The DOM keeps raw text; the screen shows the transform. Harvesting the
+    // raw graphemes turned uppercase headings lowercase mid-physics.
+    root.innerHTML =
+      '<span style="text-transform: uppercase">ab</span>' +
+      '<span style="text-transform: capitalize">hi yo</span>';
+    expect(harvest().map((g) => g.char).join("")).toBe("ABHiYo");
+  });
+
   it("skips whitespace and records the source element", () => {
     root.innerHTML = "<span>a b</span>";
     const glyphs = harvest();
