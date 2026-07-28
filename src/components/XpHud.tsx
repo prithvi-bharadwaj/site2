@@ -130,13 +130,12 @@ export function XpHud() {
 
       <button
         onClick={() => {
-          setOpen((previous) => {
-            trackInteraction(
-              previous ? "xp_hud_closed" : "xp_hud_opened",
-              { reason: "toggle" }
-            );
-            return !previous;
+          // Tracking stays out of the updater: React may re-run updaters,
+          // which double-fired this event.
+          trackInteraction(open ? "xp_hud_closed" : "xp_hud_opened", {
+            reason: "toggle",
           });
+          setOpen(!open);
         }}
         aria-expanded={open}
         title="progress"

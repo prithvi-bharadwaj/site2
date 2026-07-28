@@ -69,4 +69,19 @@ describe("AnalyticsTracker", () => {
       { seconds: 60 }
     );
   });
+
+  it("counts pointer movement alone as activity, not idle time", () => {
+    vi.useFakeTimers();
+    render(<AnalyticsTracker />);
+
+    for (let elapsed = 0; elapsed < 65; elapsed += 25) {
+      fireEvent.pointerMove(window, { pointerType: "mouse" });
+      vi.advanceTimersByTime(25_000);
+    }
+
+    expect(trackInteraction).toHaveBeenCalledWith(
+      "visible_time_reached",
+      { seconds: 60 }
+    );
+  });
 });

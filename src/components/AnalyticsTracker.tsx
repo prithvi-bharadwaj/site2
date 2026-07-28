@@ -96,11 +96,13 @@ export function AnalyticsTracker() {
       }
     }, 1000);
     window.addEventListener("pointerdown", recordActivity, { passive: true });
+    window.addEventListener("pointermove", recordActivity, { passive: true });
     window.addEventListener("keydown", recordActivity);
     window.addEventListener("scroll", recordActivity, { passive: true });
     return () => {
       window.clearInterval(timer);
       window.removeEventListener("pointerdown", recordActivity);
+      window.removeEventListener("pointermove", recordActivity);
       window.removeEventListener("keydown", recordActivity);
       window.removeEventListener("scroll", recordActivity);
     };
