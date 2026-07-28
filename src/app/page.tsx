@@ -17,6 +17,7 @@ import { XpHud } from "@/components/XpHud";
 import { XpToasts } from "@/components/XpToasts";
 import { ExitGate } from "@/components/ExitGate";
 import { PhysicsLayer } from "@/components/PhysicsLayer";
+import { CosmicWind } from "@/components/CosmicWind";
 import { ControlPanel, type PanelSection } from "@/components/ControlPanel";
 import { CLICK_XP, SOCIAL_UNLOCK_XP, award, emitXpToast, useXp } from "@/lib/xp";
 import { emitShow, emitMove, emitHide, type HoverCardMedia } from "@/lib/hover-card-bus";
@@ -441,6 +442,7 @@ export default function Home() {
 
   return (
     <main className="relative min-h-screen" data-analytics-section="home">
+      <CosmicWind />
       <CursorTrail />
       <XpFx />
       <InspectProgress />
