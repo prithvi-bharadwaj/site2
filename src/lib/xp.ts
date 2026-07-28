@@ -28,7 +28,7 @@ export const SOCIAL_UNLOCK_XP = 150;
  * Rough total xp available on the site (hovers + clicks + one-offs).
  * Used for the "you've explored N%" completion stat.
  */
-export const MAX_XP = 1420;
+export const MAX_XP = 1520;
 
 export function completionPct(total: number) {
   return Math.min(100, Math.round((total / MAX_XP) * 100));
@@ -345,6 +345,18 @@ export const ACHIEVEMENTS: Achievement[] = [
     name: "Did Not Touch Grass",
     desc: "Enabled gen z mode",
     done: (s) => "genz:on" in s.earned,
+  },
+  {
+    id: "gravity-check",
+    name: "Gravity Check",
+    desc: "Turned gravity on and dropped every letter on the floor",
+    done: (s) => "gravity:on" in s.earned,
+  },
+  {
+    id: "table-slam",
+    name: "Table Slam",
+    desc: "Slammed the page like a chess table",
+    done: (s) => "smash:first" in s.earned,
   },
   {
     id: "touch-grass",

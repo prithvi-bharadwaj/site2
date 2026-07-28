@@ -1796,3 +1796,330 @@ a.project-item {
 .hover-card[data-mode="youtube"] .hover-card-youtube {
   display: block;
 }
+
+/* ── Switch ──────────────────────────────────────────────────────────────
+   Geometry comes from the component in px (the 125% root font inflates rem
+   utilities and threw the thumb off-centre). Only paint lives here. */
+.switch {
+  position: relative;
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  cursor: pointer;
+  touch-action: none;
+  -webkit-tap-highlight-color: transparent;
+  background: rgb(var(--ink-rgb) / 0.16);
+  box-shadow: inset 0 0 0 1px rgb(var(--ink-rgb) / 0.06);
+  transition: background-color 220ms var(--ease-out);
+}
+
+.switch[data-checked="true"] {
+  background: var(--ink);
+  box-shadow: none;
+}
+
+.switch:focus-visible {
+  outline: 2px solid rgb(var(--ink-rgb) / 0.45);
+  outline-offset: 2px;
+}
+
+.switch:disabled {
+  cursor: not-allowed;
+  opacity: 0.4;
+}
+
+.switch-thumb {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  border-radius: 999px;
+  background: var(--bg);
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.22), 0 0 0 0.5px rgb(0 0 0 / 0.05);
+  transition: transform 260ms cubic-bezier(0.32, 1.6, 0.55, 1), width 150ms var(--ease-out);
+}
+
+/* Off-state thumb needs to out-brighten the track in dark mode. */
+html.dark .switch-thumb {
+  background: rgb(var(--ink-rgb) / 0.5);
+  box-shadow: 0 1px 3px rgb(0 0 0 / 0.5);
+}
+
+html.dark .switch[data-checked="true"] .switch-thumb {
+  background: var(--bg);
+}
+
+/* ── Physics overlay ─────────────────────────────────────────────────────
+   Sits above the cursor trail, below the HUD and the controls panel. */
+.physics-canvas {
+  position: fixed;
+  top: 0;
+  left: 0;
+  pointer-events: none;
+  z-index: 65;
+}
+
+.physics-fist {
+  position: fixed;
+  left: 50%;
+  bottom: 0;
+  z-index: 66;
+  font-size: 88px;
+  line-height: 1;
+  pointer-events: none;
+  user-select: none;
+  filter: drop-shadow(0 8px 16px rgb(0 0 0 / 0.28));
+  animation: fist-slam 620ms both;
+}
+
+@media (max-width: 640px) {
+  .physics-fist {
+    font-size: 62px;
+  }
+}
+
+/* Connects at 30% (190ms), which is when the impulse fires. */
+@keyframes fist-slam {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, 130%) rotate(-16deg) scale(0.82);
+    animation-timing-function: cubic-bezier(0.3, 0, 0.15, 1);
+  }
+  18% {
+    opacity: 1;
+  }
+  30% {
+    opacity: 1;
+    transform: translate(-50%, -6%) rotate(-3deg) scale(1.06);
+    animation-timing-function: cubic-bezier(0.4, 0, 0.6, 1);
+  }
+  42% {
+    transform: translate(-50%, 16%) rotate(-7deg) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, 135%) rotate(-18deg) scale(0.85);
+  }
+}
+
+/* ── Sitemap + controls panel ───────────────────────────────────────────── */
+.panel-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 10px;
+  border: 0;
+  border-radius: 999px;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: rgb(var(--ink-rgb) / 0.42);
+  background: rgb(var(--ink-rgb) / 0.05);
+  transition: color 200ms var(--ease-out), background-color 200ms var(--ease-out);
+}
+
+.panel-trigger:hover {
+  color: rgb(var(--ink-rgb) / 0.85);
+  background: rgb(var(--ink-rgb) / 0.09);
+}
+
+.control-dock {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 2px 9px;
+  max-width: calc(100vw - 24px);
+  padding: 7px 13px;
+  border-radius: 18px;
+  border: 1px solid rgb(var(--ink-rgb) / 0.07);
+  background: var(--card-bg);
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.06), 0 12px 28px rgb(0 0 0 / 0.13);
+}
+
+html.dark .control-dock {
+  border-color: rgb(var(--ink-rgb) / 0.1);
+  box-shadow: 0 2px 6px rgb(0 0 0 / 0.5), 0 16px 40px rgb(0 0 0 / 0.55);
+}
+
+.dock-nav {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  column-gap: 2px;
+}
+
+.dock-sep {
+  flex: none;
+  width: 1px;
+  height: 15px;
+  background: rgb(var(--ink-rgb) / 0.12);
+}
+
+.dock-control {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.dock-note {
+  flex-basis: 100%;
+  margin: 1px 0 0;
+  text-align: center;
+}
+
+.panel-close {
+  padding: 0 2px;
+  border: 0;
+  background: none;
+  cursor: pointer;
+  font-size: 14px;
+  line-height: 1;
+  color: rgb(var(--ink-rgb) / 0.35);
+  transition: color 160ms var(--ease-out);
+}
+
+.panel-close:hover {
+  color: rgb(var(--ink-rgb) / 0.85);
+}
+
+.panel-link {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 3px 4px;
+  border: 0;
+  border-radius: 5px;
+  background: none;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 11.5px;
+  text-align: left;
+  color: rgb(var(--ink-rgb) / 0.5);
+  transition: color 160ms var(--ease-out), background-color 160ms var(--ease-out);
+}
+
+.panel-link:hover {
+  color: var(--ink);
+  background: rgb(var(--ink-rgb) / 0.05);
+}
+
+.panel-link[data-active="true"] {
+  color: var(--ink);
+}
+
+.panel-dot {
+  flex: none;
+  width: 3px;
+  height: 3px;
+  border-radius: 999px;
+  background: currentColor;
+  opacity: 0.25;
+  transition: opacity 160ms var(--ease-out), transform 160ms var(--ease-out);
+}
+
+.panel-link[data-active="true"] .panel-dot {
+  opacity: 1;
+  transform: scale(1.7);
+}
+
+.panel-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11.5px;
+  color: rgb(var(--ink-rgb) / 0.6);
+}
+
+.panel-key {
+  padding: 2px 4px;
+  border-radius: 3px;
+  font-family: inherit;
+  font-size: 9px;
+  line-height: 1;
+  color: rgb(var(--ink-rgb) / 0.45);
+  background: rgb(var(--ink-rgb) / 0.08);
+}
+
+.panel-button {
+  padding: 3px 11px;
+  border: 1px solid rgb(var(--ink-rgb) / 0.15);
+  border-radius: 999px;
+  background: none;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 10.5px;
+  color: rgb(var(--ink-rgb) / 0.65);
+  transition: color 160ms var(--ease-out), background-color 160ms var(--ease-out),
+    border-color 160ms var(--ease-out), transform 120ms var(--ease-out);
+}
+
+.panel-button:hover:not(:disabled) {
+  color: var(--bg);
+  border-color: var(--ink);
+  background: var(--ink);
+}
+
+.panel-button:active:not(:disabled) {
+  transform: scale(0.93);
+}
+
+.panel-button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.panel-note {
+  margin: 5px 4px 0;
+  font-size: 10px;
+  color: rgb(var(--ink-rgb) / 0.35);
+}
+
+/* Way out of a physics session - sits in the middle of the screen so it can't
+   be missed while the letters are loose. */
+.physics-restore {
+  position: fixed;
+  left: 50%;
+  top: 46%;
+  z-index: 68;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 7px 9px 7px 14px;
+  border: 1px solid rgb(var(--ink-rgb) / 0.12);
+  border-radius: 999px;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 11.5px;
+  color: rgb(var(--ink-rgb) / 0.7);
+  background: var(--card-bg);
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.06), 0 10px 30px rgb(0 0 0 / 0.14);
+  animation: restore-in 260ms var(--ease-out) both;
+  transition: color 160ms var(--ease-out), border-color 160ms var(--ease-out);
+}
+
+.physics-restore:hover {
+  color: var(--ink);
+  border-color: rgb(var(--ink-rgb) / 0.3);
+}
+
+html.dark .physics-restore {
+  border-color: rgb(var(--ink-rgb) / 0.14);
+  box-shadow: 0 2px 6px rgb(0 0 0 / 0.5), 0 14px 36px rgb(0 0 0 / 0.5);
+}
+
+@keyframes restore-in {
+  from {
+    opacity: 0;
+    transform: translate(-50%, calc(-50% + 6px));
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, -50%);
+  }
+}

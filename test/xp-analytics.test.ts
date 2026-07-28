@@ -37,6 +37,8 @@ describe("XP analytics", () => {
       award("genz:on", 50);
       award("scroll:bottom", 50);
       award("time:60s", 50);
+      award("gravity:on", 50);
+      award("smash:first", 50);
     });
 
     const unlocks = analytics.captureAnalyticsEvent.mock.calls.filter(

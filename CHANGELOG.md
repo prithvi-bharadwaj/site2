@@ -2,6 +2,24 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.1.5.0] - 2026-07-28
+
+### Added
+- Letter physics: a gravity switch drops every visible glyph into a pile, and a table slam punches letters off their lines chess.com-style - letters stay alive under the cursor (brush, poke, knock upright) until "put it back" or esc
+- Sitemap + controls as a floating bottom dock: section links with active tracking, gen z / gravity / slam controls inline, G and F keyboard shortcuts, achievements for both effects
+- Gen z toggle rebuilt as a real draggable switch component (shared by the footer easter egg and the dock)
+
+### Changed
+- Physics renders cached glyph sprites instead of filling text per frame (~1.4x fps during a fall, jank frames 21/149 -> 0) and the collision broadphase is a zero-alloc typed-array hash grid (1.49 -> 0.80 ms/step at 1500 bodies)
+- Gravity drops fall with per-letter scatter instead of a mirror-symmetric fan
+
+### Fixed
+- Theme flips mid-physics re-resolve letter colors (dark letters no longer vanish on dark background)
+- Reduced-motion changes apply at runtime: physics commands no-op, running effects end, sitemap jumps scroll instantly
+- Glyph harvest keeps emoji whole (grapheme segmentation) and applies text-transform, so uppercase headings stay uppercase mid-physics
+- Cursor push works on slammed letters (snap-to-column no longer swallows the shove)
+- Canceled switch drags no longer commit or eat the next tap
+
 ## [0.1.4.0] - 2026-07-19
 
 ### Changed
