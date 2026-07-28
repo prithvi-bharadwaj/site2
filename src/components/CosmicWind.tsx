@@ -46,12 +46,25 @@ export function CosmicWind() {
       return;
     }
 
+    // Canvas box in page coordinates, refreshed on resize. Mouse math works
+    // off pageX/pageY against this cache, so mousemove never forces layout.
+    const box = { left: 0, top: 0, width: 1, height: 1 };
+
     function resize() {
       const rect = canvas!.getBoundingClientRect();
+      box.left = rect.left + window.scrollX;
+      box.top = rect.top + window.scrollY;
+      box.width = rect.width;
+      box.height = rect.height;
       renderer!.resize(rect.width, rect.height, RESOLUTION);
     }
     resize();
     window.addEventListener("resize", resize);
+    // The canvas hangs off the page bottom, so its page-space top moves when
+    // content above it grows (gen z mode, expanded lore). Track the body, not
+    // just the window.
+    const bodyObserver = new ResizeObserver(resize);
+    bodyObserver.observe(document.body);
 
     const reducedMotion =
       typeof window.matchMedia === "function" &&
@@ -67,9 +80,8 @@ export function CosmicWind() {
     const mouse = { x: 0.5, y: 0.5, tx: 0.5, ty: 0.5, strength: 0 };
 
     function onMove(e: MouseEvent) {
-      const rect = canvas!.getBoundingClientRect();
-      mouse.tx = (e.clientX - rect.left) / rect.width;
-      mouse.ty = 1 - (e.clientY - rect.top) / rect.height;
+      mouse.tx = (e.pageX - box.left) / box.width;
+      mouse.ty = 1 - (e.pageY - box.top) / box.height;
       mouse.strength = 1;
     }
 
@@ -93,6 +105,7 @@ export function CosmicWind() {
       observer.observe(canvas);
       return () => {
         observer.disconnect();
+        bodyObserver.disconnect();
         document.removeEventListener("mousemove", onMove);
         cancelAnimationFrame(raf);
         window.removeEventListener("resize", resize);
@@ -101,6 +114,7 @@ export function CosmicWind() {
     }
 
     return () => {
+      bodyObserver.disconnect();
       window.removeEventListener("resize", resize);
       renderer.dispose();
     };

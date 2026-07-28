@@ -96,10 +96,12 @@ float noise(vec2 p) {
   );
 }
 
+// 4 octaves: the 5th sat below the half-resolution canvas's pixel grid,
+// so it cost a third noise() round per fragment without changing the look.
 float fbm(vec2 p) {
   float v = 0.0;
   float a = 0.5;
-  for (int i = 0; i < 5; i++) {
+  for (int i = 0; i < 4; i++) {
     v += a * noise(p);
     p = p * 2.03 + vec2(11.7, 5.3);
     a *= 0.5;
@@ -172,7 +174,15 @@ export function createWindRenderer(
   palette: WindPalette,
   intensity: number,
 ): WindRenderer | null {
-  const gl = canvas.getContext("webgl", { alpha: true, antialias: false, premultipliedAlpha: true });
+  const gl = canvas.getContext("webgl", {
+    alpha: true,
+    antialias: false,
+    premultipliedAlpha: true,
+    // Decoration: never worth spinning up the discrete GPU on dual-GPU machines.
+    powerPreference: "low-power",
+    depth: false,
+    stencil: false,
+  });
   if (!gl) return null;
   const program = compileProgram(gl);
   const buffer = gl.createBuffer();
