@@ -847,8 +847,9 @@ main.crumb-page-blurred {
   margin: 0;
   padding: 0 12px;
   place-items: center;
-  /* 2px to match the pet's drawn line weight. */
-  border: 2px solid rgb(var(--ink-rgb) / 0.18);
+  /* 2px at 0.8 ink to match the pet's drawn line, which is knocked down to the
+     same 0.8 on .crumb-pet-sprite::after. Change them together. */
+  border: 2px solid rgb(var(--ink-rgb) / 0.8);
   border-radius: 10px;
   font: 500 10px/1 "SFMono-Regular", Consolas, monospace;
   cursor: pointer;
@@ -1222,6 +1223,10 @@ main.crumb-page-blurred {
   background: currentColor;
   -webkit-mask-image: url("/images/crumb-sprites.png");
   mask-image: url("/images/crumb-sprites.png");
+  /* Matches the buttons' 0.8-ink borders so pet and boxes read as one drawing.
+     Only the outline layer fades; the ::before fill stays solid so the pet
+     still occludes the floor line and passing cookies. */
+  opacity: 0.8;
 }
 
 .crumb-pet[data-mood="tracking"],
