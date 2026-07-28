@@ -1227,10 +1227,11 @@ main.crumb-page-blurred {
   background: currentColor;
   -webkit-mask-image: url("/images/crumb-sprites.png");
   mask-image: url("/images/crumb-sprites.png");
-  /* Matches the buttons' 0.64-ink borders so pet and boxes read as one
-     drawing. Only the outline layer fades; the ::before fill stays solid so
-     the pet still occludes the floor line and passing cookies. */
-  opacity: 0.64;
+  /* A touch above the buttons' 0.64-ink borders so the pet, the protagonist,
+     sits slightly forward of the boxes. Only the outline layer fades; the
+     ::before fill stays solid so the pet still occludes the floor line and
+     passing cookies. */
+  opacity: 0.69;
 }
 
 .crumb-pet[data-mood="tracking"],
