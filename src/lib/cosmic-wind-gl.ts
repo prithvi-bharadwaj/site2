@@ -8,8 +8,12 @@ export interface WindPalette {
 
 export interface WindRenderer {
   resize(width: number, height: number, dpr: number): void;
-  /** Render one frame at the given time (seconds). */
-  draw(time: number): void;
+  /**
+   * Render one frame. `time` in seconds; `mouseX`/`mouseY` in canvas uv space
+   * (y up, may exceed [0,1] when the cursor is above the canvas); `strength`
+   * 0..1 fades the mouse influence in and out.
+   */
+  draw(time: number, mouseX: number, mouseY: number, strength: number): void;
   dispose(): void;
 }
 
@@ -66,6 +70,8 @@ uniform vec3 uColorA;
 uniform vec3 uColorB;
 uniform vec3 uColorC;
 uniform float uIntensity;
+uniform vec2 uMouse;
+uniform float uMouseStrength;
 
 float hash(vec2 p) {
   p = fract(p * vec2(123.34, 456.21));
@@ -97,8 +103,14 @@ float fbm(vec2 p) {
 
 void main() {
   vec2 uv = gl_FragCoord.xy / uSize;
-  vec2 p = vec2(uv.x * uSize.x / uSize.y, uv.y);
-  float t = uTime * 0.03;
+  float aspect = uSize.x / uSize.y;
+  vec2 p = vec2(uv.x * aspect, uv.y);
+  float t = uTime * 0.14;
+
+  // The cursor drags the field toward itself and feeds extra energy nearby.
+  vec2 mp = vec2(uMouse.x * aspect, uMouse.y);
+  float md = exp(-length(p - mp) * 1.8) * uMouseStrength;
+  p += (mp - p) * md * 0.35;
 
   // Two fbm channels warp the third; the -t drift makes the wisps rise.
   vec2 q = vec2(
@@ -107,14 +119,19 @@ void main() {
   );
   float f = fbm(p * vec2(2.6, 1.1) + q * 1.7 + vec2(uSeed * 2.0, -t * 3.0));
 
+  // Aurora curtains: a slow warped wave sweeps across, so wisps swell and
+  // die instead of glowing steadily.
+  float wave = 0.5 + 0.5 * sin(p.x * 2.4 + q.x * 5.0 + t * 3.0 + uSeed);
+
   // Strongest at the bottom edge, dissolved well before the top.
   float fall = pow(clamp(1.0 - uv.y, 0.0, 1.0), 2.6);
-  float body = smoothstep(0.45, 1.15, f + fall * 0.55);
+  float body = smoothstep(0.45, 1.15, f + fall * 0.55 + md * 0.3);
+  body *= 0.35 + 0.65 * wave;
 
   vec3 col = mix(uColorA, uColorB, clamp(q.x * 1.5, 0.0, 1.0));
   col = mix(col, uColorC, clamp(q.y * q.y * 1.7, 0.0, 1.0) * 0.75);
 
-  float a = body * fall * uIntensity;
+  float a = body * fall * uIntensity * (1.0 + md * 0.6);
   gl_FragColor = vec4(col * a, a);
 }
 `;
@@ -167,6 +184,8 @@ export function createWindRenderer(
 
   const uSize = gl.getUniformLocation(program, "uSize");
   const uTime = gl.getUniformLocation(program, "uTime");
+  const uMouse = gl.getUniformLocation(program, "uMouse");
+  const uMouseStrength = gl.getUniformLocation(program, "uMouseStrength");
   gl.uniform1f(gl.getUniformLocation(program, "uSeed"), palette.seed);
   gl.uniform3fv(gl.getUniformLocation(program, "uColorA"), palette.colors[0]);
   gl.uniform3fv(gl.getUniformLocation(program, "uColorB"), palette.colors[1]);
@@ -182,8 +201,10 @@ export function createWindRenderer(
       gl.viewport(0, 0, canvas.width, canvas.height);
       gl.uniform2f(uSize, canvas.width, canvas.height);
     },
-    draw(time) {
+    draw(time, mouseX, mouseY, strength) {
       gl.uniform1f(uTime, time);
+      gl.uniform2f(uMouse, mouseX, mouseY);
+      gl.uniform1f(uMouseStrength, strength);
       gl.drawArrays(gl.TRIANGLES, 0, 3);
     },
     dispose() {

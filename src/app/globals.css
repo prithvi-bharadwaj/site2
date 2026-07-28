@@ -59,6 +59,9 @@ body {
 
 html {
   background: var(--bg);
+  /* No rubber-band bounce: overscrolling past the footer flashed a bare
+     white bar under the cosmic wind. */
+  overscroll-behavior: none;
 }
 
 body {
