@@ -867,10 +867,9 @@ main.crumb-page-blurred {
   background: var(--bg);
 }
 
-/* Border beam, after beam.jakubantalik.com (rotate, mono, full strength, with
-   the inner glow pulsing). The original is a white beam on a dark card; here the
-   travelling highlight is ink, so the same gradient reads as the border stroke
-   inking up in light mode and lighting up in dark. */
+/* Border beam, after beam.jakubantalik.com (rotate, with the inner glow
+   pulsing). The comet runs blue at the tail into purple at the head; the
+   colours are self-lit, so the same gradient carries in both light and dark. */
 @property --beam-angle {
   syntax: "<angle>";
   inherits: true;
@@ -926,25 +925,26 @@ main.crumb-page-blurred {
   box-sizing: border-box;
   padding: 1px;
   border-radius: inherit;
+  /* Long blue tail sweeping into a bright purple head, with a quick falloff
+     past the head so it reads as a comet, not a smear. */
   background: conic-gradient(
     from var(--beam-angle),
     transparent 0%,
-    transparent 54%,
-    rgb(var(--ink-rgb) / 0.1) 57%,
-    rgb(var(--ink-rgb) / 0.3) 60%,
-    rgb(var(--ink-rgb) / 0.6) 63%,
-    rgb(var(--ink-rgb) / 0.75) 66%,
-    rgb(var(--ink-rgb) / 0.6) 69%,
-    rgb(var(--ink-rgb) / 0.3) 72%,
-    rgb(var(--ink-rgb) / 0.1) 75%,
-    transparent 78%,
+    transparent 50%,
+    rgb(59 130 246 / 0.12) 53%,
+    rgb(56 128 255 / 0.55) 60%,
+    rgb(76 114 252 / 0.7) 66%,
+    rgb(124 96 250 / 0.85) 71%,
+    rgb(168 85 247 / 1) 75%,
+    rgb(168 85 247 / 0.25) 77%,
+    transparent 78.5%,
     transparent 100%
   );
   -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
   -webkit-mask-composite: xor;
   mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
   mask-composite: exclude;
-  opacity: calc(var(--beam-opacity) * 0.72);
+  opacity: calc(var(--beam-opacity) * 0.9);
   pointer-events: none;
 }
 
@@ -955,7 +955,7 @@ main.crumb-page-blurred {
   position: absolute;
   inset: 0;
   border-radius: inherit;
-  box-shadow: inset 0 0 9px 1px rgb(var(--ink-rgb) / 0.27);
+  box-shadow: inset 0 0 11px 1px rgb(124 104 250 / 0.4);
   /* Written out rather than held in a custom property: a var() inside a custom
      property resolves against the element that declares it, so the button's
      static --beam-angle would win over the pseudo's animated one. */
@@ -972,7 +972,7 @@ main.crumb-page-blurred {
     transparent 95%,
     transparent 100%
   );
-  opacity: calc(var(--beam-opacity) * var(--beam-pulse) * 0.5);
+  opacity: calc(var(--beam-opacity) * var(--beam-pulse) * 0.6);
   pointer-events: none;
 }
 
