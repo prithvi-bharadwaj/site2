@@ -46,6 +46,10 @@ export function CosmicWind() {
       return;
     }
 
+    const reducedMotion =
+      typeof window.matchMedia === "function" &&
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
     // Canvas box in page coordinates, refreshed on resize. Mouse math works
     // off pageX/pageY against this cache, so mousemove never forces layout.
     const box = { left: 0, top: 0, width: 1, height: 1 };
@@ -57,6 +61,9 @@ export function CosmicWind() {
       box.width = rect.width;
       box.height = rect.height;
       renderer!.resize(rect.width, rect.height, RESOLUTION);
+      // Resizing the backing buffer wipes it; under reduced motion no rAF
+      // loop exists to repaint, so redraw the static frame here.
+      if (reducedMotion) renderer!.draw(palette.seed, 0.5, 0.5, 0);
     }
     resize();
     window.addEventListener("resize", resize);
@@ -65,10 +72,6 @@ export function CosmicWind() {
     // just the window.
     const bodyObserver = new ResizeObserver(resize);
     bodyObserver.observe(document.body);
-
-    const reducedMotion =
-      typeof window.matchMedia === "function" &&
-      window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
     let raf = 0;
     let visible = false;
@@ -93,9 +96,8 @@ export function CosmicWind() {
       if (visible) raf = requestAnimationFrame(frame);
     }
 
-    if (reducedMotion) {
-      renderer.draw(palette.seed, 0.5, 0.5, 0);
-    } else {
+    // Reduced motion already got its static frame from the initial resize().
+    if (!reducedMotion) {
       document.addEventListener("mousemove", onMove, { passive: true });
       const observer = new IntersectionObserver(([entry]) => {
         visible = entry.isIntersecting;

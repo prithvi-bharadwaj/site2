@@ -210,10 +210,11 @@ export function createWindRenderer(
 
   return {
     resize(width, height, dpr) {
+      // Backing buffer only - the stylesheet owns the CSS box. Writing inline
+      // px here would freeze `w-full`/`clamp(...)` at their first-measured
+      // values, so every later resize would remeasure the same stale rect.
       canvas.width = Math.max(1, Math.round(width * dpr));
       canvas.height = Math.max(1, Math.round(height * dpr));
-      canvas.style.width = `${width}px`;
-      canvas.style.height = `${height}px`;
       gl.viewport(0, 0, canvas.width, canvas.height);
       gl.uniform2f(uSize, canvas.width, canvas.height);
     },

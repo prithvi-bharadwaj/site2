@@ -59,9 +59,10 @@ body {
 
 html {
   background: var(--bg);
-  /* No rubber-band bounce: overscrolling past the footer flashed a bare
-     white bar under the cosmic wind. */
-  overscroll-behavior: none;
+  /* No vertical rubber-band bounce: overscrolling past the footer flashed a
+     bare white bar under the cosmic wind. y-only, so trackpad swipe-back
+     history navigation keeps working. */
+  overscroll-behavior-y: none;
 }
 
 body {
