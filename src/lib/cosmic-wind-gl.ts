@@ -34,18 +34,24 @@ function hslToRgb(h: number, s: number, l: number): Rgb {
   return [r + m, g + m, b + m];
 }
 
+/** Hue band the palette lives in: teal-blue (180) through violet (300). */
+const HUE_MIN = 180;
+const HUE_MAX = 300;
+const clampHue = (h: number) => Math.min(HUE_MAX, Math.max(HUE_MIN, h));
+
 /**
- * A fresh palette per page load: one random base hue, two analogous drifts.
- * Saturated but light, so the low-alpha wisps read as tinted air on white
- * and as a faint aurora on dark. `rand` is injectable for tests.
+ * A fresh palette per page load: one random base hue with two analogous
+ * drifts, all held inside the blue-purple band. Saturated but light, so the
+ * low-alpha wisps read as tinted air on white and as a faint aurora on dark.
+ * `rand` is injectable for tests.
  */
 export function randomWindPalette(rand: () => number = Math.random): WindPalette {
-  const base = rand() * 360;
+  const base = 205 + rand() * 80;
   return {
     colors: [
       hslToRgb(base, 0.85, 0.62),
-      hslToRgb(base + 30 + rand() * 30, 0.8, 0.68),
-      hslToRgb(base - 40 - rand() * 40, 0.75, 0.58),
+      hslToRgb(clampHue(base + 15 + rand() * 20), 0.8, 0.68),
+      hslToRgb(clampHue(base - 15 - rand() * 25), 0.75, 0.58),
     ],
     seed: rand() * 100,
   };

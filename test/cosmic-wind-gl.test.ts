@@ -25,6 +25,15 @@ describe("randomWindPalette", () => {
     expect(a.seed).toBeLessThanOrEqual(100);
   });
 
+  it("stays in the blue-purple band (blue is the dominant channel)", () => {
+    for (let seed = 1; seed < 50; seed++) {
+      for (const [r, g, b] of randomWindPalette(seeded(seed)).colors) {
+        expect(b).toBeGreaterThanOrEqual(r);
+        expect(b).toBeGreaterThanOrEqual(g);
+      }
+    }
+  });
+
   it("varies the palette across loads", () => {
     const a = randomWindPalette(seeded(1));
     const b = randomWindPalette(seeded(999));
