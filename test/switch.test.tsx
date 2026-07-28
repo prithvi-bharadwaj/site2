@@ -1,8 +1,11 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { Switch } from "@/components/Switch";
 
 afterEach(cleanup);
+
+// jsdom has no pointer capture.
+window.HTMLElement.prototype.setPointerCapture ||= () => {};
 
 function thumb(container: HTMLElement) {
   return container.querySelector<HTMLElement>(".switch-thumb")!;
@@ -28,6 +31,25 @@ describe("Switch", () => {
     render(<Switch checked={false} onChange={onChange} label="gravity" disabled />);
     screen.getByRole("switch").click();
     expect(onChange).not.toHaveBeenCalled();
+  });
+
+  it("drops a canceled drag without committing or eating the next tap", () => {
+    // A scroll gesture stealing the pointer fires pointercancel. That must
+    // not commit the half-drag, and must not arm the click swallow - the
+    // canceled sequence never produces a click, so the flag would eat the
+    // user's next real tap instead.
+    const onChange = vi.fn();
+    render(<Switch checked={false} onChange={onChange} label="gravity" />);
+    const el = screen.getByRole("switch");
+
+    fireEvent.pointerDown(el, { clientX: 0, pointerId: 1 });
+    fireEvent.pointerMove(el, { clientX: 15, pointerId: 1 });
+    fireEvent.pointerCancel(el, { pointerId: 1 });
+    expect(onChange).not.toHaveBeenCalled();
+
+    el.click();
+    expect(onChange).toHaveBeenCalledTimes(1);
+    expect(onChange).toHaveBeenCalledWith(true);
   });
 
   it("parks the thumb symmetrically at both ends", () => {

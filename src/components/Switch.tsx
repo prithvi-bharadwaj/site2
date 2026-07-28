@@ -68,6 +68,15 @@ export function Switch({ checked, onChange, label, disabled }: SwitchProps) {
     setDragX(null);
   }, [checked, dragX, onChange]);
 
+  /** The browser stole the pointer (scroll gesture, etc.) - no commit, and no
+   *  click swallow: a canceled sequence never produces the click that flag
+   *  expects, so arming it would eat the user's next real tap. */
+  const cancelDrag = useCallback(() => {
+    setPressed(false);
+    draggedRef.current = false;
+    setDragX(null);
+  }, []);
+
   const onClick = useCallback(() => {
     if (swallowClickRef.current) {
       swallowClickRef.current = false;
@@ -94,7 +103,7 @@ export function Switch({ checked, onChange, label, disabled }: SwitchProps) {
       onPointerDown={onPointerDown}
       onPointerMove={onPointerMove}
       onPointerUp={endDrag}
-      onPointerCancel={endDrag}
+      onPointerCancel={cancelDrag}
     >
       <span
         className="switch-thumb"
