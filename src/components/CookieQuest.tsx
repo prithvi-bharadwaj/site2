@@ -8,7 +8,7 @@ import {
   stepCookiePhysics,
   type CookieParticle,
 } from "@/lib/cookie-physics";
-import { saveCookieChoice } from "@/lib/cookie-quest";
+import { readCookieChoice, saveCookieChoice } from "@/lib/cookie-quest";
 import { useBoxShatter } from "@/lib/use-box-shatter";
 import { launchOntoPet } from "@/lib/crumb-ballistics";
 import { playClick } from "@/lib/crumb-sfx";
@@ -41,6 +41,8 @@ function layoutLabel(): PositionedWord[] {
 export function CookieQuest() {
   const [ready, setReady] = useState(false);
   const [visible, setVisible] = useState(false);
+  // Hop-and-badge nag on the trigger until a consent choice is on record.
+  const [nudging, setNudging] = useState(false);
   const [phase, setPhase] = useState<Phase>("idle");
   const [petMood, setPetMood] = useState<PetMood>("sad");
   const [letters, setLetters] = useState<PositionedWord[]>([]);
@@ -78,6 +80,7 @@ export function CookieQuest() {
   useEffect(() => {
     document.fonts.ready.then(() => {
       setLetters(layoutLabel());
+      setNudging(readCookieChoice() === null);
       setReady(true);
     });
     return clearTimers;
@@ -300,6 +303,7 @@ export function CookieQuest() {
   function allowCookies() {
     if (phase !== "idle") return;
     saveCookieChoice("accepted");
+    setNudging(false);
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
       setPetMood("happy");
       setPhase("complete");
@@ -344,6 +348,7 @@ export function CookieQuest() {
   function declineCookies() {
     if (phase !== "idle") return;
     saveCookieChoice("declined");
+    setNudging(false);
     playClick();
     setPhase("declined");
     dropOnPet(declineRef.current, 1600);
@@ -393,8 +398,16 @@ export function CookieQuest() {
         onClick={openDialog}
         aria-haspopup="dialog"
         aria-expanded={visible}
+        data-nudge={nudging && !visible ? "" : undefined}
       >
-        cookies
+        <span className="crumb-trigger-inner">
+          cookies
+          {nudging && (
+            <span className="crumb-trigger-badge" aria-hidden="true">
+              1
+            </span>
+          )}
+        </span>
       </button>
 
       {visible && createPortal(
