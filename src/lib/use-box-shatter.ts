@@ -18,13 +18,13 @@ import { createRibbonRenderer, type RibbonRenderer } from "@/lib/ink-ribbon-gl";
 const PAD_X = 280;
 const PAD_TOP = 200;
 const CANVAS_HEIGHT = 760;
-// Matches the .crumb-brick border stroke (2px, ink at 0.8).
+// Matches the .crumb-brick border stroke (2px, ink at 0.64).
 const STROKE = 2;
-const STROKE_ALPHA = 0.8;
+const STROKE_ALPHA = 0.64;
 // Dust keeps a hairline stroke so it reads finer than the fragments, and sits
 // below border ink so the specks read as debris, not confetti-sized fragments.
 const DUST_STROKE = 1;
-const DUST_ALPHA = 0.5;
+const DUST_ALPHA = 0.4;
 // One frame of intact-but-cracked box before it goes. Any longer and the hit
 // reads as a slow break instead of a bang.
 const HOLD_MS = 50;

@@ -818,7 +818,7 @@ main.crumb-page-blurred {
 
 .crumb-prompt > h2 {
   margin: 0 0 13px;
-  color: rgb(var(--ink-rgb) / 0.48);
+  color: rgb(var(--ink-rgb) / 0.58);
   font-size: 10px;
   font-weight: 300;
   line-height: 1.4;
@@ -847,9 +847,9 @@ main.crumb-page-blurred {
   margin: 0;
   padding: 0 12px;
   place-items: center;
-  /* 2px at 0.8 ink to match the pet's drawn line, which is knocked down to the
-     same 0.8 on .crumb-pet-sprite::after. Change them together. */
-  border: 2px solid rgb(var(--ink-rgb) / 0.8);
+  /* 2px at 0.64 ink to match the pet's drawn line, which is knocked down to
+     the same 0.64 on .crumb-pet-sprite::after. Change them together. */
+  border: 2px solid rgb(var(--ink-rgb) / 0.64);
   border-radius: 10px;
   font: 500 10px/1 "SFMono-Regular", Consolas, monospace;
   cursor: pointer;
@@ -865,7 +865,8 @@ main.crumb-page-blurred {
 
 .crumb-brick,
 .crumb-decline {
-  color: rgb(var(--ink-rgb) / 0.58);
+  /* Darker than the border: the label is content, the box is drawing. */
+  color: rgb(var(--ink-rgb) / 0.85);
   background: var(--bg);
 }
 
@@ -1223,10 +1224,10 @@ main.crumb-page-blurred {
   background: currentColor;
   -webkit-mask-image: url("/images/crumb-sprites.png");
   mask-image: url("/images/crumb-sprites.png");
-  /* Matches the buttons' 0.8-ink borders so pet and boxes read as one drawing.
-     Only the outline layer fades; the ::before fill stays solid so the pet
-     still occludes the floor line and passing cookies. */
-  opacity: 0.8;
+  /* Matches the buttons' 0.64-ink borders so pet and boxes read as one
+     drawing. Only the outline layer fades; the ::before fill stays solid so
+     the pet still occludes the floor line and passing cookies. */
+  opacity: 0.64;
 }
 
 .crumb-pet[data-mood="tracking"],

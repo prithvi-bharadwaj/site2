@@ -23,7 +23,7 @@ export const SHARD_GRAVITY = 1150;
 export const SHARD_FADE_START = 0.45;
 export const SHARD_FADE_END = 1;
 /** Peak ink multiplier once a fragment is clear of the box, and the ramp to it.
-    The base stroke is 0.8 ink now, so 1.25 lands the peak at exactly full ink. */
+    The base stroke is 0.64 ink, so 1.25 peaks the debris at 0.8. */
 export const BLAST_INK = 1.25;
 const BLAST_INK_IN = 0.1;
 const MAX_STEP_MS = 32;
