@@ -15,6 +15,8 @@ export interface Shard {
   spin: number;
   /** Seconds since the break; drives the fade. */
   age: number;
+  /** Fade-clock multiplier. Dust burns out faster than structural fragments. */
+  fadeRate?: number;
 }
 
 export const SHARD_GRAVITY = 1150;
@@ -160,11 +162,11 @@ export function createShatter({
   radius,
   offsetX = 0,
   offsetY = 0,
-  columns = 9,
-  splitChance = 0.85,
-  burst = 660,
+  columns = 13,
+  splitChance = 0.94,
+  burst = 540,
   spray = 1.5,
-  lift = 240,
+  lift = 200,
   seed = 20260726,
 }: ShatterOptions): Shard[] {
   const random = makeRandom(seed);
@@ -230,6 +232,61 @@ export function createShatter({
   });
 }
 
+interface ParticleOptions {
+  width: number;
+  height: number;
+  offsetX?: number;
+  offsetY?: number;
+  count?: number;
+  /** Peak speed in px/s. Dust flies faster than the fragments it rides with. */
+  burst?: number;
+  lift?: number;
+  seed?: number;
+}
+
+/**
+ * Dust kicked out of the hit: tiny diamonds thrown from the button's body in
+ * every direction. The fragments read as the box coming apart; this reads as
+ * the energy of the impact, and it dies away before the fragments do.
+ */
+export function createBlastParticles({
+  width,
+  height,
+  offsetX = 0,
+  offsetY = 0,
+  count = 34,
+  burst = 820,
+  lift = 150,
+  seed = 91,
+}: ParticleOptions): Shard[] {
+  const random = makeRandom(seed);
+  return Array.from({ length: count }, () => {
+    const radius = 0.6 + random() * 1.1;
+    const heading = random() * Math.PI * 2;
+    const speed = burst * (0.25 + random() * 0.95);
+    // Seeded across the middle of the box, not one point, so the burst has a
+    // core with some body to it instead of a starburst pinned to a pixel.
+    const x = width * (0.25 + random() * 0.5);
+    const y = height * (0.3 + random() * 0.4);
+    return {
+      local: [
+        { x: 0, y: -radius },
+        { x: radius, y: 0 },
+        { x: 0, y: radius },
+        { x: -radius, y: 0 },
+      ],
+      x: x + offsetX,
+      y: y + offsetY,
+      vx: Math.cos(heading) * speed,
+      vy: Math.sin(heading) * speed - lift * (0.4 + random()),
+      angle: random() * Math.PI,
+      spin: (random() - 0.5) * 30,
+      age: 0,
+      fadeRate: 1.6 + random() * 0.9,
+    };
+  });
+}
+
 export function stepShatter(shards: Shard[], dtMs: number, gravity = SHARD_GRAVITY): void {
   const dt = Math.min(Math.max(dtMs, 0), MAX_STEP_MS) / 1000;
   if (dt === 0) return;
@@ -253,10 +310,11 @@ export function stepShatter(shards: Shard[], dtMs: number, gravity = SHARD_GRAVI
  * as faint confetti. Fades to nothing at the end so nothing pops out of view.
  */
 export function shardAlpha(shard: Shard): number {
-  const boost = 1 + (BLAST_INK - 1) * Math.min(shard.age / BLAST_INK_IN, 1);
-  if (shard.age <= SHARD_FADE_START) return boost;
-  if (shard.age >= SHARD_FADE_END) return 0;
-  const t = (shard.age - SHARD_FADE_START) / (SHARD_FADE_END - SHARD_FADE_START);
+  const age = shard.age * (shard.fadeRate ?? 1);
+  const boost = 1 + (BLAST_INK - 1) * Math.min(age / BLAST_INK_IN, 1);
+  if (age <= SHARD_FADE_START) return boost;
+  if (age >= SHARD_FADE_END) return 0;
+  const t = (age - SHARD_FADE_START) / (SHARD_FADE_END - SHARD_FADE_START);
   return boost * (1 - t * t);
 }
 

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   BLAST_INK,
+  createBlastParticles,
   createShatter,
   roundedRectOutline,
   shardAlpha,
@@ -167,6 +168,16 @@ describe("box shatter", () => {
     });
   });
 
+  it("burns dust out faster than the fragments it flies with", () => {
+    const [fragment] = createShatter({ ...BOX });
+    const [mote] = createBlastParticles({ ...BOX });
+    expect(mote.fadeRate).toBeGreaterThan(1);
+    fragment.age = 0.7;
+    mote.age = 0.7;
+    expect(shardAlpha(fragment)).toBeGreaterThan(0);
+    expect(shardAlpha(mote)).toBe(0);
+  });
+
   it("matches the border exactly at handoff, inks up in flight, then fades out", () => {
     const [shard] = createShatter({ ...BOX });
     // Frame one has to be indistinguishable from the intact CSS border.
@@ -179,5 +190,44 @@ describe("box shatter", () => {
     expect(mid).toBeLessThan(BLAST_INK);
     shard.age = 1.4;
     expect(shardAlpha(shard)).toBe(0);
+  });
+});
+
+describe("blast particles", () => {
+  it("is deterministic for a given seed", () => {
+    const key = (motes: Shard[]) => motes.map((m) => [m.x, m.y, m.vx, m.vy]);
+    expect(key(createBlastParticles({ ...BOX, seed: 4 }))).toEqual(
+      key(createBlastParticles({ ...BOX, seed: 4 })),
+    );
+    expect(key(createBlastParticles({ ...BOX, seed: 4 }))).not.toEqual(
+      key(createBlastParticles({ ...BOX, seed: 5 })),
+    );
+  });
+
+  it("spawns every mote inside the box, offset into canvas space", () => {
+    for (const mote of createBlastParticles({ ...BOX, offsetX: 60, offsetY: 40 })) {
+      expect(mote.x).toBeGreaterThan(60);
+      expect(mote.x).toBeLessThan(60 + BOX.width);
+      expect(mote.y).toBeGreaterThan(40);
+      expect(mote.y).toBeLessThan(40 + BOX.height);
+    }
+  });
+
+  it("keeps the dust tiny relative to the fragments", () => {
+    for (const mote of createBlastParticles({ ...BOX })) {
+      const { minX, maxX, minY, maxY } = boundsOf(mote.local);
+      expect(maxX - minX).toBeLessThan(4);
+      expect(maxY - minY).toBeLessThan(4);
+    }
+  });
+
+  it("flies through the same physics as the fragments", () => {
+    const motes = createBlastParticles({ ...BOX, seed: 8 });
+    const before = motes.map((m) => ({ x: m.x, y: m.y }));
+    stepShatter(motes, 16);
+    motes.forEach((mote, i) => {
+      expect(mote.x).not.toBe(before[i].x);
+      expect(mote.age).toBeGreaterThan(0);
+    });
   });
 });

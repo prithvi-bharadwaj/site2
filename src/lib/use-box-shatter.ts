@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, type RefObject } from "react";
 import {
+  createBlastParticles,
   createShatter,
   shardAlpha,
   shardOutline,
@@ -20,6 +21,9 @@ const CANVAS_HEIGHT = 760;
 // Matches the .crumb-brick border stroke (1px, ink at 0.18).
 const STROKE = 1;
 const STROKE_ALPHA = 0.18;
+// Dust starts heavier than the fragments: a 2px speck at border weight would
+// vanish into the background before it read as anything.
+const DUST_ALPHA = 0.3;
 // One frame of intact-but-cracked box before it goes. Any longer and the hit
 // reads as a slow break instead of a bang.
 const HOLD_MS = 50;
@@ -78,6 +82,9 @@ export function useBoxShatter(
     const renderer = rendererRef.current;
     if (!renderer || shardsRef.current) return;
     const shards = createShatter({ width, height, radius, offsetX: PAD_X, offsetY: PAD_TOP });
+    // Dust waits out the hold: on the cracked-but-intact frames it would just
+    // be specks floating inside a whole box.
+    const dust = createBlastParticles({ width, height, offsetX: PAD_X, offsetY: PAD_TOP });
     shardsRef.current = shards;
     // Same frame the CSS border goes transparent, so the handoff has no seam.
     buttonRef.current?.setAttribute("data-shattered", "");
@@ -85,17 +92,27 @@ export function useBoxShatter(
     const start = performance.now();
     let previous = start;
     const frame = (now: number) => {
-      if (now - start >= HOLD_MS) stepShatter(shards, now - previous);
+      const detonated = now - start >= HOLD_MS;
+      if (detonated) {
+        stepShatter(shards, now - previous);
+        stepShatter(dust, now - previous);
+      }
       previous = now;
-      renderer.draw(
-        shards
-          .map((shard) => ({
-            points: shardOutline(shard),
+      const strips = shards.map((shard) => ({
+        points: shardOutline(shard),
+        thickness: STROKE,
+        alpha: STROKE_ALPHA * shardAlpha(shard),
+      }));
+      if (detonated) {
+        for (const mote of dust) {
+          strips.push({
+            points: shardOutline(mote),
             thickness: STROKE,
-            alpha: STROKE_ALPHA * shardAlpha(shard),
-          }))
-          .filter((strip) => strip.alpha > 0.001),
-      );
+            alpha: DUST_ALPHA * shardAlpha(mote),
+          });
+        }
+      }
+      renderer.draw(strips.filter((strip) => strip.alpha > 0.001));
       rafRef.current = requestAnimationFrame(frame);
     };
     frame(start);
