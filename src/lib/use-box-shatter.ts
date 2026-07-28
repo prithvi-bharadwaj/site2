@@ -18,11 +18,13 @@ import { createRibbonRenderer, type RibbonRenderer } from "@/lib/ink-ribbon-gl";
 const PAD_X = 280;
 const PAD_TOP = 200;
 const CANVAS_HEIGHT = 760;
-// Matches the .crumb-brick border stroke (1px, ink at 0.18).
-const STROKE = 1;
+// Matches the .crumb-brick border stroke (2px, ink at 0.18).
+const STROKE = 2;
 const STROKE_ALPHA = 0.18;
-// Dust starts heavier than the fragments: a 2px speck at border weight would
-// vanish into the background before it read as anything.
+// Dust keeps a hairline stroke so it reads finer than the fragments, and
+// starts heavier: a speck that small at border ink would vanish before it
+// read as anything.
+const DUST_STROKE = 1;
 const DUST_ALPHA = 0.3;
 // One frame of intact-but-cracked box before it goes. Any longer and the hit
 // reads as a slow break instead of a bang.
@@ -107,7 +109,7 @@ export function useBoxShatter(
         for (const mote of dust) {
           strips.push({
             points: shardOutline(mote),
-            thickness: STROKE,
+            thickness: DUST_STROKE,
             alpha: DUST_ALPHA * shardAlpha(mote),
           });
         }

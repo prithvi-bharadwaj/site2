@@ -21,6 +21,8 @@ const BUTTON_WIDTH = 132;
 const BUTTON_HEIGHT = 38;
 // Mirrors the .crumb-brick border-radius so the shards trace the same outline.
 const BUTTON_RADIUS = 10;
+// Letter positions are measured from the padding box, which the border offsets.
+const BUTTON_BORDER = 2;
 const FONT = '500 10px "SFMono-Regular", Consolas, monospace';
 
 function layoutLabel(): PositionedWord[] {
@@ -378,7 +380,7 @@ export function CookieQuest() {
   }
 
   const labelWidth = letters.reduce((max, letter) => Math.max(max, letter.x + letter.width), 0);
-  const labelOffset = (BUTTON_WIDTH - labelWidth) / 2;
+  const labelOffset = (BUTTON_WIDTH - labelWidth) / 2 - BUTTON_BORDER;
 
   if (!ready) return null;
 

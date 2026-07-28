@@ -40,7 +40,8 @@ function makeRandom(seed: number): () => number {
 
 /**
  * The button's border stroke as a closed convex polygon, walked clockwise from
- * the top-right corner. Inset half a pixel like the 1px CSS border.
+ * the top-right corner. Inset one pixel to the centreline of the 2px CSS
+ * border.
  */
 export function roundedRectOutline(
   width: number,
@@ -48,7 +49,7 @@ export function roundedRectOutline(
   radius: number,
   cornerSegments = 5,
 ): Point[] {
-  const inset = 0.5;
+  const inset = 1;
   const r = Math.max(radius - inset, 0);
   const left = inset + r;
   const right = width - inset - r;

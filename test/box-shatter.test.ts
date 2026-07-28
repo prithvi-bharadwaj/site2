@@ -41,12 +41,12 @@ function openOutline(shard: Shard): Point[] {
 }
 
 describe("rounded rect outline", () => {
-  it("traces the 1px border's stroke centreline", () => {
+  it("traces the 2px border's stroke centreline", () => {
     const { minX, maxX, minY, maxY } = boundsOf(roundedRectOutline(132, 38, 10));
-    expect(minX).toBeCloseTo(0.5);
-    expect(maxX).toBeCloseTo(131.5);
-    expect(minY).toBeCloseTo(0.5);
-    expect(maxY).toBeCloseTo(37.5);
+    expect(minX).toBeCloseTo(1);
+    expect(maxX).toBeCloseTo(131);
+    expect(minY).toBeCloseTo(1);
+    expect(maxY).toBeCloseTo(37);
   });
 
   it("is closed without repeating the first vertex", () => {
@@ -80,10 +80,10 @@ describe("box shatter", () => {
   it("frame one draws nothing outside the intact outline", () => {
     const all = createShatter({ ...BOX, seed: 33 }).flatMap((shard) => shardOutline(shard));
     const { minX, maxX, minY, maxY } = boundsOf(all);
-    expect(minX).toBeGreaterThanOrEqual(0.5 - 1e-6);
-    expect(maxX).toBeLessThanOrEqual(131.5 + 1e-6);
-    expect(minY).toBeGreaterThanOrEqual(0.5 - 1e-6);
-    expect(maxY).toBeLessThanOrEqual(37.5 + 1e-6);
+    expect(minX).toBeGreaterThanOrEqual(1 - 1e-6);
+    expect(maxX).toBeLessThanOrEqual(131 + 1e-6);
+    expect(minY).toBeGreaterThanOrEqual(1 - 1e-6);
+    expect(maxY).toBeLessThanOrEqual(37 + 1e-6);
   });
 
   it("keeps pieces chunky instead of carving needles", () => {
