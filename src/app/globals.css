@@ -912,6 +912,14 @@ main.crumb-page-blurred {
   --beam-opacity: 1;
 }
 
+/* The lift rides the existing 140ms transform transition. Kept off
+   focus-visible: a keyboard focus ring around a floating button reads as
+   misregistration, not intent. */
+.crumb-brick:hover:not(:disabled),
+.crumb-decline:hover:not(:disabled) {
+  transform: translateY(-1px) scale(1.03);
+}
+
 /* The travelling stroke. Masking the padding box out of the border box leaves a
    1px ring that follows the button's corner radius exactly, so the beam rides
    the real border instead of a square approximation of it. */
@@ -1049,9 +1057,12 @@ main.crumb-page-blurred {
   pointer-events: none;
 }
 
+/* Later than the hover lift so a held press wins over it. The strain animation
+   picks up from this same scale, so press-and-release flows straight into the
+   buildup with no jump. */
 .crumb-brick:active:not(:disabled),
 .crumb-decline:active:not(:disabled) {
-  transform: scale(0.97);
+  transform: scale(0.96);
 }
 
 .crumb-brick:focus-visible,
@@ -1080,7 +1091,7 @@ main.crumb-page-blurred {
 }
 
 .crumb-scene[data-phase="opening"] .crumb-brick {
-  animation: crumb-brick-compress 220ms var(--ease-out) both;
+  animation: crumb-brick-strain 430ms var(--ease-out) both;
 }
 
 .crumb-particle {
@@ -1335,9 +1346,20 @@ main.crumb-page-blurred {
   to { opacity: 1; }
 }
 
-@keyframes crumb-brick-compress {
-  0% { transform: scale(1); }
-  48% { transform: scaleX(1.018) scaleY(0.94); }
+/* The buildup: opens at the pressed scale so it flows out of :active, squashes
+   under the press and keeps squashing while a tremble spreads through it, then
+   the last frames spring it back to full size and the bang takes over. Has to
+   end at scale 1: the shards trace the unscaled outline, and the shatter timer
+   in CookieQuest.tsx fires 10ms after this settles. */
+@keyframes crumb-brick-strain {
+  0% { transform: scale(0.96); }
+  16% { transform: scaleX(1.02) scaleY(0.9); }
+  30% { transform: scaleX(1.025) scaleY(0.89) rotate(0.4deg); }
+  42% { transform: scaleX(1.03) scaleY(0.885) rotate(-0.45deg); }
+  54% { transform: scaleX(1.035) scaleY(0.88) rotate(0.5deg); }
+  66% { transform: scaleX(1.04) scaleY(0.87) rotate(-0.55deg); }
+  78% { transform: scaleX(1.045) scaleY(0.865) rotate(0.6deg); }
+  90% { transform: scaleX(1.05) scaleY(0.86) rotate(-0.5deg); }
   100% { transform: scale(1); }
 }
 

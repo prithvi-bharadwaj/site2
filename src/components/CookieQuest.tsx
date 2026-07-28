@@ -305,13 +305,15 @@ export function CookieQuest() {
       timersRef.current.push(reducedTimer);
       return;
     }
+    playClick();
     setPhase("opening");
     setPetMood("alert");
-    // Wait out crumb-brick-compress (220ms): mid-squash the button is scaled and
-    // the unscaled shards would not sit on its outline. The compress reads as
-    // the wind-up, then the box and its letters go in the same instant.
-    timersRef.current.push(window.setTimeout(shatterBox, 220));
-    const timer = window.setTimeout(beginPhysics, 250);
+    // Wait out crumb-brick-strain (430ms) plus a 10ms cushion for the animation
+    // starting a paint behind this timer: mid-squash the button is scaled and
+    // the unscaled shards would not sit on its outline. The strain reads as the
+    // wind-up, then the box and its letters go the instant it springs back.
+    timersRef.current.push(window.setTimeout(shatterBox, 440));
+    const timer = window.setTimeout(beginPhysics, 470);
     timersRef.current.push(timer);
   }
 
