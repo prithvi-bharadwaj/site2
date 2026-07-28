@@ -16,8 +16,11 @@ import { InspectProgress } from "@/components/InspectProgress";
 import { XpHud } from "@/components/XpHud";
 import { XpToasts } from "@/components/XpToasts";
 import { ExitGate } from "@/components/ExitGate";
+import { PhysicsLayer } from "@/components/PhysicsLayer";
+import { ControlPanel, type PanelSection } from "@/components/ControlPanel";
 import { CLICK_XP, SOCIAL_UNLOCK_XP, award, emitXpToast, useXp } from "@/lib/xp";
 import { emitShow, emitMove, emitHide, type HoverCardMedia } from "@/lib/hover-card-bus";
+import { trackInteraction } from "@/lib/analytics";
 
 /* ── Default content ── */
 
@@ -299,11 +302,26 @@ const SOCIALS: {
   },
 ];
 
+/* ── Sitemap (also drives the controls panel's jump links) ── */
+
+const SECTIONS: PanelSection[] = [
+  { id: "intro", label: "intro" },
+  { id: "previously", label: "previously" },
+  { id: "built", label: "in 2026 i built" },
+  { id: "lore", label: "lore" },
+  { id: "writing", label: "writing" },
+  { id: "socials", label: "find me on" },
+];
+
+/** Every section shares the same column geometry. */
+const COLUMN = "w-full max-w-[min(42rem,78vw)] mx-auto md:ml-[15vw] lg:ml-[18vw] scroll-mt-12";
+
 /* ── Edit mode toolbar ── */
 
 function EditToolbar({ onSave, onReset, onCopy }: { onSave: () => void; onReset: () => void; onCopy: () => void }) {
   return (
     <div
+      data-analytics-section="editor"
       className="fixed top-4 right-14 z-50 flex items-center gap-2"
       style={{ animation: "word-enter 200ms ease-out" }}
     >
@@ -349,12 +367,18 @@ export default function Home() {
     function onKey(e: KeyboardEvent) {
       if ((e.metaKey || e.ctrlKey) && e.key === "e") {
         e.preventDefault();
-        setEditMode((p) => !p);
+        // Tracking stays out of the updater: React may re-run updaters, which
+        // double-fired this event.
+        trackInteraction("edit_mode_changed", {
+          enabled: !editMode,
+          method: "keyboard_shortcut",
+        });
+        setEditMode(!editMode);
       }
     }
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, []);
+  }, [editMode]);
 
   useEffect(() => {
     function onScroll() {
@@ -381,15 +405,26 @@ export default function Home() {
     return () => window.clearInterval(timer);
   }, []);
 
+  const toggleGenz = useCallback((next: boolean) => {
+    trackInteraction("genz_mode_changed", { enabled: next });
+    setGenzMode(next);
+    if (next) {
+      setPipDismissed(false); // re-toggling brings the pip back
+      award("genz:on", CLICK_XP);
+    }
+  }, []);
+
   const update = useCallback((key: keyof Content, value: string) => {
     setContent((prev) => ({ ...prev, [key]: value }));
   }, []);
 
   const save = useCallback(() => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(content));
+    trackInteraction("edited_content_saved");
   }, [content]);
 
   const reset = useCallback(() => {
+    trackInteraction("edited_content_reset");
     setContent(DEFAULTS);
     localStorage.removeItem(STORAGE_KEY);
   }, []);
@@ -399,12 +434,13 @@ export default function Home() {
       .map(([k, v]) => `  ${k}: \`${v.replace(/`/g, "\\`")}\`,`)
       .join("\n");
     navigator.clipboard.writeText(`const CONTENT = {\n${out}\n};`);
+    trackInteraction("edited_content_copied");
   }, [content]);
 
   if (!hydrated) return null;
 
   return (
-    <main className="relative min-h-screen">
+    <main className="relative min-h-screen" data-analytics-section="home">
       <CursorTrail />
       <XpFx />
       <InspectProgress />
@@ -412,6 +448,8 @@ export default function Home() {
       <XpToasts />
       <ExitGate />
       <ThemeToggle />
+      <PhysicsLayer />
+      <ControlPanel sections={SECTIONS} genz={genzMode} onGenzChange={toggleGenz} />
       {editMode && (
         <EditToolbar onSave={save} onReset={reset} onCopy={copyToClipboard} />
       )}
@@ -419,9 +457,10 @@ export default function Home() {
       <div
         className="relative px-8 md:px-0 pt-[18vh] md:pt-[22vh]"
         style={{ zIndex: 1 }}
+        data-physics-content
       >
         {/* Hero */}
-        <div className="w-full max-w-[min(42rem,78vw)] mx-auto md:ml-[15vw] lg:ml-[18vw]">
+        <div id="intro" className={COLUMN}>
           {editMode && (
             <div className="mb-4">
               <EditPanel label="greeting" value={content.greeting} onChange={(v) => update("greeting", v)} />
@@ -433,42 +472,50 @@ export default function Home() {
         </div>
 
         {/* Previously */}
-        <div className="w-full max-w-[min(42rem,78vw)] mx-auto md:ml-[15vw] lg:ml-[18vw] mt-10 md:mt-14">
+        <div id="previously" className={`${COLUMN} mt-10 md:mt-14`}>
           <PreviouslyList label="Previously." items={PREVIOUSLY} />
         </div>
 
         {/* Projects */}
-        <div className="w-full max-w-[min(42rem,78vw)] mx-auto md:ml-[15vw] lg:ml-[18vw] mt-10 md:mt-14">
+        <div id="built" className={`${COLUMN} mt-10 md:mt-14`}>
           <PreviouslyList label="In 2026 I built." items={PROJECTS} proofKind="project-proof" />
         </div>
 
         {/* Lore */}
-        <div className="w-full max-w-[min(42rem,78vw)] mx-auto md:ml-[15vw] lg:ml-[18vw] mt-10 md:mt-14">
+        <div id="lore" className={`${COLUMN} mt-10 md:mt-14`}>
           <LinkList label="Lore." items={LORE} variant="prose" pointer xpKind="lore" />
         </div>
 
         {/* Writing */}
-        <div className="w-full max-w-[min(42rem,78vw)] mx-auto md:ml-[15vw] lg:ml-[18vw] mt-10 md:mt-14">
+        <div id="writing" className={`${COLUMN} mt-10 md:mt-14`}>
           <LinkList label="Writing." items={WRITING} pointer xpKind="writing" />
         </div>
 
         {/* Socials */}
-        <div className="w-full max-w-[min(42rem,78vw)] mx-auto md:ml-[15vw] lg:ml-[18vw] mt-10 md:mt-14 pb-24">
+        <div id="socials" className={`${COLUMN} mt-10 md:mt-14 pb-24`}>
           <span className="text-(--ink)/35 text-xs uppercase tracking-widest block mb-6">
             <WiggleWords text="Find me on." />
           </span>
-          <div className="flex flex-wrap gap-x-5 gap-y-2 text-sm">
+          <div
+            className="flex flex-wrap gap-x-5 gap-y-2 text-sm"
+            data-analytics-section="socials"
+          >
             {SOCIALS.map((s) =>
               s.contact && xp.total < SOCIAL_UNLOCK_XP ? (
                 <button
                   key={s.label}
-                  onClick={() =>
+                  onClick={() => {
+                    trackInteraction("locked_contact_clicked", {
+                      network: s.label,
+                      current_xp: xp.total,
+                      required_xp: SOCIAL_UNLOCK_XP,
+                    });
                     emitXpToast({
                       title: "get to know me first",
                       body: `Spend time on the site before you reach out. Hover the proof, open the lore, read the writing. Contact links unlock at ${SOCIAL_UNLOCK_XP} xp.`,
                       kind: "info",
-                    })
-                  }
+                    });
+                  }}
                   title={`unlocks at ${SOCIAL_UNLOCK_XP} xp`}
                   onPointerEnter={(e) => {
                     if (s.media && e.pointerType === "mouse") emitShow({ media: s.media, x: e.clientX, y: e.clientY });
@@ -496,6 +543,8 @@ export default function Home() {
                 <a
                   key={s.label}
                   href={s.href}
+                  target="_blank"
+                  rel="noreferrer"
                   onPointerEnter={(e) => {
                     if (s.media && e.pointerType === "mouse") emitShow({ media: s.media, x: e.clientX, y: e.clientY });
                   }}
@@ -522,16 +571,7 @@ export default function Home() {
 
           {/* Gen z mode - footer easter egg */}
           <div className="mt-10">
-            <GenZToggle
-              enabled={genzMode}
-              onChange={(v) => {
-                setGenzMode(v);
-                if (v) {
-                  setPipDismissed(false); // re-toggling brings the pip back
-                  award("genz:on", CLICK_XP);
-                }
-              }}
-            />
+            <GenZToggle enabled={genzMode} onChange={toggleGenz} />
           </div>
           {genzMode && (
             <div className="mt-4 text-sm text-(--ink)/60 leading-relaxed">

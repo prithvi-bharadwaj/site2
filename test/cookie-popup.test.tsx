@@ -4,7 +4,7 @@ import { CookieQuest } from "@/components/CookieQuest";
 
 vi.mock("@/lib/pretext-layout", () => ({
   layoutHero: () => ({
-    words: "ALLOWCOOKIES".split("").map((text, index) => ({
+    words: "FEEDCOOKIES".split("").map((text, index) => ({
       text,
       x: index * 8,
       y: 0,
@@ -38,10 +38,16 @@ describe("cookie popup", () => {
 
     fireEvent.click(trigger);
     expect(screen.getByRole("dialog")).toBeInTheDocument();
+    expect(
+      screen.getByText("crumb heard there were cookies here.")
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Feed Crumb cookies" })
+    ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "not today" })).toBeInTheDocument();
   });
 
-  it("nudges with a hop and a badge until a choice is on record", async () => {
-    document.cookie = "crumb-cookie-choice=; Max-Age=0";
+  it("nudges with a hop and a badge until a choice is made this visit", async () => {
     render(<CookieQuest />);
 
     const trigger = await screen.findByRole("button", { name: "cookies" });
@@ -54,14 +60,15 @@ describe("cookie popup", () => {
     expect(trigger.textContent).toContain("1");
   });
 
-  it("does not nudge when a choice is already stored", async () => {
-    document.cookie = "crumb-cookie-choice=accepted";
+  it("stops nudging once a choice is made", async () => {
     render(<CookieQuest />);
+    fireEvent.click(await screen.findByRole("button", { name: "cookies" }));
 
-    const trigger = await screen.findByRole("button", { name: "cookies" });
+    fireEvent.click(screen.getByRole("button", { name: "not today" }));
+
+    const trigger = screen.getByRole("button", { name: "cookies" });
     expect(trigger).not.toHaveAttribute("data-nudge");
     expect(trigger.textContent).not.toContain("1");
-    document.cookie = "crumb-cookie-choice=; Max-Age=0";
   });
 
   it("closes when the backdrop is clicked, but not when the window is clicked", async () => {

@@ -8,15 +8,15 @@ import {
   stepCookiePhysics,
   type CookieParticle,
 } from "@/lib/cookie-physics";
-import { readCookieChoice, saveCookieChoice } from "@/lib/cookie-quest";
 import { useBoxShatter } from "@/lib/use-box-shatter";
 import { launchOntoPet } from "@/lib/crumb-ballistics";
 import { playClick } from "@/lib/crumb-sfx";
 import { CookieParticleView, SpritePet, type PetMood } from "@/components/CrumbPet";
+import { trackInteraction } from "@/lib/analytics";
 
 type Phase = "idle" | "opening" | "falling" | "complete" | "declined" | "closing";
 
-const LABEL = "allow cookies";
+const LABEL = "feed cookies";
 const BUTTON_WIDTH = 132;
 const BUTTON_HEIGHT = 38;
 // Mirrors the .crumb-brick border-radius so the shards trace the same outline.
@@ -41,8 +41,10 @@ function layoutLabel(): PositionedWord[] {
 export function CookieQuest() {
   const [ready, setReady] = useState(false);
   const [visible, setVisible] = useState(false);
-  // Hop-and-badge nag on the trigger until a consent choice is on record.
-  const [nudging, setNudging] = useState(false);
+  // Hop-and-badge nag on the trigger until a choice is made this visit. Not
+  // persisted: the site is cookieless (instrumentation-client clears the old
+  // consent cookie as legacy state), so the nag returns on each load.
+  const [nudging, setNudging] = useState(true);
   const [phase, setPhase] = useState<Phase>("idle");
   const [petMood, setPetMood] = useState<PetMood>("sad");
   const [letters, setLetters] = useState<PositionedWord[]>([]);
@@ -80,13 +82,13 @@ export function CookieQuest() {
   useEffect(() => {
     document.fonts.ready.then(() => {
       setLetters(layoutLabel());
-      setNudging(readCookieChoice() === null);
       setReady(true);
     });
     return clearTimers;
   }, [clearTimers]);
 
   const openDialog = useCallback(() => {
+    trackInteraction("cookie_dialog_opened");
     clearTimers();
     particleRefs.current.clear();
     completedRef.current = false;
@@ -97,8 +99,9 @@ export function CookieQuest() {
     setVisible(true);
   }, [clearTimers]);
 
-  const closeDialog = useCallback(() => {
+  const closeDialog = useCallback((reason = "automatic") => {
     if (leavingRef.current) return;
+    trackInteraction("cookie_dialog_closed", { reason });
     leavingRef.current = true;
     setLeaving(true);
     // Let the exit animation play before tearing the dialog down.
@@ -128,7 +131,7 @@ export function CookieQuest() {
     if (page) page.inert = true;
     const focusFrame = requestAnimationFrame(() => dialogRef.current?.focus());
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") closeDialog();
+      if (event.key === "Escape") closeDialog("escape");
     };
     document.addEventListener("keydown", onKeyDown);
     return () => {
@@ -292,7 +295,10 @@ export function CookieQuest() {
           }, 480);
           timersRef.current.push(happyTimer);
         }
-        const closeTimer = window.setTimeout(closeDialog, 2100);
+        const closeTimer = window.setTimeout(
+          () => closeDialog("accepted_animation_complete"),
+          2100
+        );
         timersRef.current.push(closeTimer);
       };
 
@@ -302,12 +308,15 @@ export function CookieQuest() {
 
   function allowCookies() {
     if (phase !== "idle") return;
-    saveCookieChoice("accepted");
+    trackInteraction("cookie_game_choice_selected", { choice: "feed" });
     setNudging(false);
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
       setPetMood("happy");
       setPhase("complete");
-      const reducedTimer = window.setTimeout(closeDialog, 900);
+      const reducedTimer = window.setTimeout(
+        () => closeDialog("accepted_reduced_motion"),
+        900
+      );
       timersRef.current.push(reducedTimer);
       return;
     }
@@ -323,14 +332,20 @@ export function CookieQuest() {
     timersRef.current.push(timer);
   }
 
-  const dropOnPet = useCallback((node: HTMLElement | null, closeDelay: number) => {
+  const dropOnPet = useCallback((
+    node: HTMLElement | null,
+    closeDelay: number,
+    closeReason: string
+  ) => {
     const pet = petRef.current;
     const scene = sceneRef.current;
     const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     if (!node || !pet || !scene || reducedMotion || typeof node.animate !== "function") {
       // No flight to watch: brief squash beat, then get out of the way.
       setPetMood("squash");
-      timersRef.current.push(window.setTimeout(closeDialog, 350));
+      timersRef.current.push(
+        window.setTimeout(() => closeDialog(closeReason), 350)
+      );
       return;
     }
 
@@ -340,28 +355,30 @@ export function CookieQuest() {
         // He stays flattened under the button until the dialog leaves.
         setPetMood("squash");
         setImpact({ x, y });
-        timersRef.current.push(window.setTimeout(closeDialog, closeDelay));
+        timersRef.current.push(
+          window.setTimeout(() => closeDialog(closeReason), closeDelay)
+        );
       },
     });
   }, [closeDialog]);
 
   function declineCookies() {
     if (phase !== "idle") return;
-    saveCookieChoice("declined");
+    trackInteraction("cookie_game_choice_selected", { choice: "not_today" });
     setNudging(false);
     playClick();
     setPhase("declined");
-    dropOnPet(declineRef.current, 1600);
+    dropOnPet(declineRef.current, 1600, "declined_animation_complete");
   }
 
   function dismissOnHead() {
     if (phase === "closing") return;
     if (phase !== "idle") {
-      closeDialog();
+      closeDialog("close_button");
       return;
     }
     setPhase("closing");
-    dropOnPet(closeRef.current, 1200);
+    dropOnPet(closeRef.current, 1200, "close_button_animation_complete");
   }
 
   // Hovering "allow cookies" makes the pet perk up and watch the button.
@@ -377,6 +394,7 @@ export function CookieQuest() {
 
   function blushPet() {
     if (petMood === "blush" || petMood === "bonked" || petMood === "startle" || petMood === "squash") return;
+    trackInteraction("cookie_pet_tapped", { mood: petMood });
     const previous = petMood;
     setPetMood("blush");
     timersRef.current.push(window.setTimeout(() => {
@@ -391,31 +409,38 @@ export function CookieQuest() {
 
   return (
     <>
-      <button
-        ref={triggerRef}
-        type="button"
-        className="crumb-trigger"
-        onClick={openDialog}
-        aria-haspopup="dialog"
-        aria-expanded={visible}
-        data-nudge={nudging && !visible ? "" : undefined}
-      >
-        <span className="crumb-trigger-inner">
-          cookies
-          {nudging && (
-            <span className="crumb-trigger-badge" aria-hidden="true">
-              1
-            </span>
-          )}
-        </span>
-      </button>
+      <div className="crumb-utility">
+        <button
+          ref={triggerRef}
+          type="button"
+          className="crumb-trigger"
+          onClick={openDialog}
+          data-analytics-section="cookie_game"
+          aria-haspopup="dialog"
+          aria-expanded={visible}
+          data-nudge={nudging && !visible ? "" : undefined}
+        >
+          <span className="crumb-trigger-inner">
+            cookies
+            {nudging && (
+              <span className="crumb-trigger-badge" aria-hidden="true">
+                1
+              </span>
+            )}
+          </span>
+        </button>
+        <a className="crumb-privacy-link" href="/privacy">
+          privacy
+        </a>
+      </div>
 
       {visible && createPortal(
         <div
           className="crumb-backdrop"
+          data-analytics-section="cookie_game"
           data-leaving={leaving || undefined}
           onMouseDown={(event) => {
-            if (event.target === event.currentTarget) closeDialog();
+            if (event.target === event.currentTarget) closeDialog("backdrop");
           }}
         >
           <section
@@ -438,7 +463,7 @@ export function CookieQuest() {
 
             <div ref={sceneRef} className="crumb-scene" data-phase={phase} aria-live="polite">
               <div className="crumb-prompt">
-                <h2 id="cookie-dialog-title">this site uses cookies to save your progress.</h2>
+                <h2 id="cookie-dialog-title">crumb heard there were cookies here.</h2>
                 <div className="crumb-actions">
                   <div className="crumb-trap">
                     <button
@@ -451,7 +476,7 @@ export function CookieQuest() {
                       onFocus={petWatchButton}
                       onBlur={petStopWatching}
                       disabled={phase !== "idle"}
-                      aria-label="Allow cookies and save game progress"
+                      aria-label="Feed Crumb cookies"
                     >
                       {letters.map((letter, index) => (
                         <span
@@ -477,7 +502,7 @@ export function CookieQuest() {
                     onClick={declineCookies}
                     disabled={phase !== "idle"}
                   >
-                    {"don't allow"}
+                    not today
                   </button>
                 </div>
               </div>
@@ -497,7 +522,7 @@ export function CookieQuest() {
               <span className="crumb-floor" aria-hidden="true" />
               <SpritePet ref={petRef} mood={petMood} onTap={blushPet} />
               <span className="sr-only">
-                {phase === "complete" ? "Cookies saved. Crumb ate every cookie." : ""}
+                {phase === "complete" ? "Crumb ate every cookie." : ""}
               </span>
             </div>
           </section>

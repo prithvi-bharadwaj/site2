@@ -12,6 +12,7 @@ import {
   useXp,
   type XpState,
 } from "@/lib/xp";
+import { trackInteraction } from "@/lib/analytics";
 
 function count(s: XpState, prefix: string) {
   return Object.keys(s.earned).filter((k) => k.startsWith(prefix)).length;
@@ -31,10 +32,16 @@ export function XpHud() {
   useEffect(() => {
     if (!open) return;
     const onDocClick = (e: MouseEvent) => {
-      if (!rootRef.current?.contains(e.target as Node)) setOpen(false);
+      if (!rootRef.current?.contains(e.target as Node)) {
+        setOpen(false);
+        trackInteraction("xp_hud_closed", { reason: "outside_click" });
+      }
     };
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setOpen(false);
+      if (e.key === "Escape") {
+        setOpen(false);
+        trackInteraction("xp_hud_closed", { reason: "escape" });
+      }
     };
     document.addEventListener("click", onDocClick);
     window.addEventListener("keydown", onKey);
@@ -57,7 +64,11 @@ export function XpHud() {
   ];
 
   return (
-    <div ref={rootRef} className="fixed bottom-4 right-4 z-[70] flex flex-col items-end">
+    <div
+      ref={rootRef}
+      data-analytics-section="xp_hud"
+      className="fixed bottom-4 right-4 z-[70] flex flex-col items-end"
+    >
       {open && (
         <div
           className="mb-2 w-64 rounded-lg border border-(--ink)/10 bg-(--bg) p-4 shadow-lg"
@@ -108,6 +119,7 @@ export function XpHud() {
             onClick={() => {
               resetXp();
               setOpen(false);
+              trackInteraction("xp_hud_closed", { reason: "progress_reset" });
             }}
             className="mt-2 cursor-pointer text-[10px] text-(--ink)/30 transition-colors hover:text-(--ink)/60"
           >
@@ -117,7 +129,14 @@ export function XpHud() {
       )}
 
       <button
-        onClick={() => setOpen((p) => !p)}
+        onClick={() => {
+          // Tracking stays out of the updater: React may re-run updaters,
+          // which double-fired this event.
+          trackInteraction(open ? "xp_hud_closed" : "xp_hud_opened", {
+            reason: "toggle",
+          });
+          setOpen(!open);
+        }}
         aria-expanded={open}
         title="progress"
         className="group cursor-pointer rounded-md bg-(--bg)/80 px-2 py-1.5 backdrop-blur-sm transition-colors hover:bg-(--ink)/4"
