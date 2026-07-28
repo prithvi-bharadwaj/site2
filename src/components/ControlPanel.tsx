@@ -99,7 +99,11 @@ export function ControlPanel({ sections, genz, onGenzChange }: ControlPanelProps
   const jump = useCallback(
     (id: string) => {
       const go = () =>
-        document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
+        document.getElementById(id)?.scrollIntoView({
+          // Reduced motion opts out of the scroll animation too.
+          behavior: reduced ? "auto" : "smooth",
+          block: "start",
+        });
       if (gravity) {
         toggleGravity(false);
         window.setTimeout(go, RESTORE_MS);
@@ -107,7 +111,7 @@ export function ControlPanel({ sections, genz, onGenzChange }: ControlPanelProps
         go();
       }
     },
-    [gravity, toggleGravity]
+    [gravity, reduced, toggleGravity]
   );
 
   return (
