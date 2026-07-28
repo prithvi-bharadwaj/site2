@@ -21,6 +21,8 @@ const BUTTON_WIDTH = 132;
 const BUTTON_HEIGHT = 38;
 // Mirrors the .crumb-brick border-radius so the shards trace the same outline.
 const BUTTON_RADIUS = 10;
+// Letter positions are measured from the padding box, which the border offsets.
+const BUTTON_BORDER = 2;
 const FONT = '500 10px "SFMono-Regular", Consolas, monospace';
 
 function layoutLabel(): PositionedWord[] {
@@ -39,6 +41,10 @@ function layoutLabel(): PositionedWord[] {
 export function CookieQuest() {
   const [ready, setReady] = useState(false);
   const [visible, setVisible] = useState(false);
+  // Hop-and-badge nag on the trigger until a choice is made this visit. Not
+  // persisted: the site is cookieless (instrumentation-client clears the old
+  // consent cookie as legacy state), so the nag returns on each load.
+  const [nudging, setNudging] = useState(true);
   const [phase, setPhase] = useState<Phase>("idle");
   const [petMood, setPetMood] = useState<PetMood>("sad");
   const [letters, setLetters] = useState<PositionedWord[]>([]);
@@ -303,6 +309,7 @@ export function CookieQuest() {
   function allowCookies() {
     if (phase !== "idle") return;
     trackInteraction("cookie_game_choice_selected", { choice: "feed" });
+    setNudging(false);
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
       setPetMood("happy");
       setPhase("complete");
@@ -313,12 +320,15 @@ export function CookieQuest() {
       timersRef.current.push(reducedTimer);
       return;
     }
+    playClick();
     setPhase("opening");
     setPetMood("alert");
-    // Wait out crumb-brick-compress (220ms): mid-squash the button is scaled and
-    // the unscaled shards would not sit on its outline.
-    timersRef.current.push(window.setTimeout(shatterBox, 220));
-    const timer = window.setTimeout(beginPhysics, 360);
+    // Wait out crumb-brick-strain (430ms) plus a 10ms cushion for the animation
+    // starting a paint behind this timer: mid-squash the button is scaled and
+    // the unscaled shards would not sit on its outline. The strain reads as the
+    // wind-up, then the box and its letters go the instant it springs back.
+    timersRef.current.push(window.setTimeout(shatterBox, 440));
+    const timer = window.setTimeout(beginPhysics, 470);
     timersRef.current.push(timer);
   }
 
@@ -355,6 +365,7 @@ export function CookieQuest() {
   function declineCookies() {
     if (phase !== "idle") return;
     trackInteraction("cookie_game_choice_selected", { choice: "not_today" });
+    setNudging(false);
     playClick();
     setPhase("declined");
     dropOnPet(declineRef.current, 1600, "declined_animation_complete");
@@ -392,7 +403,7 @@ export function CookieQuest() {
   }
 
   const labelWidth = letters.reduce((max, letter) => Math.max(max, letter.x + letter.width), 0);
-  const labelOffset = (BUTTON_WIDTH - labelWidth) / 2;
+  const labelOffset = (BUTTON_WIDTH - labelWidth) / 2 - BUTTON_BORDER;
 
   if (!ready) return null;
 
@@ -407,8 +418,16 @@ export function CookieQuest() {
           data-analytics-section="cookie_game"
           aria-haspopup="dialog"
           aria-expanded={visible}
+          data-nudge={nudging && !visible ? "" : undefined}
         >
-          cookies
+          <span className="crumb-trigger-inner">
+            cookies
+            {nudging && (
+              <span className="crumb-trigger-badge" aria-hidden="true">
+                1
+              </span>
+            )}
+          </span>
         </button>
         <a className="crumb-privacy-link" href="/privacy">
           privacy

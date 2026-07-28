@@ -22,6 +22,12 @@ beforeEach(() => {
     configurable: true,
     value: { ready: Promise.resolve() },
   });
+  // jsdom has no matchMedia; the decline path reads prefers-reduced-motion.
+  window.matchMedia = vi.fn().mockReturnValue({
+    matches: false,
+    addEventListener: () => {},
+    removeEventListener: () => {},
+  }) as unknown as typeof window.matchMedia;
 });
 
 afterEach(() => {
@@ -45,6 +51,30 @@ describe("cookie popup", () => {
       screen.getByRole("button", { name: "Feed Crumb cookies" })
     ).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "not today" })).toBeInTheDocument();
+  });
+
+  it("nudges with a hop and a badge until a choice is made this visit", async () => {
+    render(<CookieQuest />);
+
+    const trigger = await screen.findByRole("button", { name: "cookies" });
+    expect(trigger).toHaveAttribute("data-nudge");
+    expect(trigger.textContent).toContain("1");
+
+    // The nag pauses while the dialog is open, but the badge stays.
+    fireEvent.click(trigger);
+    expect(trigger).not.toHaveAttribute("data-nudge");
+    expect(trigger.textContent).toContain("1");
+  });
+
+  it("stops nudging once a choice is made", async () => {
+    render(<CookieQuest />);
+    fireEvent.click(await screen.findByRole("button", { name: "cookies" }));
+
+    fireEvent.click(screen.getByRole("button", { name: "not today" }));
+
+    const trigger = screen.getByRole("button", { name: "cookies" });
+    expect(trigger).not.toHaveAttribute("data-nudge");
+    expect(trigger.textContent).not.toContain("1");
   });
 
   it("closes when the backdrop is clicked, but not when the window is clicked", async () => {

@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, type RefObject } from "react";
 import {
+  createBlastParticles,
   createShatter,
   shardAlpha,
   shardOutline,
@@ -10,16 +11,24 @@ import {
 } from "@/lib/box-shatter";
 import { createRibbonRenderer, type RibbonRenderer } from "@/lib/ink-ribbon-gl";
 
-// Canvas geometry — mirrors .crumb-shatter in globals.css.
-const PAD_X = 60;
-const PAD_TOP = 40;
-const CANVAS_HEIGHT = 520;
-// Matches the .crumb-brick border stroke (1px, ink at 0.18).
-const STROKE = 1;
-const STROKE_ALPHA = 0.18;
-// Beat where the box is cracked but still standing, before it lets go.
-const HOLD_MS = 150;
-const MAX_DPR = 3;
+// Canvas geometry — mirrors .crumb-shatter in globals.css. Padded out past the
+// dialog on every side so the blast is clipped by .crumb-scene's edge (which is
+// the dialog's edge, and reads as debris leaving frame) rather than by the
+// canvas, which would read as debris hitting an invisible wall.
+const PAD_X = 280;
+const PAD_TOP = 200;
+const CANVAS_HEIGHT = 760;
+// Matches the .crumb-brick border stroke (2px, ink at 0.64).
+const STROKE = 2;
+const STROKE_ALPHA = 0.64;
+// Dust keeps a hairline stroke so it reads finer than the fragments, and sits
+// below border ink so the specks read as debris, not confetti-sized fragments.
+const DUST_STROKE = 1;
+const DUST_ALPHA = 0.4;
+// One frame of intact-but-cracked box before it goes. Any longer and the hit
+// reads as a slow break instead of a bang.
+const HOLD_MS = 50;
+const MAX_DPR = 2;
 
 interface ShatterBox {
   width: number;
@@ -74,6 +83,9 @@ export function useBoxShatter(
     const renderer = rendererRef.current;
     if (!renderer || shardsRef.current) return;
     const shards = createShatter({ width, height, radius, offsetX: PAD_X, offsetY: PAD_TOP });
+    // Dust waits out the hold: on the cracked-but-intact frames it would just
+    // be specks floating inside a whole box.
+    const dust = createBlastParticles({ width, height, offsetX: PAD_X, offsetY: PAD_TOP });
     shardsRef.current = shards;
     // Same frame the CSS border goes transparent, so the handoff has no seam.
     buttonRef.current?.setAttribute("data-shattered", "");
@@ -81,17 +93,27 @@ export function useBoxShatter(
     const start = performance.now();
     let previous = start;
     const frame = (now: number) => {
-      if (now - start >= HOLD_MS) stepShatter(shards, now - previous);
+      const detonated = now - start >= HOLD_MS;
+      if (detonated) {
+        stepShatter(shards, now - previous);
+        stepShatter(dust, now - previous);
+      }
       previous = now;
-      renderer.draw(
-        shards
-          .map((shard) => ({
-            points: shardOutline(shard),
-            thickness: STROKE,
-            alpha: STROKE_ALPHA * shardAlpha(shard),
-          }))
-          .filter((strip) => strip.alpha > 0.001),
-      );
+      const strips = shards.map((shard) => ({
+        points: shardOutline(shard),
+        thickness: STROKE,
+        alpha: STROKE_ALPHA * shardAlpha(shard),
+      }));
+      if (detonated) {
+        for (const mote of dust) {
+          strips.push({
+            points: shardOutline(mote),
+            thickness: DUST_STROKE,
+            alpha: DUST_ALPHA * shardAlpha(mote),
+          });
+        }
+      }
+      renderer.draw(strips.filter((strip) => strip.alpha > 0.001));
       rafRef.current = requestAnimationFrame(frame);
     };
     frame(start);

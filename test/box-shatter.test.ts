@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
+  BLAST_INK,
+  createBlastParticles,
   createShatter,
   roundedRectOutline,
   shardAlpha,
@@ -39,12 +41,12 @@ function openOutline(shard: Shard): Point[] {
 }
 
 describe("rounded rect outline", () => {
-  it("traces the 1px border's stroke centreline", () => {
+  it("traces the 2px border's stroke centreline", () => {
     const { minX, maxX, minY, maxY } = boundsOf(roundedRectOutline(132, 38, 10));
-    expect(minX).toBeCloseTo(0.5);
-    expect(maxX).toBeCloseTo(131.5);
-    expect(minY).toBeCloseTo(0.5);
-    expect(maxY).toBeCloseTo(37.5);
+    expect(minX).toBeCloseTo(1);
+    expect(maxX).toBeCloseTo(131);
+    expect(minY).toBeCloseTo(1);
+    expect(maxY).toBeCloseTo(37);
   });
 
   it("is closed without repeating the first vertex", () => {
@@ -78,10 +80,10 @@ describe("box shatter", () => {
   it("frame one draws nothing outside the intact outline", () => {
     const all = createShatter({ ...BOX, seed: 33 }).flatMap((shard) => shardOutline(shard));
     const { minX, maxX, minY, maxY } = boundsOf(all);
-    expect(minX).toBeGreaterThanOrEqual(0.5 - 1e-6);
-    expect(maxX).toBeLessThanOrEqual(131.5 + 1e-6);
-    expect(minY).toBeGreaterThanOrEqual(0.5 - 1e-6);
-    expect(maxY).toBeLessThanOrEqual(37.5 + 1e-6);
+    expect(minX).toBeGreaterThanOrEqual(1 - 1e-6);
+    expect(maxX).toBeLessThanOrEqual(131 + 1e-6);
+    expect(minY).toBeGreaterThanOrEqual(1 - 1e-6);
+    expect(maxY).toBeLessThanOrEqual(37 + 1e-6);
   });
 
   it("keeps pieces chunky instead of carving needles", () => {
@@ -102,25 +104,37 @@ describe("box shatter", () => {
     }
   });
 
-  it("leans pieces away from the middle and drops them", () => {
-    const shards = createShatter({ ...BOX, seed: 12 });
-    const before = shards.map((s) => s.y);
-    for (const shard of shards) {
-      if (Math.abs(shard.x - BOX.width / 2) < 8) continue;
-      expect(Math.sign(shard.vx)).toBe(Math.sign(shard.x - BOX.width / 2));
+  it("fires every fragment away from the point of impact", () => {
+    const impact = { x: BOX.width / 2, y: BOX.height / 2 };
+    for (const seed of [12, 77, 2024]) {
+      for (const shard of createShatter({ ...BOX, seed })) {
+        const dx = shard.x - impact.x;
+        const dy = shard.y - impact.y;
+        if (Math.hypot(dx, dy) < 4) continue;
+        // Spray fans the heading, but never far enough to send a piece back
+        // through the middle.
+        expect(shard.vx * dx + shard.vy * dy).toBeGreaterThan(0);
+      }
     }
-    for (let i = 0; i < 30; i++) stepShatter(shards, 16);
-    shards.forEach((shard, i) => {
-      expect(shard.y).toBeGreaterThan(before[i]);
-      expect(shard.vy).toBeGreaterThan(0);
-    });
   });
 
-  it("sends the lowest pieces first so the box does not fall as one lump", () => {
-    const shards = createShatter({ ...BOX, seed: 21, columns: 6, splitChance: 1 });
-    const lowest = shards.reduce((a, b) => (a.y > b.y ? a : b));
-    const highest = shards.reduce((a, b) => (a.y < b.y ? a : b));
-    expect(lowest.vy).toBeGreaterThan(highest.vy);
+  it("blows the pieces clear of where the box stood", () => {
+    const shards = createShatter({ ...BOX, seed: 12 });
+    for (let i = 0; i < 30; i++) stepShatter(shards, 16);   // ~half a second
+    const escaped = shards.filter(
+      (s) => s.x < -20 || s.x > BOX.width + 20 || s.y < -20 || s.y > BOX.height + 20,
+    );
+    expect(escaped.length).toBe(shards.length);
+  });
+
+  it("throws debris up on balance, then lets gravity take all of it", () => {
+    const shards = createShatter({ ...BOX, seed: 3 });
+    // A blast still fires some pieces downward; the lift only has to win on average.
+    const meanVy = shards.reduce((sum, s) => sum + s.vy, 0) / shards.length;
+    expect(meanVy).toBeLessThan(0);
+    expect(shards.some((s) => s.vy > 0)).toBe(true);
+    for (let i = 0; i < 60; i++) stepShatter(shards, 16);
+    expect(shards.every((s) => s.vy > 0)).toBe(true);
   });
 
   it("spins each piece about its own centroid", () => {
@@ -133,7 +147,8 @@ describe("box shatter", () => {
     expect(spinner!.angle).toBeCloseTo(spinner!.spin * 0.032);
     // Rotation is about the centroid, so the outline's own centre only moves by
     // the velocity, never by the spin.
-    expect(spinner!.x - before.x).toBeCloseTo(before.vx * 0.999 * 0.032, 4);
+    expect(spinner!.x - before.x).toBeCloseTo(spinner!.vx * 0.032, 4);
+    expect(Math.abs(spinner!.vx)).toBeLessThan(Math.abs(before.vx));   // drag bit
   });
 
   it("does not move on a zero-length frame", () => {
@@ -153,16 +168,66 @@ describe("box shatter", () => {
     });
   });
 
-  it("holds full ink while the crack is fresh, then fades to nothing", () => {
+  it("burns dust out faster than the fragments it flies with", () => {
+    const [fragment] = createShatter({ ...BOX });
+    const [mote] = createBlastParticles({ ...BOX });
+    expect(mote.fadeRate).toBeGreaterThan(1);
+    fragment.age = 0.7;
+    mote.age = 0.7;
+    expect(shardAlpha(fragment)).toBeGreaterThan(0);
+    expect(shardAlpha(mote)).toBe(0);
+  });
+
+  it("matches the border exactly at handoff, inks up in flight, then fades out", () => {
     const [shard] = createShatter({ ...BOX });
+    // Frame one has to be indistinguishable from the intact CSS border.
     expect(shardAlpha(shard)).toBe(1);
-    shard.age = 0.4;
-    expect(shardAlpha(shard)).toBe(1);
-    shard.age = 0.8;
+    shard.age = 0.15;
+    expect(shardAlpha(shard)).toBeCloseTo(BLAST_INK);
+    shard.age = 0.7;
     const mid = shardAlpha(shard);
     expect(mid).toBeGreaterThan(0);
-    expect(mid).toBeLessThan(1);
+    expect(mid).toBeLessThan(BLAST_INK);
     shard.age = 1.4;
     expect(shardAlpha(shard)).toBe(0);
+  });
+});
+
+describe("blast particles", () => {
+  it("is deterministic for a given seed", () => {
+    const key = (motes: Shard[]) => motes.map((m) => [m.x, m.y, m.vx, m.vy]);
+    expect(key(createBlastParticles({ ...BOX, seed: 4 }))).toEqual(
+      key(createBlastParticles({ ...BOX, seed: 4 })),
+    );
+    expect(key(createBlastParticles({ ...BOX, seed: 4 }))).not.toEqual(
+      key(createBlastParticles({ ...BOX, seed: 5 })),
+    );
+  });
+
+  it("spawns every mote inside the box, offset into canvas space", () => {
+    for (const mote of createBlastParticles({ ...BOX, offsetX: 60, offsetY: 40 })) {
+      expect(mote.x).toBeGreaterThan(60);
+      expect(mote.x).toBeLessThan(60 + BOX.width);
+      expect(mote.y).toBeGreaterThan(40);
+      expect(mote.y).toBeLessThan(40 + BOX.height);
+    }
+  });
+
+  it("keeps the dust tiny relative to the fragments", () => {
+    for (const mote of createBlastParticles({ ...BOX })) {
+      const { minX, maxX, minY, maxY } = boundsOf(mote.local);
+      expect(maxX - minX).toBeLessThan(4);
+      expect(maxY - minY).toBeLessThan(4);
+    }
+  });
+
+  it("flies through the same physics as the fragments", () => {
+    const motes = createBlastParticles({ ...BOX, seed: 8 });
+    const before = motes.map((m) => ({ x: m.x, y: m.y }));
+    stepShatter(motes, 16);
+    motes.forEach((mote, i) => {
+      expect(mote.x).not.toBe(before[i].x);
+      expect(mote.age).toBeGreaterThan(0);
+    });
   });
 });

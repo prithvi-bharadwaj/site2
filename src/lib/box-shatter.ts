@@ -15,13 +15,20 @@ export interface Shard {
   spin: number;
   /** Seconds since the break; drives the fade. */
   age: number;
+  /** Fade-clock multiplier. Dust burns out faster than structural fragments. */
+  fadeRate?: number;
 }
 
 export const SHARD_GRAVITY = 1150;
-export const SHARD_FADE_START = 0.5;
-export const SHARD_FADE_END = 1.15;
+export const SHARD_FADE_START = 0.45;
+export const SHARD_FADE_END = 1;
+/** Peak ink multiplier once a fragment is clear of the box, and the ramp to it.
+    The base stroke is 0.64 ink, so 1.25 peaks the debris at 0.8. */
+export const BLAST_INK = 1.25;
+const BLAST_INK_IN = 0.1;
 const MAX_STEP_MS = 32;
-const DRAG = 0.999;
+/** Air drag per second, so debris sheds its blast speed as it flies. */
+const DRAG_PER_SECOND = 1.15;
 
 /** Deterministic so the fracture is reproducible in tests. */
 function makeRandom(seed: number): () => number {
@@ -34,7 +41,8 @@ function makeRandom(seed: number): () => number {
 
 /**
  * The button's border stroke as a closed convex polygon, walked clockwise from
- * the top-right corner. Inset half a pixel like the 1px CSS border.
+ * the top-right corner. Inset one pixel to the centreline of the 2px CSS
+ * border.
  */
 export function roundedRectOutline(
   width: number,
@@ -42,7 +50,7 @@ export function roundedRectOutline(
   radius: number,
   cornerSegments = 5,
 ): Point[] {
-  const inset = 0.5;
+  const inset = 1;
   const r = Math.max(radius - inset, 0);
   const left = inset + r;
   const right = width - inset - r;
@@ -132,15 +140,20 @@ interface ShatterOptions {
   columns?: number;
   /** Odds a column also takes a horizontal crack, giving a mix of piece sizes. */
   splitChance?: number;
-  /** Sideways drift at the box's ends, px/s. Gravity does the rest. */
+  /** Blast speed in px/s. Debris leaves the frame; gravity only bends the arcs. */
   burst?: number;
+  /** How wide the debris cone spreads off the straight-out direction, radians. */
+  spray?: number;
+  /** Upward bias on the blast, px/s, so bits arc up before gravity wins. */
+  lift?: number;
   seed?: number;
 }
 
 /**
- * Fracture the button into chunks: near-vertical cracks across the width, some
- * columns cut again horizontally. Straight cracks on a convex outline means the
- * pieces tile the box exactly, so frame one is the intact button plus cracks.
+ * Blow the button apart: near-vertical cracks across the width, most columns cut
+ * again horizontally, then every fragment fired away from the centre like the
+ * box took a round through the middle. Straight cracks on a convex outline means
+ * the pieces tile the box exactly, so frame one is the intact button plus cracks.
  *
  * Wide short boxes break into columns, not a radial star: cracks fanning from a
  * point would carve 80px needles out of a 38px-tall box.
@@ -151,9 +164,11 @@ export function createShatter({
   radius,
   offsetX = 0,
   offsetY = 0,
-  columns = 6,
-  splitChance = 0.6,
-  burst = 54,
+  columns = 13,
+  splitChance = 0.94,
+  burst = 540,
+  spray = 1.5,
+  lift = 200,
   seed = 20260726,
 }: ShatterOptions): Shard[] {
   const random = makeRandom(seed);
@@ -191,24 +206,85 @@ export function createShatter({
     pieces.push(piece);
   }
 
-  const centerX = width / 2;
+  // Point of impact: dead centre, as if something went straight through it.
+  const impactX = width / 2;
+  const impactY = height / 2;
+  const reach = Math.hypot(impactX, impactY);
+
   return pieces.map((points) => {
     const centroid = centroidOf(points);
-    // A shove, not a blast: pieces lean away from the middle and drop. The ends
-    // drift furthest, so the box opens outward as it comes apart.
-    const lean = (centroid.x - centerX) / centerX;
-    // Low pieces have nothing under them and go first. Without this head start
-    // everything falls at the same rate and the box drops as one lump.
-    const unsupported = centroid.y / height;
+    const dx = centroid.x - impactX;
+    const dy = centroid.y - impactY;
+    const distance = Math.hypot(dx, dy);
+    // Straight out from the impact, fanned so a 3.5:1 box does not fire every
+    // fragment along one flat horizontal line.
+    const heading = Math.atan2(dy, dx) + (random() - 0.5) * spray;
+    // Fragments nearest the hit take the most of it.
+    const force = burst * (1 - Math.min(distance / reach, 1) * 0.3) * (0.6 + random() * 0.8);
     return {
       local: points.map((p) => ({ x: p.x - centroid.x, y: p.y - centroid.y })),
       x: centroid.x + offsetX,
       y: centroid.y + offsetY,
-      vx: lean * burst * (0.7 + random() * 0.6),
-      vy: -20 + unsupported * 78 + random() * 22,
+      vx: Math.cos(heading) * force,
+      vy: Math.sin(heading) * force - lift * (0.5 + random()),
       angle: 0,
-      spin: lean * 2.1 + (random() - 0.5) * 1.4,
+      spin: (random() - 0.5) * 26,
       age: 0,
+    };
+  });
+}
+
+interface ParticleOptions {
+  width: number;
+  height: number;
+  offsetX?: number;
+  offsetY?: number;
+  count?: number;
+  /** Peak speed in px/s. Dust flies faster than the fragments it rides with. */
+  burst?: number;
+  lift?: number;
+  seed?: number;
+}
+
+/**
+ * Dust kicked out of the hit: tiny diamonds thrown from the button's body in
+ * every direction. The fragments read as the box coming apart; this reads as
+ * the energy of the impact, and it dies away before the fragments do.
+ */
+export function createBlastParticles({
+  width,
+  height,
+  offsetX = 0,
+  offsetY = 0,
+  count = 34,
+  burst = 820,
+  lift = 150,
+  seed = 91,
+}: ParticleOptions): Shard[] {
+  const random = makeRandom(seed);
+  return Array.from({ length: count }, () => {
+    const radius = 0.6 + random() * 1.1;
+    const heading = random() * Math.PI * 2;
+    const speed = burst * (0.25 + random() * 0.95);
+    // Seeded across the middle of the box, not one point, so the burst has a
+    // core with some body to it instead of a starburst pinned to a pixel.
+    const x = width * (0.25 + random() * 0.5);
+    const y = height * (0.3 + random() * 0.4);
+    return {
+      local: [
+        { x: 0, y: -radius },
+        { x: radius, y: 0 },
+        { x: 0, y: radius },
+        { x: -radius, y: 0 },
+      ],
+      x: x + offsetX,
+      y: y + offsetY,
+      vx: Math.cos(heading) * speed,
+      vy: Math.sin(heading) * speed - lift * (0.4 + random()),
+      angle: random() * Math.PI,
+      spin: (random() - 0.5) * 30,
+      age: 0,
+      fadeRate: 1.6 + random() * 0.9,
     };
   });
 }
@@ -216,22 +292,32 @@ export function createShatter({
 export function stepShatter(shards: Shard[], dtMs: number, gravity = SHARD_GRAVITY): void {
   const dt = Math.min(Math.max(dtMs, 0), MAX_STEP_MS) / 1000;
   if (dt === 0) return;
+  // Drag per unit time, not per frame, so the arcs do not change shape with the
+  // refresh rate.
+  const drag = Math.exp(-DRAG_PER_SECOND * dt);
   for (const shard of shards) {
     shard.age += dt;
-    shard.vx *= DRAG;
-    shard.vy += gravity * dt;
+    shard.vx *= drag;
+    shard.vy = shard.vy * drag + gravity * dt;
     shard.x += shard.vx * dt;
     shard.y += shard.vy * dt;
     shard.angle += shard.spin * dt;
   }
 }
 
-/** Full ink while the crack is fresh, then a fade so shards never hard-clip. */
+/**
+ * Ink multiplier on the base stroke. Exactly 1 at rest, so the frame the canvas
+ * takes over from the CSS border is identical; then the fragments ink up as they
+ * separate, because debris this small and this fast at plain border weight reads
+ * as faint confetti. Fades to nothing at the end so nothing pops out of view.
+ */
 export function shardAlpha(shard: Shard): number {
-  if (shard.age <= SHARD_FADE_START) return 1;
-  if (shard.age >= SHARD_FADE_END) return 0;
-  const t = (shard.age - SHARD_FADE_START) / (SHARD_FADE_END - SHARD_FADE_START);
-  return 1 - t * t;
+  const age = shard.age * (shard.fadeRate ?? 1);
+  const boost = 1 + (BLAST_INK - 1) * Math.min(age / BLAST_INK_IN, 1);
+  if (age <= SHARD_FADE_START) return boost;
+  if (age >= SHARD_FADE_END) return 0;
+  const t = (age - SHARD_FADE_START) / (SHARD_FADE_END - SHARD_FADE_START);
+  return boost * (1 - t * t);
 }
 
 /** Shard outline in canvas coordinates, closed for stroking as a ribbon. */
