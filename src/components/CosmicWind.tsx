@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { createWindRenderer, randomWindPalette, type Rgb } from "@/lib/cosmic-wind-gl";
+import { createWindRenderer, randomWindPalette } from "@/lib/cosmic-wind-gl";
 
 /**
  * Cosmic wind - soft shader wisps rising out of the page's bottom edge, in a
@@ -11,7 +11,8 @@ import { createWindRenderer, randomWindPalette, type Rgb } from "@/lib/cosmic-wi
  * The fbm field is inherently blurry, so the canvas renders at half
  * resolution and lets CSS scale it up - a quarter of the fragments for an
  * identical look. Animates only while scrolled into view; reduced motion
- * gets one static frame; no WebGL gets a CSS gradient in the same palette.
+ * gets one static frame; no WebGL means no effect - a static CSS gradient
+ * read as generic decoration, so the fallback is just the page background.
  *
  * The cursor pulls the field toward itself while moving; the influence
  * decays over ~a second once it stops, so the waves feel disturbed rather
@@ -24,8 +25,6 @@ const MOUSE_EASE = 0.06;
 const STRENGTH_DECAY = 0.985;
 const RESOLUTION = 0.5;
 
-const css = ([r, g, b]: Rgb) => `rgb(${Math.round(r * 255)} ${Math.round(g * 255)} ${Math.round(b * 255)})`;
-
 export function CosmicWind() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
@@ -35,16 +34,7 @@ export function CosmicWind() {
     const palette = randomWindPalette();
     const renderer = createWindRenderer(canvas, palette, INTENSITY);
 
-    if (!renderer) {
-      const [a, b, c] = palette.colors.map(css);
-      canvas.style.background = [
-        `radial-gradient(120% 90% at 20% 100%, ${a} 0%, transparent 60%)`,
-        `radial-gradient(100% 80% at 75% 100%, ${b} 0%, transparent 55%)`,
-        `radial-gradient(140% 70% at 50% 100%, ${c} 0%, transparent 65%)`,
-      ].join(", ");
-      canvas.style.opacity = "0.35";
-      return;
-    }
+    if (!renderer) return;
 
     const reducedMotion =
       typeof window.matchMedia === "function" &&

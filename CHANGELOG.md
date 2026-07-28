@@ -6,7 +6,7 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 - Cosmic wind: a WebGL shader at the footer - domain-warped noise wisps rise from the bottom edge in a blue-violet palette randomized each visit, swell and die in aurora-like waves, and lean toward the cursor while it moves
-- Reduced motion gets a static frame; browsers without WebGL get a CSS gradient in the same palette
+- Reduced motion gets a static frame; browsers without WebGL get the plain page background
 
 ### Changed
 - Vertical overscroll bounce is disabled so rubber-banding past the footer no longer flashes a bare white bar (horizontal swipe-back navigation still works)
