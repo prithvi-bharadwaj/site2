@@ -515,6 +515,8 @@ export default function Home() {
                 <a
                   key={s.label}
                   href={s.href}
+                  target="_blank"
+                  rel="noreferrer"
                   onPointerEnter={(e) => {
                     if (s.media && e.pointerType === "mouse") emitShow({ media: s.media, x: e.clientX, y: e.clientY });
                   }}
