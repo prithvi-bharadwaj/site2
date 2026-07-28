@@ -22,6 +22,12 @@ beforeEach(() => {
     configurable: true,
     value: { ready: Promise.resolve() },
   });
+  // jsdom has no matchMedia; the decline path reads prefers-reduced-motion.
+  window.matchMedia = vi.fn().mockReturnValue({
+    matches: false,
+    addEventListener: () => {},
+    removeEventListener: () => {},
+  }) as unknown as typeof window.matchMedia;
 });
 
 afterEach(() => {
