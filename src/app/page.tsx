@@ -66,17 +66,17 @@ const PREVIOUSLY: LinkListItem[] = [
     ],
   },
   {
-    title: "1st place at the Google DeepMind × Stanford AI Game Contest (2026), for a genAI playcast",
+    title: "Won the 2026 Google DeepMind × Stanford AI Game Contest with a generative AI playcast",
     inlineLinks: [
       {
-        phrase: "genAI playcast",
+        phrase: "generative AI playcast",
         href: "https://youtube.com/shorts/E4fyqr_semE",
         media: { type: "youtube", id: "E4fyqr_semE", caption: "voxel demolish" },
       },
     ],
   },
   {
-    title: "Bootstrapped a game studio at 19 and made 100+ games for Voodoo and Supersonic - 200K+ downloads, six-figure revenue",
+    title: "At 19, I bootstrapped a game studio and shipped 100+ titles with Voodoo and Supersonic—200K+ downloads and six figures in revenue",
     inlineLinks: [
       {
         phrase: "game studio",
@@ -308,10 +308,10 @@ const SOCIALS: {
 const SECTIONS: PanelSection[] = [
   { id: "intro", label: "intro" },
   { id: "previously", label: "previously" },
-  { id: "built", label: "in 2026 i built" },
+  { id: "built", label: "shipped in 2026" },
   { id: "lore", label: "lore" },
   { id: "writing", label: "writing" },
-  { id: "socials", label: "find me on" },
+  { id: "socials", label: "elsewhere" },
 ];
 
 /** Every section shares the same column geometry. */
@@ -480,7 +480,7 @@ export default function Home() {
 
         {/* Projects */}
         <div id="built" className={`${COLUMN} mt-10 md:mt-14`}>
-          <PreviouslyList label="In 2026 I built." items={PROJECTS} proofKind="project-proof" />
+          <PreviouslyList label="Shipped in 2026." items={PROJECTS} proofKind="project-proof" />
         </div>
 
         {/* Lore */}
@@ -496,7 +496,7 @@ export default function Home() {
         {/* Socials */}
         <div id="socials" className={`${COLUMN} mt-10 md:mt-14 pb-24`}>
           <span className="text-(--ink)/35 text-xs uppercase tracking-widest block mb-6">
-            <WiggleWords text="Find me on." />
+            <WiggleWords text="Elsewhere." />
           </span>
           <div
             className="flex flex-wrap gap-x-5 gap-y-2 text-sm"
