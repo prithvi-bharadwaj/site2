@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.1.7.0] - 2026-08-03
+
+### Added
+- First-visit intro reveal: the page opens plain white/black, the greeting types itself out with a live caret, then the "i" in "Prithvi" duplicates, drops, and crashes near the bottom of the screen - shockwave, sparks, screen shake - and the wreckage flies up as the bio's own letters, each spring-homing to the exact spot the real text occupies before the rest of the site staggers into view
+- Glyphs are harvested from the rendered hero via Range rects (same trick as letter physics), so the canvas hands off to the live DOM pixel-for-pixel
+- Plays once per session; any click, key, or scroll skips straight to the finished page; reduced motion never sees it; `?intro` replays it on demand
+
+### Changed
+- Home page content data (previously/projects/lore/writing/socials) extracted to `home-content.ts` - `page.tsx` had crossed the 600-line mark
+
 ## [0.1.6.0] - 2026-07-28
 
 ### Added

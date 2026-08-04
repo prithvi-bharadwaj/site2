@@ -2359,3 +2359,28 @@ html.dark .physics-restore {
     transform: translate(-50%, -50%);
   }
 }
+
+/* ── First-visit intro reveal ──
+   While the IntroReveal canvas plays, the page sits unchanged underneath it.
+   The moment the canvas starts fading, main gains data-reveal="in" and the
+   sections below the hero rise into place. The hero itself doesn't animate -
+   the canvas hands its glyphs off in place. */
+
+main[data-reveal="in"] #previously { animation: reveal-rise 600ms var(--ease-out) 80ms both; }
+main[data-reveal="in"] #built { animation: reveal-rise 600ms var(--ease-out) 170ms both; }
+main[data-reveal="in"] #lore { animation: reveal-rise 600ms var(--ease-out) 260ms both; }
+main[data-reveal="in"] #writing { animation: reveal-rise 600ms var(--ease-out) 350ms both; }
+main[data-reveal="in"] #socials { animation: reveal-rise 600ms var(--ease-out) 440ms both; }
+
+@keyframes reveal-rise {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  main[data-reveal="in"] :is(#previously, #built, #lore, #writing, #socials) {
+    animation: none;
+  }
+}

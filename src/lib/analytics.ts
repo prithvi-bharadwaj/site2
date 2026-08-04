@@ -22,6 +22,7 @@ export type InteractionName =
   | "exit_gate_shown"
   | "genz_mode_changed"
   | "genz_video_dismissed"
+  | "intro_reveal_finished"
   | "link_activated"
   | "list_item_collapsed"
   | "list_item_expanded"
@@ -98,6 +99,7 @@ export function captureAnalyticsEvent(
 const SIGNAL_INTERACTIONS = new Set<InteractionName>([
   "content_edit_started",
   "exit_gate_shown",
+  "intro_reveal_finished",
   "pointer_exploration_started",
   "scroll_depth_reached",
   "visible_time_reached",
