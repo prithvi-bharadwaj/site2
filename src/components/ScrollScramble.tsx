@@ -32,6 +32,11 @@ const SECTION_IDS = ["previously", "built", "lore", "writing", "socials"];
 const TRIGGER_VH = 1;
 /** Sections triggering in the same frame decode top-to-bottom, this far apart. */
 const STAGGER_MS = 140;
+/**
+ * Sections already on screen at handoff hold this beat before decoding, so
+ * the hero's crossfade (480ms) settles first instead of both moving at once.
+ */
+const HANDOFF_GRACE_MS = 900;
 
 type SectionState =
   | { kind: "pending"; el: HTMLElement }
@@ -182,8 +187,11 @@ export function ScrollScramble({ onDone }: ScrollScrambleProps) {
       }
     }
 
+    let mountedAt = -1;
+
     function frame(now: number) {
       if (finished) return;
+      if (mountedAt < 0) mountedAt = now;
       ctx!.setTransform(dpr, 0, 0, dpr, 0, 0);
       ctx!.clearRect(0, 0, window.innerWidth, window.innerHeight);
       let allDone = true;
@@ -196,8 +204,10 @@ export function ScrollScramble({ onDone }: ScrollScrambleProps) {
         if (s.kind === "pending") {
           if (rect.top < window.innerHeight * TRIGGER_VH && rect.bottom > 0) {
             // A future startedAt just delays the draw; drawSection paints
-            // nothing while elapsed is negative.
-            start(i, rect.top, now + startedThisFrame * STAGGER_MS);
+            // nothing while elapsed is negative. Grace decays to zero, so
+            // scroll-triggered sections later start immediately.
+            const grace = Math.max(0, mountedAt + HANDOFF_GRACE_MS - now);
+            start(i, rect.top, now + grace + startedThisFrame * STAGGER_MS);
             startedThisFrame++;
           }
           continue;
