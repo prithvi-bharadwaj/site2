@@ -206,6 +206,9 @@ export function PreviouslyList({ label, items, proofKind = "proof", analyticsLab
                         >
                           {seg.text}
                         </span>
+                        {seg.brand.external && (
+                          <span aria-hidden className="brand-link-arrow">↗</span>
+                        )}
                       </a>
                     );
                   }

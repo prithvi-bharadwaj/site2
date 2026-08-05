@@ -12,6 +12,8 @@ export interface BrandLink {
   favicon: string;
   /** Optional hover-preview media shown next to the cursor. */
   media?: HoverCardMedia;
+  /** Append a ↗ inside the link to mark it as an outbound destination. */
+  external?: boolean;
 }
 
 export interface InlineLink {
@@ -84,7 +86,7 @@ function renderTitleWithBrands(
 ): ReactNode {
   const patterns = [
     ...(inline ?? []).map((l) => ({ kind: "inline" as const, match: l.phrase, href: l.href, media: l.media })),
-    ...(brands ?? []).map((b) => ({ kind: "brand" as const, match: b.name, href: b.href, media: b.media, favicon: b.favicon })),
+    ...(brands ?? []).map((b) => ({ kind: "brand" as const, match: b.name, href: b.href, media: b.media, favicon: b.favicon, external: b.external })),
   ].sort((a, b) => b.match.length - a.match.length);
   if (patterns.length === 0) return <WiggleWords text={title} />;
 
@@ -149,6 +151,7 @@ function renderTitleWithBrands(
             className="brand-link-favicon inline-block h-[0.7rem] w-[0.7rem] rounded-sm align-[-0.15em]"
           />
           <span className="brand-link-text">{part}</span>
+          {hit.external && <span aria-hidden className="brand-link-arrow">↗</span>}
         </a>
       );
     }

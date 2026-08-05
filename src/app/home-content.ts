@@ -34,12 +34,13 @@ export const PREVIOUSLY: LinkListItem[] = [
     ],
   },
   {
-    title: "Built Roam, an AI consumer app that lets you go from a text prompt to a 3D multiplayer game in minutes → roam.gg",
+    title: "Built Roam, an AI consumer app that lets you go from a text prompt to a 3D multiplayer game in minutes",
     brandLinks: [
       {
         name: "Roam",
         href: "https://roam.lol",
         favicon: LOGO("roam"),
+        external: true,
         media: {
           type: "image",
           src: SHOT("roam"),
@@ -47,20 +48,9 @@ export const PREVIOUSLY: LinkListItem[] = [
         },
       },
     ],
-    inlineLinks: [
-      {
-        phrase: "roam.gg",
-        href: "https://roam.gg",
-        media: {
-          type: "image",
-          src: SHOT("roam-gg"),
-          caption: "roam.gg - turn anything into a game",
-        },
-      },
-    ],
   },
   {
-    title: "Solo-bootstrapped a game studio and shipped 100+ titles with Voodoo and Supersonic - 200K+ downloads and six figures in revenue",
+    title: "At 19, I solo-bootstrapped a game studio and shipped 100+ titles with Voodoo and Supersonic - 200K+ downloads and six figures in revenue",
     inlineLinks: [
       {
         phrase: "game studio",

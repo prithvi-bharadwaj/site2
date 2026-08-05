@@ -1545,6 +1545,21 @@ main a:hover {
   text-underline-offset: 3px;
 }
 
+/* Outbound marker: a small raised ↗ inside the link, brightening on hover. */
+.brand-link-arrow {
+  font-size: 0.72em;
+  line-height: 1;
+  align-self: flex-start;
+  margin-left: -2px;
+  opacity: 0.55;
+  transition: opacity 200ms var(--ease-out), color 200ms var(--ease-out);
+}
+
+.brand-link:hover .brand-link-arrow {
+  color: #2563eb;
+  opacity: 1;
+}
+
 /* Suppress the line-wide hover-underline sweep when a brand-link inside is the hover target. */
 .hover-underline:has(.brand-link:hover)::after {
   width: 0 !important;
