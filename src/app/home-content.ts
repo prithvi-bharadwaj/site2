@@ -40,12 +40,15 @@ export const PREVIOUSLY: LinkListItem[] = [
         name: "Roam",
         href: "https://roam.lol",
         favicon: LOGO("roam"),
-        external: true,
         media: {
           type: "image",
-          src: SHOT("roam"),
-          caption: "roam.lol",
+          src: SHOT("roam-gg"),
+          caption: "roam - turn anything into a game",
         },
+        actions: [
+          { label: "Generate Games", href: "https://roam.gg" },
+          { label: "Landing Page", href: "https://roam.lol" },
+        ],
       },
     ],
   },

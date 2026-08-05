@@ -169,6 +169,7 @@ export function PreviouslyList({ label, items, proofKind = "proof", analyticsLab
                             emitPin({
                               media: media ?? linkNote(seg.brand.href),
                               href: seg.brand.href,
+                              actions: seg.brand.actions,
                               inspectId: media ? `${proofKind}:${mediaKey(media)}` : undefined,
                               x: e.clientX,
                               y: e.clientY,
@@ -208,9 +209,6 @@ export function PreviouslyList({ label, items, proofKind = "proof", analyticsLab
                         >
                           {seg.text}
                         </span>
-                        {seg.brand.external && (
-                          <span aria-hidden className="brand-link-arrow">↗</span>
-                        )}
                       </a>
                     );
                   }

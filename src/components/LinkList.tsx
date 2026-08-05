@@ -2,7 +2,7 @@
 
 import { useRef, useState, type ReactNode } from "react";
 import { WiggleWords, useWiggleDescendants } from "./WiggleWords";
-import { emitShow, emitMove, emitHide, emitPin, isPinnedInspect, type HoverCardMedia } from "@/lib/hover-card-bus";
+import { emitShow, emitMove, emitHide, emitPin, isPinnedInspect, type HoverCardAction, type HoverCardMedia } from "@/lib/hover-card-bus";
 import { CLICK_XP, award, inspectStart, inspectEnd, mediaKey } from "@/lib/xp";
 import { trackInteraction } from "@/lib/analytics";
 
@@ -12,8 +12,8 @@ export interface BrandLink {
   favicon: string;
   /** Optional hover-preview media shown next to the cursor. */
   media?: HoverCardMedia;
-  /** Append a ↗ inside the link to mark it as an outbound destination. */
-  external?: boolean;
+  /** Destination buttons on the pinned card instead of one card-wide link. */
+  actions?: HoverCardAction[];
 }
 
 export interface InlineLink {
@@ -86,11 +86,11 @@ function renderTitleWithBrands(
 ): ReactNode {
   const patterns = [
     ...(inline ?? []).map((l) => ({ kind: "inline" as const, match: l.phrase, href: l.href, media: l.media })),
-    ...(brands ?? []).map((b) => ({ kind: "brand" as const, match: b.name, href: b.href, media: b.media, favicon: b.favicon, external: b.external })),
+    ...(brands ?? []).map((b) => ({ kind: "brand" as const, match: b.name, href: b.href, media: b.media, favicon: b.favicon, actions: b.actions })),
   ].sort((a, b) => b.match.length - a.match.length);
   if (patterns.length === 0) return <WiggleWords text={title} />;
 
-  const proofHandlers = (href: string, media: HoverCardMedia | undefined) => ({
+  const proofHandlers = (href: string, media: HoverCardMedia | undefined, actions?: HoverCardAction[]) => ({
     onClick: (e: React.MouseEvent) => {
       e.stopPropagation();
       if (xpKind) award(`click:${media ? mediaKey(media) : href}`, CLICK_XP);
@@ -101,6 +101,7 @@ function renderTitleWithBrands(
         emitPin({
           media,
           href,
+          actions,
           inspectId: xpKind ? `${xpKind}-proof:${mediaKey(media)}` : undefined,
           x: e.clientX,
           y: e.clientY,
@@ -140,7 +141,7 @@ function renderTitleWithBrands(
           key={i}
           href={hit.href}
           data-repel
-          {...proofHandlers(hit.href, hit.media)}
+          {...proofHandlers(hit.href, hit.media, hit.actions)}
           className="brand-link wl-unit inline-flex items-baseline gap-1"
         >
           <img
@@ -151,7 +152,6 @@ function renderTitleWithBrands(
             className="brand-link-favicon inline-block h-[0.7rem] w-[0.7rem] rounded-sm align-[-0.15em]"
           />
           <span className="brand-link-text">{part}</span>
-          {hit.external && <span aria-hidden className="brand-link-arrow">↗</span>}
         </a>
       );
     }

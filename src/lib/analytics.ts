@@ -31,6 +31,7 @@ export type InteractionName =
   | "pointer_exploration_started"
   | "preview_opened"
   | "preview_pinned"
+  | "preview_action_clicked"
   | "preview_unpinned"
   | "proof_inspection_abandoned"
   | "proof_inspection_completed"

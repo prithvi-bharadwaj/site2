@@ -26,10 +26,20 @@ export interface HoverCardMoveDetail {
   y: number;
 }
 
+export interface HoverCardAction {
+  label: string;
+  href: string;
+}
+
 export interface HoverCardPinDetail {
   media: HoverCardMedia;
   /** Destination the pinned card links to (same tab). */
   href: string;
+  /**
+   * Explicit destination buttons. When present, the pinned card renders
+   * these instead of acting as one big link (e.g. Roam: play vs landing).
+   */
+  actions?: HoverCardAction[];
   /**
    * Proof-inspection id (e.g. "proof:<mediaKey>"). While the card stays
    * pinned, the dwell timer runs against this id - the touch equivalent of

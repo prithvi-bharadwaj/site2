@@ -1545,20 +1545,6 @@ main a:hover {
   text-underline-offset: 3px;
 }
 
-/* Outbound marker: a small raised ↗ inside the link, brightening on hover. */
-.brand-link-arrow {
-  font-size: 0.72em;
-  line-height: 1;
-  align-self: flex-start;
-  margin-left: -2px;
-  opacity: 0.55;
-  transition: opacity 200ms var(--ease-out), color 200ms var(--ease-out);
-}
-
-.brand-link:hover .brand-link-arrow {
-  color: #2563eb;
-  opacity: 1;
-}
 
 /* Suppress the line-wide hover-underline sweep when a brand-link inside is the hover target. */
 .hover-underline:has(.brand-link:hover)::after {
@@ -1883,8 +1869,9 @@ a.project-item {
 }
 
 /* Hanging indent so wrapped lines align with the text, not under the bullet. */
+/* The bullet hangs in the margin: text (first line and wraps) sits flush
+   with the column edge shared by the bio and section titles. */
 .bullet-hang {
-  padding-left: 1em;
   text-indent: -1em;
 }
 
@@ -1967,6 +1954,31 @@ a.project-item {
   color: inherit;
   text-decoration: none;
   cursor: pointer;
+}
+
+/* Destination buttons on a pinned card (e.g. Roam: play vs landing). */
+.hover-card-actions {
+  display: flex;
+  gap: 6px;
+  padding: 8px 2px 2px;
+}
+
+.hover-card-action {
+  flex: 1;
+  text-align: center;
+  font-size: 11px;
+  padding: 5px 8px;
+  border-radius: 5px;
+  border: 1px solid rgb(var(--ink-rgb) / 0.15);
+  color: rgb(var(--ink-rgb) / 0.75);
+  text-decoration: none;
+  transition: color 150ms, border-color 150ms, background 150ms;
+}
+
+.hover-card-action:hover {
+  color: var(--ink);
+  border-color: rgb(var(--ink-rgb) / 0.35);
+  background: rgb(var(--ink-rgb) / 0.04);
 }
 
 .hover-card.pinned .hover-card-caption {

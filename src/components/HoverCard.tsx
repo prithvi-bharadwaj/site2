@@ -8,6 +8,7 @@ import {
   onPin,
   onUnpin,
   setPinnedInspectId,
+  type HoverCardAction,
   type HoverCardMedia,
 } from "@/lib/hover-card-bus";
 import { inspectStart, inspectEnd } from "@/lib/xp";
@@ -65,6 +66,7 @@ export function HoverCard() {
   const [media, setMedia] = useState<HoverCardMedia | null>(null);
   const [visible, setVisible] = useState(false);
   const [pinnedHref, setPinnedHref] = useState<string | null>(null);
+  const [pinnedActions, setPinnedActions] = useState<HoverCardAction[] | null>(null);
   const cardRef = useRef<HTMLDivElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const shapeRef = useRef<CardShape>("default");
@@ -90,6 +92,7 @@ export function HoverCard() {
     }
     setPinnedInspectId(null);
     setPinned(null);
+    setPinnedActions(null);
     setVisible(false);
     hideTimerRef.current = setTimeout(() => {
       setMedia((m) => (m?.type === "youtube" ? null : m));
@@ -147,7 +150,7 @@ export function HoverCard() {
         hideTimerRef.current = null;
       }, 250);
     });
-    const offPin = onPin(({ media: m, href, inspectId, x, y }) => {
+    const offPin = onPin(({ media: m, href, actions, inspectId, x, y }) => {
       // Re-clicking the same link toggles the pin off.
       if (pinnedRef.current === href) {
         unpin("source_reclicked");
@@ -169,6 +172,7 @@ export function HoverCard() {
       setVisible(true);
       shapeRef.current = m.type === "note" ? "note" : m.type === "image" && m.wide ? "wide" : "default";
       setPinned(href);
+      setPinnedActions(actions?.length ? actions : null);
       const card = cardRef.current;
       if (card) {
         const { x: px, y: py } = clampPosition(x, y, shapeRef.current, true);
@@ -259,7 +263,7 @@ export function HoverCard() {
       {media?.caption && (
         <div className="hover-card-caption">
           {media.caption}
-          {pinnedHref && <span className="hover-card-visit"> →</span>}
+          {pinnedHref && !pinnedActions && <span className="hover-card-visit"> →</span>}
         </div>
       )}
     </>
@@ -275,7 +279,32 @@ export function HoverCard() {
       aria-hidden={pinnedHref ? undefined : "true"}
       role={pinnedHref ? undefined : "presentation"}
     >
-      {pinnedHref ? (
+      {pinnedHref && pinnedActions ? (
+        // Explicit destinations: the card itself is inert, the buttons link.
+        <div>
+          {inner}
+          <div className="hover-card-actions">
+            {pinnedActions.map((a) => (
+              <a
+                key={a.href}
+                href={a.href}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="hover-card-action"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  trackInteraction("preview_action_clicked", {
+                    href: a.href,
+                    label: a.label,
+                  });
+                }}
+              >
+                {a.label}
+              </a>
+            ))}
+          </div>
+        </div>
+      ) : pinnedHref ? (
         // New tab on purpose: the visitor keeps their xp session running here.
         <a
           href={pinnedHref}
