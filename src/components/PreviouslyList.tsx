@@ -107,8 +107,11 @@ export function PreviouslyList({ label, items, proofKind = "proof" }: Previously
           const verified = proofKeys.length > 0 && proofKeys.every((k) => k in xp.earned);
 
           return (
-            <li key={i} className="m-0 p-0 bullet-hang" data-cursor={item.cursor}>
+            <li key={i} className="m-0 p-0 bullet-hang">
+              {/* Cursor zone on the inline span (hugs the sentence), not the
+                  full-width li, so empty space past short lines stays inert. */}
               <span
+                data-cursor={item.cursor}
                 onClick={expandable ? () => {
                   setOpen(isOpen ? null : i);
                   trackInteraction(

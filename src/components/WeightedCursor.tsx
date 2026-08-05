@@ -56,10 +56,22 @@ export function WeightedCursor() {
   const [sprite, setSprite] = useState("");
   const spriteRef = useRef("");
   const morphRef = useRef(1);
+  // Tracked live, not just at mount: flipping reduced-motion mid-session must
+  // hand the native cursor back and stop the animation.
+  const [reducedMotion, setReducedMotion] = useState(false);
 
   useEffect(() => {
     if (typeof window.matchMedia !== "function") return; // jsdom
-    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
+    setReducedMotion(mq.matches);
+    const onChange = () => setReducedMotion(mq.matches);
+    mq.addEventListener("change", onChange);
+    return () => mq.removeEventListener("change", onChange);
+  }, []);
+
+  useEffect(() => {
+    if (typeof window.matchMedia !== "function") return; // jsdom
+    if (reducedMotion) return;
     if (window.matchMedia("(pointer: coarse)").matches) return;
     const dart = dartRef.current;
     if (!dart) return;
@@ -88,7 +100,14 @@ export function WeightedCursor() {
     let zones: Zone[] = [];
     let zonesDirty = true;
     let rectsDirty = true;
+    let lastMeasure = -Infinity;
     const lastDetect = { x: NaN, y: NaN };
+    /**
+     * Transforms (WiggleWords, PretextHero) and visibility flips
+     * (PhysicsLayer) move or hide zones without any mutation/scroll event,
+     * so cached rects also expire on age while the loop runs.
+     */
+    const RECT_MAX_AGE_MS = 250;
     const zoneObserver = new MutationObserver(() => {
       zonesDirty = true;
     });
@@ -96,12 +115,18 @@ export function WeightedCursor() {
 
     function measureZones() {
       for (const z of zones) {
-        const r = z.el.getBoundingClientRect();
-        z.left = r.left;
-        z.top = r.top;
-        z.right = r.right;
-        z.bottom = r.bottom;
-        z.area = r.width * r.height;
+        // Zones hidden via CSS (e.g. PhysicsLayer swaps content for a canvas
+        // with visibility: hidden) keep their boxes; treat them as gone.
+        const visible =
+          !(z.el instanceof HTMLElement) ||
+          typeof z.el.checkVisibility !== "function" ||
+          z.el.checkVisibility({ checkVisibilityCSS: true, checkOpacity: true });
+        const r = visible ? z.el.getBoundingClientRect() : null;
+        z.left = r?.left ?? 0;
+        z.top = r?.top ?? 0;
+        z.right = r?.right ?? 0;
+        z.bottom = r?.bottom ?? 0;
+        z.area = r ? r.width * r.height : 0;
       }
     }
     const spring: AngleSpring = { angle: IDLE_ANGLE, velocity: 0 };
@@ -137,8 +162,10 @@ export function WeightedCursor() {
           }))
           .filter((z) => z.key in SPRITE_SVGS);
       }
-      if (rectsDirty) {
+      const now = performance.now();
+      if (rectsDirty || now - lastMeasure > RECT_MAX_AGE_MS) {
         rectsDirty = false;
+        lastMeasure = now;
         measureZones();
       } else if (mouse.x === lastDetect.x && mouse.y === lastDetect.y) {
         // Nothing moved since the last check (e.g. pendulum-return frames).
@@ -305,10 +332,13 @@ export function WeightedCursor() {
       document.documentElement.removeEventListener("mouseleave", onLeave);
       document.documentElement.removeEventListener("mouseenter", onEnter);
       document.documentElement.classList.remove("weighted-cursor");
+      // Cleanup can run mid-session (reduced-motion flipped on): hide the
+      // frozen dart, not just restore the native cursor.
+      dart.style.opacity = "0";
       zoneObserver.disconnect();
       cancelAnimationFrame(raf);
     };
-  }, []);
+  }, [reducedMotion]);
 
   return (
     <div ref={dartRef} className="weighted-cursor-dart" aria-hidden="true">
