@@ -23,6 +23,8 @@ const NOTE_CARD_WIDTH = 320;
 const NOTE_CARD_HEIGHT = 36;
 // Pinned (clicked) cards grow ~20%.
 const PIN_SCALE = 1.2;
+// Destination-button row height (padding + pill), for viewport clamping.
+const ACTIONS_HEIGHT = 40;
 const OFFSET_X = 16;
 const OFFSET_Y = 16;
 const PREVIEW_OPEN_COOLDOWN_MS = 5_000;
@@ -42,12 +44,12 @@ function mediaProperties(media: HoverCardMedia) {
   };
 }
 
-function clampPosition(x: number, y: number, shape: CardShape, pinned = false) {
+function clampPosition(x: number, y: number, shape: CardShape, pinned = false, extraH = 0) {
   if (typeof window === "undefined") return { x, y };
   // Note chips render at natural width; only media cards grow when pinned.
   const scale = pinned && shape !== "note" ? PIN_SCALE : 1;
   const w = (shape === "wide" ? WIDE_CARD_WIDTH : shape === "note" ? NOTE_CARD_WIDTH : CARD_WIDTH) * scale;
-  const h = (shape === "wide" ? WIDE_CARD_HEIGHT : shape === "note" ? NOTE_CARD_HEIGHT : CARD_HEIGHT) * scale;
+  const h = (shape === "wide" ? WIDE_CARD_HEIGHT : shape === "note" ? NOTE_CARD_HEIGHT : CARD_HEIGHT) * scale + extraH;
   // max() last: on narrow viewports the card must stay on-screen at the left/top
   // even when it's wider than the space to the right of the cursor.
   return {
@@ -175,7 +177,13 @@ export function HoverCard() {
       setPinnedActions(actions?.length ? actions : null);
       const card = cardRef.current;
       if (card) {
-        const { x: px, y: py } = clampPosition(x, y, shapeRef.current, true);
+        const { x: px, y: py } = clampPosition(
+          x,
+          y,
+          shapeRef.current,
+          true,
+          actions?.length ? ACTIONS_HEIGHT : 0
+        );
         card.style.transform = `translate3d(${px}px, ${py}px, 0)`;
       }
     });
