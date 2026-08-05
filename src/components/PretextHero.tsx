@@ -18,6 +18,12 @@ interface PretextHeroProps {
   greeting: string;
   bio: string;
   className?: string;
+  /**
+   * Pause mouse displacement. While the intro overlay draws its harvested
+   * copy of this text, the live DOM must not move underneath it or the
+   * crossfade lands on displaced words instead of a pixel-exact handoff.
+   */
+  frozen?: boolean;
 }
 
 const FONT_FAMILY = '-apple-system, BlinkMacSystemFont, "SF Pro Display", "Inter", "Segoe UI", system-ui, sans-serif';
@@ -83,7 +89,7 @@ function useCoarsePointer(): boolean {
   return coarse;
 }
 
-export function PretextHero({ greeting, bio, className }: PretextHeroProps) {
+export function PretextHero({ greeting, bio, className, frozen = false }: PretextHeroProps) {
   const reducedMotion = useReducedMotion();
   const coarsePointer = useCoarsePointer();
   const containerRef = useRef<HTMLDivElement>(null);
@@ -200,7 +206,7 @@ export function PretextHero({ greeting, bio, className }: PretextHeroProps) {
   // Mouse tracking — handlers only record coords and wake the loop; all
   // geometry reads happen once per frame inside animateDisplacement.
   useEffect(() => {
-    if (reducedMotion || coarsePointer) return;
+    if (reducedMotion || coarsePointer || frozen) return;
     const wake = () => {
       if (!animatingRef.current) {
         animatingRef.current = true;
@@ -230,7 +236,7 @@ export function PretextHero({ greeting, bio, className }: PretextHeroProps) {
       cancelAnimationFrame(rafRef.current);
       animatingRef.current = false;
     };
-  }, [reducedMotion, coarsePointer, animateDisplacement]);
+  }, [reducedMotion, coarsePointer, frozen, animateDisplacement]);
 
   if (reducedMotion) {
     return (

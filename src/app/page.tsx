@@ -249,7 +249,7 @@ export default function Home() {
               <EditPanel label="bio" value={content.bio} onChange={(v) => update("bio", v)} />
             </div>
           )}
-          <PretextHero greeting={content.greeting} bio={content.bio} />
+          <PretextHero greeting={content.greeting} bio={content.bio} frozen={reveal !== "off"} />
           <CookieQuest />
         </div>
 
