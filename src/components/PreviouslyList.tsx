@@ -87,9 +87,9 @@ export function PreviouslyList({ label, items, proofKind = "proof" }: Previously
     <div
       ref={ref}
       data-analytics-section={analyticsSection}
-      className="text-sm text-(--ink)/60 leading-relaxed"
+      className="text-sm text-(--ink)/70 leading-relaxed"
     >
-      <span className="text-(--ink)/35 text-xs uppercase tracking-widest block mb-6">
+      <span className="text-(--ink)/50 text-sm uppercase tracking-widest block mb-6">
         <WiggleWords text={label} />
       </span>
       <ul className="list-none p-0 m-0">

@@ -266,7 +266,7 @@ export default function Home() {
 
         {/* Socials */}
         <div id="socials" className={`${COLUMN} mt-10 md:mt-14 pb-24`}>
-          <span className="text-(--ink)/35 text-xs uppercase tracking-widest block mb-6">
+          <span className="text-(--ink)/50 text-sm uppercase tracking-widest block mb-6">
             <WiggleWords text="Elsewhere." />
           </span>
           <div
@@ -299,7 +299,7 @@ export default function Home() {
                   onPointerLeave={(e) => {
                     if (s.media && e.pointerType === "mouse") emitHide();
                   }}
-                  className="group inline-flex cursor-pointer items-center gap-1.5 text-(--ink)/40 transition-colors hover:text-(--ink)/60"
+                  className="group inline-flex cursor-pointer items-center gap-1.5 text-(--ink)/50 transition-colors hover:text-(--ink)/70"
                 >
                   <img
                     src={s.favicon}
@@ -327,7 +327,7 @@ export default function Home() {
                   onPointerLeave={(e) => {
                     if (s.media && e.pointerType === "mouse") emitHide();
                   }}
-                  className="group inline-flex items-center gap-1.5 text-(--ink)/60 hover:text-(--ink) transition-colors"
+                  className="group inline-flex items-center gap-1.5 text-(--ink)/70 hover:text-(--ink) transition-colors"
                 >
                   <img
                     src={s.favicon}
@@ -347,7 +347,7 @@ export default function Home() {
             <GenZToggle enabled={genzMode} onChange={toggleGenz} />
           </div>
           {genzMode && (
-            <div className="mt-4 text-sm text-(--ink)/60 leading-relaxed">
+            <div className="mt-4 text-sm text-(--ink)/70 leading-relaxed">
               <p className="text-(--ink)/50 text-xs uppercase tracking-wider mb-2">tldr</p>
               {editMode && (
                 <EditPanel label="genz tldr" value={content.genz} onChange={(v) => update("genz", v)} />

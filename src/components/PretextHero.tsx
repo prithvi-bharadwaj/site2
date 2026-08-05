@@ -24,9 +24,10 @@ const FONT_FAMILY = '-apple-system, BlinkMacSystemFont, "SF Pro Display", "Inter
 
 // Match Tailwind text-sm (0.8125rem) at the body's font-weight 300 + line-height 1.62.
 const BODY_FONT_REM = 0.8125;
-// Greeting sits one step up (text-lg) at full opacity — the page's single focal point.
-const HEADING_FONT_REM = 1.125;
+// One size throughout - the greeting is the page's focal point by weight, not size.
+const HEADING_FONT_REM = BODY_FONT_REM;
 const BODY_FONT_WEIGHT = 300;
+const HEADING_FONT_WEIGHT = 500;
 const BODY_LINE_HEIGHT_RATIO = 1.62;
 
 function rootFontPx(): number {
@@ -36,7 +37,7 @@ function rootFontPx(): number {
 
 function buildSections(greeting: string, bio: string, fontPx: number, linePx: number, headingPx: number): SectionConfig[] {
   const fontShorthand = `${BODY_FONT_WEIGHT} ${fontPx}px ${FONT_FAMILY}`;
-  const headingShorthand = `${BODY_FONT_WEIGHT} ${headingPx}px ${FONT_FAMILY}`;
+  const headingShorthand = `${HEADING_FONT_WEIGHT} ${headingPx}px ${FONT_FAMILY}`;
 
   return [
     {
@@ -48,7 +49,8 @@ function buildSections(greeting: string, bio: string, fontPx: number, linePx: nu
       marginBottom: 16,
     },
     {
-      blocks: [{ text: bio, type: "body" }],
+      // Matches the sections' ink/70 so body copy reads as one voice.
+      blocks: [{ text: bio, type: "body", baseOpacity: 0.7 }],
       font: fontShorthand,
       fontSize: fontPx,
       lineHeight: linePx,
@@ -232,9 +234,9 @@ export function PretextHero({ greeting, bio, className }: PretextHeroProps) {
 
   if (reducedMotion) {
     return (
-      <div className={`text-sm text-(--ink)/60 leading-relaxed max-w-2xl ${className ?? ""}`}>
+      <div className={`text-sm text-(--ink)/70 leading-relaxed max-w-2xl ${className ?? ""}`}>
         {/* mb-[16px] matches the canvas path's marginBottom: 16 (rem units inflate at the 125% root) */}
-        <p className="mb-[16px] text-lg text-(--ink)">{greeting}</p>
+        <p className="mb-[16px] font-medium text-(--ink)">{greeting}</p>
         <p>{bio}</p>
       </div>
     );
@@ -256,6 +258,7 @@ export function PretextHero({ greeting, bio, className }: PretextHeroProps) {
         <span
           key={word.key}
           data-pretext-idx={i}
+          data-pretext-block={word.block.type}
           className="pretext-word"
           style={{
             position: "absolute",
@@ -264,7 +267,7 @@ export function PretextHero({ greeting, bio, className }: PretextHeroProps) {
             color: word.block.color,
             opacity: word.block.baseOpacity,
             fontSize: word.block.type === "heading" ? headingPxRef.current : fontPxRef.current,
-            fontWeight: BODY_FONT_WEIGHT,
+            fontWeight: word.block.type === "heading" ? HEADING_FONT_WEIGHT : BODY_FONT_WEIGHT,
             fontFamily: FONT_FAMILY,
             whiteSpace: "pre",
             willChange: coarsePointer ? undefined : "transform, opacity",

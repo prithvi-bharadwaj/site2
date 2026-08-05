@@ -123,10 +123,6 @@ export function IntroReveal({ onHandoff, onDone }: IntroRevealProps) {
       return m.fontBoundingBoxAscent ?? m.actualBoundingBoxAscent ?? 0;
     }
 
-    function fontPx(font: string): number {
-      return parseFloat(font.match(/(\d+(?:\.\d+)?)px/)?.[1] ?? "0");
-    }
-
     /** The sections that scramble after the bio, in reading order. */
     const SECTION_IDS = ["previously", "built", "lore", "writing", "socials"];
 
@@ -137,8 +133,9 @@ export function IntroReveal({ onHandoff, onDone }: IntroRevealProps) {
 
     /**
      * Read the page's glyphs off the live DOM. The hero splits into greeting
-     * and bio by font size - the greeting is the only thing set a step
-     * larger; the sections below join the bio as the scramble field.
+     * and bio by block type - one font size everywhere, so the word spans
+     * carry data-pretext-block; the sections below join the bio as the
+     * scramble field.
      */
     function harvest(): boolean {
       const root = document.querySelector<HTMLElement>('[role="banner"]');
@@ -146,14 +143,12 @@ export function IntroReveal({ onHandoff, onDone }: IntroRevealProps) {
       const opts = { height: window.innerHeight, measureAscent };
       const glyphs = harvestGlyphs(root, opts);
       if (glyphs.length < 2) return false;
-      const sizes = glyphs.map((g) => fontPx(g.font));
-      const max = Math.max(...sizes);
-      const min = Math.min(...sizes);
-      if (max - min < 1) return false;
-      const mid = (max + min) / 2;
       greeting = [];
       const bio: GlyphSource[] = [];
-      glyphs.forEach((g, i) => (sizes[i] > mid ? greeting : bio).push(g));
+      for (const g of glyphs) {
+        const block = g.el?.closest<HTMLElement>("[data-pretext-block]")?.dataset.pretextBlock;
+        (block === "heading" ? greeting : bio).push(g);
+      }
       if (greeting.length === 0) return false;
       const byPos = (a: GlyphSource, b: GlyphSource) => a.y - b.y || a.x - b.x;
       greeting.sort(byPos);

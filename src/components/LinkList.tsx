@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useRef, useState, type ReactNode } from "react";
 import { WiggleWords, useWiggleDescendants } from "./WiggleWords";
 import { emitShow, emitMove, emitHide, emitPin, isPinnedInspect, type HoverCardMedia } from "@/lib/hover-card-bus";
 import { CLICK_XP, award, inspectStart, inspectEnd, mediaKey } from "@/lib/xp";
@@ -148,32 +148,18 @@ function renderTitleWithBrands(
 }
 
 export function LinkList({ label, items, columns = 1, variant = "compact", pointer = false, xpKind }: LinkListProps) {
-  const [visible, setVisible] = useState(false);
   const [open, setOpen] = useState<number | null>(null);
   const rootRef = useRef<HTMLElement>(null);
 
   useWiggleDescendants(rootRef);
 
-  useEffect(() => {
-    const t = setTimeout(() => setVisible(true), 600);
-    return () => clearTimeout(t);
-  }, []);
-
   const analyticsSection =
     xpKind ?? label?.toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_|_$/g, "") ?? "list";
 
   return (
-    <section
-      ref={rootRef}
-      data-analytics-section={analyticsSection}
-      style={{
-        opacity: visible ? 1 : 0,
-        transform: visible ? "translateY(0)" : "translateY(8px)",
-        transition: "opacity 400ms ease-out, transform 400ms ease-out",
-      }}
-    >
+    <section ref={rootRef} data-analytics-section={analyticsSection}>
       {label && (
-        <span className="text-(--ink)/35 text-xs uppercase tracking-widest block mb-6">
+        <span className="text-(--ink)/50 text-sm uppercase tracking-widest block mb-6">
           <WiggleWords text={label} />
         </span>
       )}
@@ -193,7 +179,7 @@ export function LinkList({ label, items, columns = 1, variant = "compact", point
             <span
               // No hover-underline in prose (lore): the sweep stays put while
               // wiggling words displace, which reads as a broken underline.
-              className={`${variant === "prose" ? "" : "hover-underline "}text-(--ink)/60 group-hover:text-(--ink) transition-colors duration-200 inline leading-snug`}
+              className={`${variant === "prose" ? "" : "hover-underline "}text-(--ink)/70 group-hover:text-(--ink) transition-colors duration-200 inline leading-snug`}
             >
               {pointer && (
                 <span className="text-(--ink)/30 mr-1.5">·</span>
