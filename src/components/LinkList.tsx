@@ -74,72 +74,95 @@ function escapeRegex(s: string) {
   return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
+const DOTTED = "1px dotted rgb(var(--ink-rgb) / 0.35)";
+
 function renderTitleWithBrands(
   title: string,
   brands: BrandLink[] | undefined,
+  inline: InlineLink[] | undefined,
   xpKind: string | undefined
 ): ReactNode {
-  if (!brands || brands.length === 0) return <WiggleWords text={title} />;
+  const patterns = [
+    ...(inline ?? []).map((l) => ({ kind: "inline" as const, match: l.phrase, href: l.href, media: l.media })),
+    ...(brands ?? []).map((b) => ({ kind: "brand" as const, match: b.name, href: b.href, media: b.media, favicon: b.favicon })),
+  ].sort((a, b) => b.match.length - a.match.length);
+  if (patterns.length === 0) return <WiggleWords text={title} />;
+
+  const proofHandlers = (href: string, media: HoverCardMedia | undefined) => ({
+    onClick: (e: React.MouseEvent) => {
+      e.stopPropagation();
+      if (xpKind) award(`click:${media ? mediaKey(media) : href}`, CLICK_XP);
+      // Mouse clicks pin the preview card; keyboard activation navigates.
+      if (media && e.detail > 0) {
+        e.preventDefault();
+        if (xpKind) inspectEnd(`${xpKind}-proof:${mediaKey(media)}`);
+        emitPin({
+          media,
+          href,
+          inspectId: xpKind ? `${xpKind}-proof:${mediaKey(media)}` : undefined,
+          x: e.clientX,
+          y: e.clientY,
+        });
+      }
+    },
+    onPointerEnter: (e: React.PointerEvent) => {
+      if (media && e.pointerType === "mouse") {
+        emitShow({ media, x: e.clientX, y: e.clientY });
+        if (xpKind) inspectStart(`${xpKind}-proof:${mediaKey(media)}`);
+      }
+    },
+    onPointerMove: (e: React.PointerEvent) => {
+      if (media && e.pointerType === "mouse") emitMove({ x: e.clientX, y: e.clientY });
+    },
+    onPointerLeave: (e: React.PointerEvent) => {
+      if (media && e.pointerType === "mouse") {
+        emitHide();
+        if (xpKind) {
+          const id = `${xpKind}-proof:${mediaKey(media)}`;
+          if (!isPinnedInspect(id)) inspectEnd(id);
+        }
+      }
+    },
+  });
+
   const pattern = new RegExp(
-    `(${brands.map((b) => escapeRegex(b.name)).join("|")})`,
+    `(${patterns.map((p) => escapeRegex(p.match)).join("|")})`,
     "gi"
   );
   const parts = title.split(pattern);
   return parts.map((part, i) => {
-    const brand = brands.find(
-      (b) => b.name.toLowerCase() === part.toLowerCase()
-    );
-    if (brand) {
-      const media = brand.media;
+    const hit = patterns.find((p) => p.match.toLowerCase() === part.toLowerCase());
+    if (hit?.kind === "brand") {
       return (
         <a
           key={i}
-          href={brand.href}
+          href={hit.href}
           data-repel
-          onClick={(e) => {
-            e.stopPropagation();
-            if (xpKind) award(`click:${media ? mediaKey(media) : brand.href}`, CLICK_XP);
-            // Mouse clicks pin the preview card; keyboard activation navigates.
-            if (media && e.detail > 0) {
-              e.preventDefault();
-              if (xpKind) inspectEnd(`${xpKind}-proof:${mediaKey(media)}`);
-              emitPin({
-                media,
-                href: brand.href,
-                inspectId: xpKind ? `${xpKind}-proof:${mediaKey(media)}` : undefined,
-                x: e.clientX,
-                y: e.clientY,
-              });
-            }
-          }}
-          onPointerEnter={(e) => {
-            if (media && e.pointerType === "mouse") {
-              emitShow({ media, x: e.clientX, y: e.clientY });
-              if (xpKind) inspectStart(`${xpKind}-proof:${mediaKey(media)}`);
-            }
-          }}
-          onPointerMove={(e) => {
-            if (media && e.pointerType === "mouse") emitMove({ x: e.clientX, y: e.clientY });
-          }}
-          onPointerLeave={(e) => {
-            if (media && e.pointerType === "mouse") {
-              emitHide();
-              if (xpKind) {
-                const id = `${xpKind}-proof:${mediaKey(media)}`;
-                if (!isPinnedInspect(id)) inspectEnd(id);
-              }
-            }
-          }}
+          {...proofHandlers(hit.href, hit.media)}
           className="brand-link wl-unit inline-flex items-baseline gap-1"
         >
           <img
-            src={brand.favicon}
+            src={hit.favicon}
             alt=""
             width={11}
             height={11}
             className="brand-link-favicon inline-block h-[0.7rem] w-[0.7rem] rounded-sm align-[-0.15em]"
           />
           <span className="brand-link-text">{part}</span>
+        </a>
+      );
+    }
+    if (hit?.kind === "inline") {
+      return (
+        <a
+          key={i}
+          href={hit.href}
+          data-repel
+          {...proofHandlers(hit.href, hit.media)}
+          className="wl-unit inline-block text-(--ink)/70 hover:text-(--ink)"
+          style={{ textDecoration: "none", borderBottom: DOTTED, paddingBottom: 1 }}
+        >
+          {part}
         </a>
       );
     }
@@ -193,7 +216,7 @@ export function LinkList({ label, items, columns = 1, variant = "compact", point
                   height={11}
                 />
               )}
-              {renderTitleWithBrands(item.title, item.brandLinks, xpKind)}
+              {renderTitleWithBrands(item.title, item.brandLinks, item.inlineLinks, xpKind)}
               {item.trailingFavicons && item.trailingFavicons.length > 0 && (
                 <span className="inline-flex items-center gap-1 ml-1.5 align-[-0.15em]">
                   {item.trailingFavicons.map((src) => (
