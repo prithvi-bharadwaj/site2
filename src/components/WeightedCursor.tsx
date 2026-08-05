@@ -10,11 +10,11 @@ import {
   stepCursor,
   type AngleSpring,
 } from "@/lib/cursor-physics";
-import { SPRITES, spriteRects } from "@/lib/pixel-sprites";
+import { SPRITE_SVGS } from "@/lib/cursor-sprites";
 
 /**
  * Weighted cursor — replaces the native cursor with a hollow classic arrow
- * that morphs into pixel-art sprites over tagged content.
+ * that morphs into flat icon sprites near tagged content.
  *
  * The arrow's tip sits exactly on the hotspot (no positional lag); its
  * heading is a rigid body hinged at the tip, integrated every frame from
@@ -23,11 +23,14 @@ import { SPRITES, spriteRects } from "@/lib/pixel-sprites";
  * when the mouse rests and pendulums the arrow home to the classic cursor
  * tilt, and hinge friction. Wiggling chains flick impulses into full spins.
  *
- * Hovering an element inside `[data-cursor="<sprite>"]` swaps the glyph for
- * that pixel sprite (see pixel-sprites) with a scale pop. Sprites don't
- * steer — they hang upright under full gravity and keep their momentum, so
- * they sway with the motion and still spin when wiggled. Skipped on touch
- * devices and when reduced motion is preferred — the native cursor stays.
+ * Sprite reveal is proximity-based, not hover-based: every frame the cursor
+ * measures its distance to each `[data-cursor="<sprite>"]` zone and morphs
+ * once it's within a forgiving radius of the sentence, with hysteresis so
+ * the boundary doesn't flicker. Nested zones (a brand link inside a tagged
+ * line) resolve to the innermost one. Sprites don't steer — they hang
+ * upright under full gravity with momentum intact, so they sway with the
+ * motion and still spin when wiggled. Skipped on touch devices and when
+ * reduced motion is preferred — the native cursor stays.
  */
 
 /** Ignore direction changes below this speed (px/s) — near-still jitter. */
@@ -43,25 +46,10 @@ const PRESS_SCALE = 0.8;
 const IDLE_ANGLE = -Math.PI * 0.625; // -112.5°
 /** Scale dip when the glyph swaps — a small pop sells the morph. */
 const MORPH_DIP = 0.55;
-
-/** Pixel sprite rendered as merged rects; upright is rotation 0. */
-function PixelGlyph({ name }: { name: string }) {
-  const sprite = SPRITES[name];
-  if (!sprite) return null;
-  return (
-    <svg
-      width="30"
-      height="30"
-      viewBox="0 0 16 16"
-      shapeRendering="crispEdges"
-      className="weighted-cursor-pixel"
-    >
-      {spriteRects(sprite).map((r, i) => (
-        <rect key={i} x={r.x} y={r.y} width={r.w} height={1} fill={r.fill} />
-      ))}
-    </svg>
-  );
-}
+/** Distance (px) from a tagged zone at which its sprite takes over… */
+const ACQUIRE_RADIUS = 36;
+/** …and how far the cursor must drift before it lets go (hysteresis). */
+const RELEASE_RADIUS = 56;
 
 export function WeightedCursor() {
   const dartRef = useRef<HTMLDivElement>(null);
@@ -84,6 +72,13 @@ export function WeightedCursor() {
     // rate, zero-motion frames land between every two real samples and no
     // frame pair ever reverses.
     const ev = { x: 0, y: 0, t: 0, vx: 0, vy: 0 };
+    // Sprite zones: refreshed when the DOM changes, measured every frame.
+    let zones: { el: Element; key: string }[] = [];
+    let zonesDirty = true;
+    const zoneObserver = new MutationObserver(() => {
+      zonesDirty = true;
+    });
+    zoneObserver.observe(document.body, { childList: true, subtree: true });
     const spring: AngleSpring = { angle: IDLE_ANGLE, velocity: 0 };
     let targetAngle = IDLE_ANGLE;
     let lastActive = -Infinity;
@@ -95,6 +90,38 @@ export function WeightedCursor() {
     let running = false;
     let raf = 0;
     let lastTime = 0;
+
+    /**
+     * Nearest tagged zone within reach. Distance is point-to-rect, so being
+     * anywhere over the sentence counts as 0; ties (nested zones) go to the
+     * smaller element so word-level tags win over their containing line.
+     */
+    function detectSprite(): string {
+      if (zonesDirty) {
+        zonesDirty = false;
+        zones = [...document.querySelectorAll("[data-cursor]")]
+          .map((el) => ({ el, key: el.getAttribute("data-cursor") ?? "" }))
+          .filter((z) => z.key in SPRITE_SVGS);
+      }
+      let bestKey = "";
+      let bestDist = Infinity;
+      let bestArea = Infinity;
+      for (const z of zones) {
+        const r = z.el.getBoundingClientRect();
+        if (r.width === 0 || r.height === 0) continue;
+        const dx = Math.max(r.left - mouse.x, 0, mouse.x - r.right);
+        const dy = Math.max(r.top - mouse.y, 0, mouse.y - r.bottom);
+        const d = Math.hypot(dx, dy);
+        const area = r.width * r.height;
+        if (d < bestDist - 0.5 || (d < bestDist + 0.5 && area < bestArea)) {
+          bestDist = d;
+          bestKey = z.key;
+          bestArea = area;
+        }
+      }
+      const reach = bestKey === spriteRef.current ? RELEASE_RADIUS : ACQUIRE_RADIUS;
+      return bestDist <= reach ? bestKey : "";
+    }
 
     function render(speed: number) {
       // Sprites don't stretch: the stretch axis is the arrow's own +x, which
@@ -122,6 +149,13 @@ export function WeightedCursor() {
       if (speed > MIN_SPEED) {
         targetAngle = Math.atan2(vel.y, vel.x);
         lastActive = now;
+      }
+
+      const next = detectSprite();
+      if (next !== spriteRef.current) {
+        spriteRef.current = next;
+        morphRef.current = MORPH_DIP;
+        setSprite(next);
       }
 
       // Sprites hang upright and don't steer — full gravity to rotation 0,
@@ -165,16 +199,6 @@ export function WeightedCursor() {
     function onMove(e: MouseEvent) {
       mouse.x = e.clientX;
       mouse.y = e.clientY;
-      // Hover context: nearest [data-cursor] ancestor picks the glyph.
-      const tagged =
-        e.target instanceof Element ? e.target.closest("[data-cursor]") : null;
-      const key = tagged?.getAttribute("data-cursor") ?? "";
-      const next = key && SPRITES[key] ? key : "";
-      if (next !== spriteRef.current) {
-        spriteRef.current = next;
-        morphRef.current = MORPH_DIP;
-        setSprite(next);
-      }
       const dt = (e.timeStamp - ev.t) / 1000;
       if (dt > 0) {
         const vx = (e.clientX - ev.x) / dt;
@@ -229,6 +253,7 @@ export function WeightedCursor() {
       document.documentElement.removeEventListener("mouseleave", onLeave);
       document.documentElement.removeEventListener("mouseenter", onEnter);
       document.documentElement.classList.remove("weighted-cursor");
+      zoneObserver.disconnect();
       cancelAnimationFrame(raf);
     };
   }, []);
@@ -236,7 +261,11 @@ export function WeightedCursor() {
   return (
     <div ref={dartRef} className="weighted-cursor-dart" aria-hidden="true">
       {sprite ? (
-        <PixelGlyph name={sprite} />
+        <div
+          className="weighted-cursor-icon"
+          // Trusted static markup from cursor-sprites, not user input.
+          dangerouslySetInnerHTML={{ __html: SPRITE_SVGS[sprite] }}
+        />
       ) : (
         /* Hollow classic arrow rotated so it points +x (angle 0); the tip at
            (21,10) is offset to the hotspot in CSS. Outline only — a bg halo
