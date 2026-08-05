@@ -2,19 +2,27 @@ import { describe, expect, it } from "vitest";
 import {
   applyFlick,
   FLICK_KICK,
+  gravityRamp,
+  GRAVITY_DELAY_MS,
+  GRAVITY_RAMP_MS,
   isFlick,
   MAX_DT,
-  PENDULUM_DAMPING,
-  PENDULUM_STIFFNESS,
   shortestAngleDelta,
-  stepAngleSpring,
+  steerWeight,
+  stepCursor,
   type AngleSpring,
 } from "@/lib/cursor-physics";
 
 const DT = 1 / 60;
 
-function settle(spring: AngleSpring, target: number, steps: number) {
-  for (let i = 0; i < steps; i++) stepAngleSpring(spring, target, DT);
+/** Full-authority steering, no gravity — the "moving fast" regime. */
+function steer(spring: AngleSpring, target: number) {
+  stepCursor(spring, { target, speed: 3000, gravity: 0, hang: 0, dt: DT });
+}
+
+/** Mouse at rest with gravity fully engaged — the "return home" regime. */
+function hangStep(spring: AngleSpring, hang: number) {
+  stepCursor(spring, { target: 0, speed: 0, gravity: 1, hang, dt: DT });
 }
 
 describe("shortestAngleDelta", () => {
@@ -36,10 +44,30 @@ describe("shortestAngleDelta", () => {
   });
 });
 
-describe("stepAngleSpring", () => {
-  it("converges to the target angle", () => {
+describe("steerWeight", () => {
+  it("vanishes at rest and saturates at speed", () => {
+    expect(steerWeight(0)).toBe(0);
+    expect(steerWeight(50)).toBeLessThan(0.05);
+    expect(steerWeight(3000)).toBeGreaterThan(0.99);
+  });
+});
+
+describe("gravityRamp", () => {
+  it("holds off during the still-delay, then fades in", () => {
+    expect(gravityRamp(0)).toBe(0);
+    expect(gravityRamp(GRAVITY_DELAY_MS)).toBe(0);
+    const mid = gravityRamp(GRAVITY_DELAY_MS + GRAVITY_RAMP_MS / 2);
+    expect(mid).toBeGreaterThan(0.2);
+    expect(mid).toBeLessThan(0.8);
+    expect(gravityRamp(GRAVITY_DELAY_MS + GRAVITY_RAMP_MS)).toBe(1);
+    expect(gravityRamp(Infinity)).toBe(1);
+  });
+});
+
+describe("stepCursor: steering", () => {
+  it("converges to the direction of travel", () => {
     const spring: AngleSpring = { angle: 0, velocity: 0 };
-    settle(spring, 1.2, 300);
+    for (let i = 0; i < 300; i++) steer(spring, 1.2);
     expect(spring.angle).toBeCloseTo(1.2, 3);
     expect(spring.velocity).toBeCloseTo(0, 3);
   });
@@ -48,17 +76,33 @@ describe("stepAngleSpring", () => {
     const spring: AngleSpring = { angle: 0, velocity: 0 };
     let peak = 0;
     for (let i = 0; i < 300; i++) {
-      stepAngleSpring(spring, 1, DT);
+      steer(spring, 1);
       peak = Math.max(peak, spring.angle);
     }
     expect(peak).toBeGreaterThan(1.01);
     expect(peak).toBeLessThan(1.5); // slight overshoot, not a wild swing
   });
 
+  it("turns lazily at low speed, tautly at high speed", () => {
+    const slow: AngleSpring = { angle: 0, velocity: 0 };
+    const fast: AngleSpring = { angle: 0, velocity: 0 };
+    for (let i = 0; i < 8; i++) {
+      stepCursor(slow, { target: 1.5, speed: 100, gravity: 0, hang: 0, dt: DT });
+      stepCursor(fast, { target: 1.5, speed: 3000, gravity: 0, hang: 0, dt: DT });
+    }
+    expect(fast.angle).toBeGreaterThan(slow.angle * 3);
+  });
+
+  it("freewheels at rest before gravity engages", () => {
+    const spring: AngleSpring = { angle: 1, velocity: 0 };
+    stepCursor(spring, { target: -2, speed: 0, gravity: 0, hang: 0, dt: DT });
+    expect(spring.angle).toBe(1); // no torque holds or moves it
+    expect(spring.velocity).toBe(0);
+  });
+
   it("rotates through the seam instead of the long way round", () => {
     const spring: AngleSpring = { angle: (170 * Math.PI) / 180, velocity: 0 };
-    const target = (-170 * Math.PI) / 180;
-    stepAngleSpring(spring, target, DT);
+    steer(spring, (-170 * Math.PI) / 180);
     // Velocity should be positive (continuing past +π), not negative (unwinding 340°).
     expect(spring.velocity).toBeGreaterThan(0);
   });
@@ -67,29 +111,18 @@ describe("stepAngleSpring", () => {
     // Already spinning CCW at 8 rad/s when a ~180° flip arrives: the error
     // should resolve with the spin (accelerate), not fight it.
     const spring: AngleSpring = { angle: 0, velocity: 8 };
-    stepAngleSpring(spring, -3, DT);
+    steer(spring, -3);
     expect(spring.velocity).toBeGreaterThan(8);
   });
 
   it("does not spin-carry from rest", () => {
     const spring: AngleSpring = { angle: 0, velocity: 0 };
-    stepAngleSpring(spring, -3, DT);
+    steer(spring, -3);
     expect(spring.velocity).toBeLessThan(0); // takes the shortest path
   });
 
-  it("accumulates full spins under rapid back-and-forth wiggling", () => {
-    const spring: AngleSpring = { angle: 0, velocity: 0 };
-    // Flip the target 180° every ~100ms, like shaking the mouse sideways.
-    for (let i = 0; i < 120; i++) {
-      const target = Math.floor(i / 6) % 2 === 0 ? Math.PI : 0;
-      stepAngleSpring(spring, target, DT);
-    }
-    // Oscillation alone stays within one turn; spinning winds past 2π.
-    expect(Math.abs(spring.angle)).toBeGreaterThan(2 * Math.PI);
-  });
-
   it("winds into full spins when wiggle flicks pump in energy", () => {
-    // A hand wiggle at ~8Hz: the spring is steered between 0 and π while each
+    // A hand wiggle at ~8Hz: steering flips between 0 and π while each
     // velocity reversal lands a flick kick. Damping must not eat the kicks.
     const spring: AngleSpring = { angle: 0, velocity: 0 };
     let flickDir = 0;
@@ -102,38 +135,63 @@ describe("stepAngleSpring", () => {
         flickDir = applyFlick(spring, dir * 1500, 0, -dir * 1500, 0, flickDir);
       }
       const before = spring.angle;
-      stepAngleSpring(spring, phase === 0 ? 0 : Math.PI, DT);
+      steer(spring, phase === 0 ? 0 : Math.PI);
       total += spring.angle - before;
     }
     expect(Math.abs(total)).toBeGreaterThan(2 * Math.PI);
   });
 
-  it("pendulum constants give a slow return with diminishing swings", () => {
+  it("clamps huge dt so the integration stays stable", () => {
+    const spring: AngleSpring = { angle: 0, velocity: 0 };
+    stepCursor(spring, { target: 1, speed: 3000, gravity: 0, hang: 0, dt: 5 });
+    const expected: AngleSpring = { angle: 0, velocity: 0 };
+    stepCursor(expected, { target: 1, speed: 3000, gravity: 0, hang: 0, dt: MAX_DT });
+    expect(spring.angle).toBeCloseTo(expected.angle);
+    expect(Math.abs(spring.angle)).toBeLessThan(Math.PI);
+  });
+});
+
+describe("stepCursor: gravity pendulum", () => {
+  it("starts gently, then accelerates through the hang point", () => {
+    // Released 2 rad off the hang pose. sin() torque means the fastest
+    // moment of the swing is at the bottom, not the start.
+    const spring: AngleSpring = { angle: 2, velocity: 0 };
+    let peakSpeed = 0;
+    let angleAtPeak = 2;
+    for (let i = 0; i < 120; i++) {
+      hangStep(spring, 0);
+      if (Math.abs(spring.velocity) > peakSpeed) {
+        peakSpeed = Math.abs(spring.velocity);
+        angleAtPeak = spring.angle;
+      }
+      // Barely under way 1/6s in — full steering would already be past 0.
+      if (i === 10) expect(spring.angle).toBeGreaterThan(1.5);
+    }
+    // Fastest moment lands in the lower half of the fall (damping pulls it a
+    // little ahead of the exact bottom).
+    expect(Math.abs(angleAtPeak)).toBeLessThan(1);
+  });
+
+  it("swings through with diminishing oscillations and comes to rest", () => {
     const spring: AngleSpring = { angle: 2, velocity: 0 };
     let crossings = 0;
-    let prevSign = Math.sign(spring.angle);
+    let prevSign = 1;
     for (let i = 0; i < 600; i++) {
-      stepAngleSpring(spring, 0, DT, PENDULUM_STIFFNESS, PENDULUM_DAMPING);
+      hangStep(spring, 0);
       const sign = Math.sign(spring.angle);
       if (sign !== 0 && sign !== prevSign) {
         crossings++;
         prevSign = sign;
       }
-      // Deliberate, not snappy: barely under way 1/6s in (taut constants
-      // would already be past the target by now).
-      if (i === 10) expect(Math.abs(spring.angle)).toBeGreaterThan(1.3);
     }
-    expect(crossings).toBeGreaterThanOrEqual(2); // swings through like a pendulum
-    expect(spring.angle).toBeCloseTo(0, 1); // and still comes to rest in 10s
+    expect(crossings).toBeGreaterThanOrEqual(2); // pendulum, not a one-way ease
+    expect(spring.angle).toBeCloseTo(0, 1); // at rest within 10s
   });
 
-  it("clamps huge dt so the integration stays stable", () => {
-    const spring: AngleSpring = { angle: 0, velocity: 0 };
-    stepAngleSpring(spring, 1, 5); // e.g. returning from a background tab
-    const expected: AngleSpring = { angle: 0, velocity: 0 };
-    stepAngleSpring(expected, 1, MAX_DT);
-    expect(spring.angle).toBeCloseTo(expected.angle);
-    expect(Math.abs(spring.angle)).toBeLessThan(Math.PI);
+  it("always falls, even from the inverted balance point", () => {
+    const spring: AngleSpring = { angle: Math.PI, velocity: 0 };
+    for (let i = 0; i < 600; i++) hangStep(spring, 0);
+    expect(Math.abs(shortestAngleDelta(spring.angle, 0))).toBeLessThan(0.2);
   });
 });
 

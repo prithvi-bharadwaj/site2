@@ -4,25 +4,24 @@ import { useEffect, useRef } from "react";
 import {
   applyFlick,
   FLICK_MEMORY_MS,
+  gravityRamp,
   isFlick,
-  PENDULUM_DAMPING,
-  PENDULUM_STIFFNESS,
   shortestAngleDelta,
-  stepAngleSpring,
+  stepCursor,
   type AngleSpring,
 } from "@/lib/cursor-physics";
 
 /**
  * Weighted cursor — replaces the native cursor with a rounded classic arrow.
  *
- * The arrow's tip sits exactly on the hotspot (no positional lag), but its
- * heading is driven by an underdamped angular spring toward the smoothed
- * direction of travel, so it swings past on sharp turns and settles back.
- * Wiggling chains reversals into full spins (see cursor-physics), going
- * still for a beat lets it pendulum home to the classic cursor tilt as if
- * the tip were a hinge, and speed stretches it slightly along its axis.
- * Skipped on touch devices and when reduced motion is preferred — the
- * native cursor stays.
+ * The arrow's tip sits exactly on the hotspot (no positional lag); its
+ * heading is a rigid body hinged at the tip, integrated every frame from
+ * continuous torques (see cursor-physics): speed-scaled steering toward the
+ * direction of travel (overshoots on sharp turns), gravity that fades in
+ * when the mouse rests and pendulums the arrow home to the classic cursor
+ * tilt, and hinge friction. Wiggling chains flick impulses into full spins,
+ * and speed stretches the arrow slightly along its axis. Skipped on touch
+ * devices and when reduced motion is preferred — the native cursor stays.
  */
 
 /** Ignore direction changes below this speed (px/s) — near-still jitter. */
@@ -34,14 +33,8 @@ const STRETCH_MAX = 0.22;
 const STRETCH_SPEED = 2500;
 /** Press feedback: shrink toward this scale while a button is down. */
 const PRESS_SCALE = 0.8;
-/** At rest, swing back to the classic cursor tilt (up, leaning left). */
+/** The hanging pose gravity pulls toward: the classic cursor tilt. */
 const IDLE_ANGLE = -Math.PI * 0.625; // -112.5°
-/**
- * How long the mouse must be still before the arrow swings home. A real
- * beat: long enough that it never fires during normal reading pauses, short
- * enough that you catch the pendulum swing when you let go of the mouse.
- */
-const IDLE_DELAY_MS = 1800;
 
 export function WeightedCursor() {
   const dartRef = useRef<HTMLDivElement>(null);
@@ -93,21 +86,18 @@ export function WeightedCursor() {
       vel.x += (ix - vel.x) * VEL_SMOOTHING;
       vel.y += (iy - vel.y) * VEL_SMOOTHING;
       const speed = Math.hypot(vel.x, vel.y);
-      let idling = false;
       if (speed > MIN_SPEED) {
         targetAngle = Math.atan2(vel.y, vel.x);
         lastActive = now;
-      } else if (now - lastActive > IDLE_DELAY_MS) {
-        targetAngle = IDLE_ANGLE;
-        idling = true;
       }
 
-      // Steering is taut; the idle return swings on soft pendulum constants.
-      if (idling) {
-        stepAngleSpring(spring, targetAngle, dt, PENDULUM_STIFFNESS, PENDULUM_DAMPING);
-      } else {
-        stepAngleSpring(spring, targetAngle, dt);
-      }
+      stepCursor(spring, {
+        target: targetAngle,
+        speed,
+        gravity: gravityRamp(now - lastActive),
+        hang: IDLE_ANGLE,
+        dt,
+      });
       press += ((pressed ? PRESS_SCALE : 1) - press) * 0.35;
 
       render(speed);
