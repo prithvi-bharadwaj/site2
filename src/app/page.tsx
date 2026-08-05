@@ -116,8 +116,8 @@ export default function Home() {
   const [reveal, setReveal] = useState<RevealState>(initialReveal);
   const xp = useXp();
 
-  // The sections decode on scroll only when the intro ran its full course -
-  // a skip means the visitor asked for the page.
+  // The sections decode as they meet the viewport, only when the intro ran
+  // its full course - a skip means the visitor asked for the page.
   const [scrollReveal, setScrollReveal] = useState(false);
   const revealHandoff = useCallback((skipped: boolean) => {
     setReveal("handoff");

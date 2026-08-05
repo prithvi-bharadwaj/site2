@@ -12,9 +12,10 @@ import {
 import { createScramblePainter } from "@/lib/scramble-painter";
 
 /**
- * The intro's second act, continued on scroll: while the hero decodes on the
- * IntroReveal canvas, the sections below hide; each one then scramble-
- * resolves the first time it enters the viewport after the visitor scrolls.
+ * The intro's second act: while the hero decodes on the IntroReveal canvas,
+ * the sections below hide; each one scramble-resolves the first time it
+ * intersects the viewport - sections already visible at handoff decode
+ * immediately (staggered top-to-bottom), the rest as they scroll in.
  * Mounted only when the intro ran to its natural handoff - a skipped intro
  * means the visitor asked for the page, so no further ceremony.
  *
@@ -28,7 +29,9 @@ import { createScramblePainter } from "@/lib/scramble-painter";
 
 const SECTION_IDS = ["previously", "built", "lore", "writing", "socials"];
 /** A section triggers once its top clears this fraction of the viewport. */
-const TRIGGER_VH = 0.88;
+const TRIGGER_VH = 1;
+/** Sections triggering in the same frame decode top-to-bottom, this far apart. */
+const STAGGER_MS = 140;
 
 type SectionState =
   | { kind: "pending"; el: HTMLElement }
@@ -179,35 +182,23 @@ export function ScrollScramble({ onDone }: ScrollScrambleProps) {
       }
     }
 
-    // "Only on scroll": arm on scroll intent, not on mere visibility - the
-    // first section is already on screen when the intro hands off. A page
-    // too short to scroll reveals immediately rather than never.
-    let scrolled =
-      document.documentElement.scrollHeight <= window.innerHeight + 4;
-    const intent = () => {
-      scrolled = true;
-    };
-    const keyIntent = (e: KeyboardEvent) => {
-      if (
-        ["ArrowDown", "ArrowUp", "PageDown", "PageUp", "End", "Home", " "].includes(e.key)
-      ) {
-        scrolled = true;
-      }
-    };
-
     function frame(now: number) {
       if (finished) return;
       ctx!.setTransform(dpr, 0, 0, dpr, 0, 0);
       ctx!.clearRect(0, 0, window.innerWidth, window.innerHeight);
       let allDone = true;
+      let startedThisFrame = 0;
       for (let i = 0; i < sections.length; i++) {
         const s = sections[i];
         if (s.kind === "done") continue;
         allDone = false;
         const rect = s.el.getBoundingClientRect();
         if (s.kind === "pending") {
-          if (scrolled && rect.top < window.innerHeight * TRIGGER_VH && rect.bottom > 0) {
-            start(i, rect.top, now);
+          if (rect.top < window.innerHeight * TRIGGER_VH && rect.bottom > 0) {
+            // A future startedAt just delays the draw; drawSection paints
+            // nothing while elapsed is negative.
+            start(i, rect.top, now + startedThisFrame * STAGGER_MS);
+            startedThisFrame++;
           }
           continue;
         }
@@ -231,20 +222,12 @@ export function ScrollScramble({ onDone }: ScrollScrambleProps) {
     }
     sizeCanvas();
 
-    window.addEventListener("wheel", intent, { passive: true });
-    window.addEventListener("touchmove", intent, { passive: true });
-    window.addEventListener("scroll", intent, { passive: true });
-    window.addEventListener("keydown", keyIntent);
     window.addEventListener("resize", finish);
 
     raf = requestAnimationFrame(frame);
 
     return () => {
       cleanup(false);
-      window.removeEventListener("wheel", intent);
-      window.removeEventListener("touchmove", intent);
-      window.removeEventListener("scroll", intent);
-      window.removeEventListener("keydown", keyIntent);
       window.removeEventListener("resize", finish);
     };
   }, []);
