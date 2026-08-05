@@ -33,10 +33,10 @@ const TRIGGER_VH = 1;
 /** Sections triggering in the same frame decode top-to-bottom, this far apart. */
 const STAGGER_MS = 140;
 /**
- * Sections already on screen at handoff hold this beat before decoding, so
- * the hero's crossfade (480ms) settles first instead of both moving at once.
+ * Sections already on screen at handoff hold this short beat before decoding
+ * so the hero's crossfade gets a head start without stalling the page.
  */
-const HANDOFF_GRACE_MS = 900;
+const HANDOFF_GRACE_MS = 400;
 
 type SectionState =
   | { kind: "pending"; el: HTMLElement }
