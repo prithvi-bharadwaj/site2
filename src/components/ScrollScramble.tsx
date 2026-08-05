@@ -97,17 +97,17 @@ export function ScrollScramble({ onDone }: ScrollScrambleProps) {
       return m.fontBoundingBoxAscent ?? m.actualBoundingBoxAscent ?? 0;
     }
 
+    // Opacity-only hiding on purpose: the content stays in the accessibility
+    // tree and the tab order, and focusin below reveals a section the moment
+    // keyboard or AT focus enters it. The ceremony must never gate access.
     function hide(el: HTMLElement) {
       el.style.opacity = "0";
       el.style.pointerEvents = "none";
-      // Keep invisible links out of the tab order and the accessibility tree.
-      el.inert = true;
     }
 
     function restore(el: HTMLElement) {
       el.style.opacity = "";
       el.style.pointerEvents = "";
-      el.inert = false;
     }
 
     /**
@@ -261,6 +261,17 @@ export function ScrollScramble({ onDone }: ScrollScrambleProps) {
       raf = requestAnimationFrame(frame);
     }
 
+    /** Focus entering a hidden section reveals it instantly, no ceremony. */
+    function onFocusIn(e: FocusEvent) {
+      const target = e.target instanceof Node ? e.target : null;
+      if (!target) return;
+      const i = sections.findIndex((s) => s.kind !== "done" && s.el.contains(target));
+      if (i === -1) return;
+      restore((sections[i] as { el: HTMLElement }).el);
+      sections[i] = { kind: "done" };
+      if (sections.every((s) => s.kind === "done")) finish();
+    }
+
     for (const s of sections) {
       if (s.kind !== "done") hide(s.el);
     }
@@ -268,6 +279,7 @@ export function ScrollScramble({ onDone }: ScrollScrambleProps) {
 
     window.addEventListener("scroll", wake, { passive: true });
     window.addEventListener("resize", finish);
+    document.addEventListener("focusin", onFocusIn);
 
     wake();
 
@@ -275,6 +287,7 @@ export function ScrollScramble({ onDone }: ScrollScrambleProps) {
       cleanup(false);
       window.removeEventListener("scroll", wake);
       window.removeEventListener("resize", finish);
+      document.removeEventListener("focusin", onFocusIn);
     };
   }, []);
 
