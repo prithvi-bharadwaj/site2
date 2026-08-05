@@ -8,6 +8,7 @@ import { PreviouslyList } from "@/components/PreviouslyList";
 import { SubwaySurfersPip } from "@/components/SubwaySurfersPip";
 import { WiggleWords } from "@/components/WiggleWords";
 import { CursorTrail } from "@/components/CursorTrail";
+import { WeightedCursor } from "@/components/WeightedCursor";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { EditPanel } from "@/components/EditPanel";
 import { CookieQuest } from "@/components/CookieQuest";
@@ -444,6 +445,7 @@ export default function Home() {
     <main className="relative min-h-screen" data-analytics-section="home">
       <CosmicWind />
       <CursorTrail />
+      <WeightedCursor />
       <XpFx />
       <InspectProgress />
       <XpHud />

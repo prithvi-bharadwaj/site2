@@ -1857,6 +1857,35 @@ a.project-item {
   z-index: 50;
 }
 
+/* Weighted cursor — ink dart replacing the native cursor. The wrapper is a
+   zero-size point pinned to the hotspot; the svg hangs off it so rotation
+   (written per frame) pivots around the dart's tip. */
+html.weighted-cursor,
+html.weighted-cursor * {
+  cursor: none !important;
+}
+
+.weighted-cursor-dart {
+  position: fixed;
+  left: 0;
+  top: 0;
+  width: 0;
+  height: 0;
+  pointer-events: none;
+  z-index: 200;
+  color: var(--ink);
+  opacity: 0;
+  transition: opacity 0.15s ease;
+  will-change: transform;
+}
+
+.weighted-cursor-dart svg {
+  position: absolute;
+  left: -20px;
+  top: -10px;
+  display: block;
+}
+
 /* Word wiggle — each word repels from the cursor with spring physics (no transition; transforms are written per frame) */
 .wl-word {
   display: inline-block;
