@@ -100,11 +100,14 @@ export function ScrollScramble({ onDone }: ScrollScrambleProps) {
     function hide(el: HTMLElement) {
       el.style.opacity = "0";
       el.style.pointerEvents = "none";
+      // Keep invisible links out of the tab order and the accessibility tree.
+      el.inert = true;
     }
 
     function restore(el: HTMLElement) {
       el.style.opacity = "";
       el.style.pointerEvents = "";
+      el.inert = false;
     }
 
     /**
@@ -187,43 +190,65 @@ export function ScrollScramble({ onDone }: ScrollScrambleProps) {
       }
     }
 
-    let mountedAt = -1;
+    const mountedAt = performance.now();
+    let looping = false;
+
+    /** Trigger every pending section that intersects the viewport. */
+    function evaluatePending(now: number): boolean {
+      let started = 0;
+      for (let i = 0; i < sections.length; i++) {
+        const s = sections[i];
+        if (s.kind !== "pending") continue;
+        const rect = s.el.getBoundingClientRect();
+        if (rect.top < window.innerHeight * TRIGGER_VH && rect.bottom > 0) {
+          // A future startedAt just delays the draw; drawSection paints
+          // nothing while elapsed is negative. Grace decays to zero, so
+          // scroll-triggered sections later start immediately.
+          const grace = Math.max(0, mountedAt + HANDOFF_GRACE_MS - now);
+          start(i, rect.top, now + grace + started * STAGGER_MS);
+          started++;
+        }
+      }
+      return started > 0;
+    }
 
     function frame(now: number) {
       if (finished) return;
-      if (mountedAt < 0) mountedAt = now;
+      evaluatePending(now);
       ctx!.setTransform(dpr, 0, 0, dpr, 0, 0);
       ctx!.clearRect(0, 0, window.innerWidth, window.innerHeight);
       let allDone = true;
-      let startedThisFrame = 0;
+      let anyRunning = false;
       for (let i = 0; i < sections.length; i++) {
         const s = sections[i];
         if (s.kind === "done") continue;
         allDone = false;
-        const rect = s.el.getBoundingClientRect();
-        if (s.kind === "pending") {
-          if (rect.top < window.innerHeight * TRIGGER_VH && rect.bottom > 0) {
-            // A future startedAt just delays the draw; drawSection paints
-            // nothing while elapsed is negative. Grace decays to zero, so
-            // scroll-triggered sections later start immediately.
-            const grace = Math.max(0, mountedAt + HANDOFF_GRACE_MS - now);
-            start(i, rect.top, now + grace + startedThisFrame * STAGGER_MS);
-            startedThisFrame++;
-          }
-          continue;
-        }
+        if (s.kind === "pending") continue;
         const elapsed = now - s.startedAt;
         if (elapsed >= s.total) {
           restore(s.el);
           sections[i] = { kind: "done" };
           continue;
         }
-        drawSection(s, elapsed, rect.top - s.harvestTop);
+        anyRunning = true;
+        drawSection(s, elapsed, s.el.getBoundingClientRect().top - s.harvestTop);
       }
       if (allDone) {
         finish();
         return;
       }
+      if (!anyRunning) {
+        // Everything visible has resolved; sleep until the next scroll
+        // instead of burning frames polling the pending sections below.
+        looping = false;
+        return;
+      }
+      raf = requestAnimationFrame(frame);
+    }
+
+    function wake() {
+      if (finished || looping) return;
+      looping = true;
       raf = requestAnimationFrame(frame);
     }
 
@@ -232,12 +257,14 @@ export function ScrollScramble({ onDone }: ScrollScrambleProps) {
     }
     sizeCanvas();
 
+    window.addEventListener("scroll", wake, { passive: true });
     window.addEventListener("resize", finish);
 
-    raf = requestAnimationFrame(frame);
+    wake();
 
     return () => {
       cleanup(false);
+      window.removeEventListener("scroll", wake);
       window.removeEventListener("resize", finish);
     };
   }, []);
