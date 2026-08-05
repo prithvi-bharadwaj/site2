@@ -10,24 +10,22 @@ import {
   scrambleChar,
   SCRAMBLE,
 } from "@/lib/intro-reveal";
+import { createScramblePainter } from "@/lib/scramble-painter";
 import { trackInteraction } from "@/lib/analytics";
 
 /**
  * First-visit reveal. The page mounts normally underneath; this canvas covers
- * the viewport with the plain page background and re-enacts the site coming
- * into being: the greeting types itself out, then everything else on screen -
- * bio and sections alike - rises from nothing as a churning field of ASCII
- * static, every character slot cycling random letters, digits and symbols in
- * place, and resolves word by word in reading order into the real page. The
- * bio resolves at reading pace; the wave then accelerates through the
- * sections. The canvas then fades, handing off pixel-for-pixel to the live
- * DOM underneath.
+ * the viewport with the plain page background and re-enacts the hero coming
+ * into being: the greeting types itself out, then the bio rises from nothing
+ * as a churning field of ASCII static - every character slot cycling random
+ * letters, digits and symbols in place - and resolves word by word into the
+ * real text. The canvas then fades, handing off pixel-for-pixel to the live
+ * DOM. The sections below stay hidden and decode on scroll instead - see
+ * ScrollScramble, which arms at handoff (unless the intro was skipped).
  *
- * Every glyph is harvested from the rendered DOM via Range rects, so the
+ * Every glyph is harvested from the rendered hero via Range rects, so the
  * copy sits exactly where the browser drew the original - same trick as the
- * letter-physics layer. Blur-hidden text (the locked contacts) is never
- * harvested: drawing it crisp on the canvas would leak it. Any input skips
- * straight to the finished page.
+ * letter-physics layer. Any input skips straight to the finished page.
  */
 
 /** Blank beat with just the caret before typing starts. */
@@ -51,8 +49,11 @@ interface CaretBox {
 }
 
 interface IntroRevealProps {
-  /** Fade begins: the page underneath starts its staggered reveal. */
-  onHandoff: () => void;
+  /**
+   * Fade begins (or the show was skipped): the page underneath takes over.
+   * A skip means the visitor asked for the page - don't arm more ceremony.
+   */
+  onHandoff: (skipped: boolean) => void;
   /** Fade finished (or skipped): unmount the overlay. */
   onDone: () => void;
 }
@@ -78,7 +79,7 @@ export function IntroReveal({ onHandoff, onDone }: IntroRevealProps) {
       finished = true;
       cancelAnimationFrame(raf);
       trackInteraction("intro_reveal_finished", { skipped });
-      if (!handedOff) handoffRef.current();
+      if (!handedOff) handoffRef.current(skipped);
       doneRef.current();
     }
 
@@ -105,7 +106,6 @@ export function IntroReveal({ onHandoff, onDone }: IntroRevealProps) {
     let lockAt: number[] = [];
     let scrambleTotal = 0;
     let greetingCaret: CaretBox = { x: 0, baseline: 0, ascent: 0, color: "#000" };
-    const widthCache = new Map<string, number>();
 
     function sizeCanvas() {
       dpr = Math.min(window.devicePixelRatio || 1, 2);
@@ -121,14 +121,6 @@ export function IntroReveal({ onHandoff, onDone }: IntroRevealProps) {
       const m = ctx!.measureText("Hxg");
       ctx!.restore();
       return m.fontBoundingBoxAscent ?? m.actualBoundingBoxAscent ?? 0;
-    }
-
-    /** The sections that scramble after the bio, in reading order. */
-    const SECTION_IDS = ["previously", "built", "lore", "writing", "socials"];
-
-    /** Blur-hidden text must never reach the canvas crisp. */
-    function isBlurHidden(g: GlyphSource): boolean {
-      return Boolean(g.el && getComputedStyle(g.el).filter.includes("blur"));
     }
 
     /**
@@ -165,19 +157,10 @@ export function IntroReveal({ onHandoff, onDone }: IntroRevealProps) {
       };
 
       field = bio;
-      for (const id of SECTION_IDS) {
-        const section = document.getElementById(id);
-        if (!section) continue;
-        const harvested = harvestGlyphs(section, opts).filter((g) => !isBlurHidden(g));
-        harvested.sort(byPos);
-        field = field.concat(harvested);
-      }
-
       const fieldTop = field.length ? Math.min(...field.map((g) => g.y)) : 0;
       curtain = field.map((g) => (g.y - fieldTop) * SCRAMBLE.curtainMsPerPx);
       words = groupWords(field);
-      const bioWords = words.filter((w) => w[0] < bio.length).length;
-      lockAt = buildScrambleSchedule(bioWords, words.length - bioWords);
+      lockAt = buildScrambleSchedule(words.length, 0);
       scrambleTotal = lockAt.length
         ? lockAt[lockAt.length - 1] + SCRAMBLE.tailMs
         : 0;
@@ -196,35 +179,12 @@ export function IntroReveal({ onHandoff, onDone }: IntroRevealProps) {
       // The CSS background hands opacity control to the drawn one.
       canvas!.style.background = "transparent";
       handedOff = true;
-      handoffRef.current();
+      handoffRef.current(false);
     }
 
     /* ── drawing ── */
 
-    function drawGlyph(g: GlyphSource, alpha: number) {
-      ctx!.globalAlpha = alpha;
-      if (g.img) {
-        ctx!.drawImage(g.img, g.x, g.y, g.w, g.h);
-        return;
-      }
-      ctx!.font = g.font;
-      ctx!.fillStyle = g.color;
-      ctx!.fillText(g.char, g.x, g.y + g.ascent);
-    }
-
-    /** Static: a rolled character centered in the real glyph's slot. */
-    function drawStatic(g: GlyphSource, ch: string, alpha: number) {
-      ctx!.font = g.font;
-      ctx!.fillStyle = g.color;
-      ctx!.globalAlpha = alpha;
-      const key = `${g.font}|${ch}`;
-      let w = widthCache.get(key);
-      if (w === undefined) {
-        w = ctx!.measureText(ch).width;
-        widthCache.set(key, w);
-      }
-      ctx!.fillText(ch, g.x + (g.w - w) / 2, g.y + g.ascent);
-    }
+    const { drawGlyph, drawStatic } = createScramblePainter(ctx);
 
     function drawCaretAt(now: number, c: CaretBox, alpha: number, blink: boolean) {
       if (alpha <= 0) return;

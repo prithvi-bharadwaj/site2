@@ -91,6 +91,15 @@ export function groupWords(boxes: IntroGlyphBox[]): number[][] {
   return words;
 }
 
+/** The scroll-triggered sections decode brisker than the intro's bio. */
+export const SCROLL_SCRAMBLE = {
+  ...SCRAMBLE,
+  fadeInMs: 260,
+  holdMs: 100,
+  sectionStepMs: 12,
+  tailMs: 120,
+};
+
 /**
  * When each word locks to its real text, in ms from scramble start. The
  * first `bioWords` lock at reading pace; everything after them locks at the

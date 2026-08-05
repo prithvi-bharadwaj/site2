@@ -21,6 +21,7 @@ import { CosmicWind } from "@/components/CosmicWind";
 import { ControlPanel } from "@/components/ControlPanel";
 import { IntroReveal } from "@/components/IntroReveal";
 import { ReplayIntro } from "@/components/ReplayIntro";
+import { ScrollScramble } from "@/components/ScrollScramble";
 import { CLICK_XP, SOCIAL_UNLOCK_XP, award, emitXpToast, useXp } from "@/lib/xp";
 import { emitShow, emitMove, emitHide } from "@/lib/hover-card-bus";
 import { trackInteraction } from "@/lib/analytics";
@@ -115,13 +116,20 @@ export default function Home() {
   const [reveal, setReveal] = useState<RevealState>(initialReveal);
   const xp = useXp();
 
-  const revealHandoff = useCallback(() => setReveal("handoff"), []);
+  // The sections decode on scroll only when the intro ran its full course -
+  // a skip means the visitor asked for the page.
+  const [scrollReveal, setScrollReveal] = useState(false);
+  const revealHandoff = useCallback((skipped: boolean) => {
+    setReveal("handoff");
+    if (!skipped) setScrollReveal(true);
+  }, []);
   const revealDone = useCallback(() => {
     setReveal("off");
     try {
       sessionStorage.setItem(INTRO_KEY, "1");
     } catch { /* ignore */ }
   }, []);
+  const scrollRevealDone = useCallback(() => setScrollReveal(false), []);
 
   useEffect(() => {
     setContent(loadContent());
@@ -212,6 +220,7 @@ export default function Home() {
       {(reveal === "intro" || reveal === "handoff") && (
         <IntroReveal onHandoff={revealHandoff} onDone={revealDone} />
       )}
+      {scrollReveal && <ScrollScramble onDone={scrollRevealDone} />}
       <ReplayIntro />
       <CosmicWind />
       <CursorTrail />
