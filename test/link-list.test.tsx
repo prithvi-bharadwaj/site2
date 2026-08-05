@@ -86,6 +86,40 @@ describe("LinkList", () => {
     offHide();
   });
 
+  it("renders inlineLinks phrases as dotted-underline links with hover proof", () => {
+    let shownSrc: string | undefined;
+    const off = onShow(({ media }) => {
+      if (media.type === "image") shownSrc = media.src;
+    });
+
+    const { container } = render(
+      <LinkList
+        items={[
+          {
+            title: "Won Buildspace's live game show",
+            inlineLinks: [
+              {
+                phrase: "live game show",
+                href: "https://x.com/FarzaTV/status/1719091708775059754",
+                media: { type: "image", src: "/screenshots/gameshow.png", caption: "gameshow" },
+              },
+            ],
+          },
+        ]}
+      />
+    );
+
+    const link = [...container.querySelectorAll("a")].find(
+      (a) => a.textContent === "live game show"
+    )!;
+    expect(link).toBeTruthy();
+    expect(link.getAttribute("href")).toBe("https://x.com/FarzaTV/status/1719091708775059754");
+
+    fireEvent.pointerEnter(link, { pointerType: "mouse", clientX: 5, clientY: 5 });
+    expect(shownSrc).toBe("/screenshots/gameshow.png");
+    off();
+  });
+
   it("marks underlined brand links for whole-unit wiggle", () => {
     render(
       <LinkList

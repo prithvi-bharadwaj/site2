@@ -18,15 +18,22 @@ interface PretextHeroProps {
   greeting: string;
   bio: string;
   className?: string;
+  /**
+   * Pause mouse displacement. While the intro overlay draws its harvested
+   * copy of this text, the live DOM must not move underneath it or the
+   * crossfade lands on displaced words instead of a pixel-exact handoff.
+   */
+  frozen?: boolean;
 }
 
 const FONT_FAMILY = '-apple-system, BlinkMacSystemFont, "SF Pro Display", "Inter", "Segoe UI", system-ui, sans-serif';
 
 // Match Tailwind text-sm (0.8125rem) at the body's font-weight 300 + line-height 1.62.
 const BODY_FONT_REM = 0.8125;
-// Greeting sits one step up (text-lg) at full opacity — the page's single focal point.
-const HEADING_FONT_REM = 1.125;
+// One size throughout - the greeting is the page's focal point by weight, not size.
+const HEADING_FONT_REM = BODY_FONT_REM;
 const BODY_FONT_WEIGHT = 300;
+const HEADING_FONT_WEIGHT = 400;
 const BODY_LINE_HEIGHT_RATIO = 1.62;
 
 function rootFontPx(): number {
@@ -36,19 +43,20 @@ function rootFontPx(): number {
 
 function buildSections(greeting: string, bio: string, fontPx: number, linePx: number, headingPx: number): SectionConfig[] {
   const fontShorthand = `${BODY_FONT_WEIGHT} ${fontPx}px ${FONT_FAMILY}`;
-  const headingShorthand = `${BODY_FONT_WEIGHT} ${headingPx}px ${FONT_FAMILY}`;
+  const headingShorthand = `${HEADING_FONT_WEIGHT} ${headingPx}px ${FONT_FAMILY}`;
 
   return [
     {
       // 0.95 matches displacement maxOpacity — at 1.0 the cursor-repel would dim the greeting
-      blocks: [{ text: greeting, type: "heading", baseOpacity: 0.95 }],
+      blocks: [{ text: greeting, type: "heading", baseOpacity: 0.8 }],
       font: headingShorthand,
       fontSize: headingPx,
       lineHeight: headingPx * BODY_LINE_HEIGHT_RATIO,
       marginBottom: 16,
     },
     {
-      blocks: [{ text: bio, type: "body" }],
+      // Matches the sections' ink/70 so body copy reads as one voice.
+      blocks: [{ text: bio, type: "body", baseOpacity: 0.75 }],
       font: fontShorthand,
       fontSize: fontPx,
       lineHeight: linePx,
@@ -81,7 +89,7 @@ function useCoarsePointer(): boolean {
   return coarse;
 }
 
-export function PretextHero({ greeting, bio, className }: PretextHeroProps) {
+export function PretextHero({ greeting, bio, className, frozen = false }: PretextHeroProps) {
   const reducedMotion = useReducedMotion();
   const coarsePointer = useCoarsePointer();
   const containerRef = useRef<HTMLDivElement>(null);
@@ -198,7 +206,7 @@ export function PretextHero({ greeting, bio, className }: PretextHeroProps) {
   // Mouse tracking — handlers only record coords and wake the loop; all
   // geometry reads happen once per frame inside animateDisplacement.
   useEffect(() => {
-    if (reducedMotion || coarsePointer) return;
+    if (reducedMotion || coarsePointer || frozen) return;
     const wake = () => {
       if (!animatingRef.current) {
         animatingRef.current = true;
@@ -228,13 +236,13 @@ export function PretextHero({ greeting, bio, className }: PretextHeroProps) {
       cancelAnimationFrame(rafRef.current);
       animatingRef.current = false;
     };
-  }, [reducedMotion, coarsePointer, animateDisplacement]);
+  }, [reducedMotion, coarsePointer, frozen, animateDisplacement]);
 
   if (reducedMotion) {
     return (
-      <div className={`text-sm text-(--ink)/60 leading-relaxed max-w-2xl ${className ?? ""}`}>
+      <div className={`text-sm text-(--ink)/75 leading-relaxed max-w-2xl ${className ?? ""}`}>
         {/* mb-[16px] matches the canvas path's marginBottom: 16 (rem units inflate at the 125% root) */}
-        <p className="mb-[16px] text-lg text-(--ink)">{greeting}</p>
+        <p className="mb-[16px] font-normal text-(--ink)/80">{greeting}</p>
         <p>{bio}</p>
       </div>
     );
@@ -256,6 +264,7 @@ export function PretextHero({ greeting, bio, className }: PretextHeroProps) {
         <span
           key={word.key}
           data-pretext-idx={i}
+          data-pretext-block={word.block.type}
           className="pretext-word"
           style={{
             position: "absolute",
@@ -264,7 +273,7 @@ export function PretextHero({ greeting, bio, className }: PretextHeroProps) {
             color: word.block.color,
             opacity: word.block.baseOpacity,
             fontSize: word.block.type === "heading" ? headingPxRef.current : fontPxRef.current,
-            fontWeight: BODY_FONT_WEIGHT,
+            fontWeight: word.block.type === "heading" ? HEADING_FONT_WEIGHT : BODY_FONT_WEIGHT,
             fontFamily: FONT_FAMILY,
             whiteSpace: "pre",
             willChange: coarsePointer ? undefined : "transform, opacity",

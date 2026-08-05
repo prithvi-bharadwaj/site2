@@ -56,7 +56,8 @@ function tokenize(title: string, brands?: BrandLink[], inline?: InlineLink[]): S
 }
 
 interface PreviouslyListProps {
-  label: string;
+  /** Section heading; omit to run the list straight into the page. */
+  label?: string;
   items: LinkListItem[];
   /**
    * Namespace for hover-inspect awards. The Previously section uses "proof"
@@ -64,6 +65,8 @@ interface PreviouslyListProps {
    * component must use their own prefix so they don't pollute that count.
    */
   proofKind?: string;
+  /** Analytics section name; required when there's no visible label. */
+  analyticsLabel?: string;
 }
 
 /**
@@ -72,13 +75,13 @@ interface PreviouslyListProps {
  * Words repel from cursor via the shared spring-physics wiggle manager;
  * underlined links move gently as single units so they stay clickable.
  */
-export function PreviouslyList({ label, items, proofKind = "proof" }: PreviouslyListProps) {
+export function PreviouslyList({ label, items, proofKind = "proof", analyticsLabel }: PreviouslyListProps) {
   const ref = useRef<HTMLDivElement>(null);
   const [open, setOpen] = useState<number | null>(null);
   const xp = useXp();
 
   useWiggleDescendants(ref);
-  const analyticsSection = label
+  const analyticsSection = (label ?? analyticsLabel ?? "list")
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "_")
     .replace(/^_|_$/g, "");
@@ -87,11 +90,13 @@ export function PreviouslyList({ label, items, proofKind = "proof" }: Previously
     <div
       ref={ref}
       data-analytics-section={analyticsSection}
-      className="text-sm text-(--ink)/60 leading-relaxed"
+      className="text-sm text-(--ink)/70 leading-relaxed"
     >
-      <span className="text-(--ink)/35 text-xs uppercase tracking-widest block mb-6">
-        <WiggleWords text={label} />
-      </span>
+      {label && (
+        <span className="text-(--ink)/80 text-sm uppercase tracking-widest block mb-6">
+          <WiggleWords text={label} />
+        </span>
+      )}
       <ul className="list-none p-0 m-0">
         {items.map((item, i) => {
           const expandable =
@@ -123,11 +128,13 @@ export function PreviouslyList({ label, items, proofKind = "proof" }: Previously
                 className={expandable ? "group cursor-pointer" : ""}
                 style={{ display: "inline" }}
               >
+                {/* Fixed 1em bullet fills the bullet-hang exactly, so first
+                    lines align with wrapped lines and with every other list. */}
                 <span
                   data-repel
                   title={verified ? "proof inspected" : undefined}
-                  className={`inline-block mr-2 ${verified ? "text-(--ink)/75" : "text-(--ink)/30"}`}
-                  style={{ transition: `transform 180ms ${EASE}, color 400ms` }}
+                  className="inline-block w-[1em] text-(--ink)/30"
+                  style={{ transition: `transform 180ms ${EASE}` }}
                 >
                   {verified ? "•" : "·"}
                 </span>
@@ -162,6 +169,7 @@ export function PreviouslyList({ label, items, proofKind = "proof" }: Previously
                             emitPin({
                               media: media ?? linkNote(seg.brand.href),
                               href: seg.brand.href,
+                              actions: seg.brand.actions,
                               inspectId: media ? `${proofKind}:${mediaKey(media)}` : undefined,
                               x: e.clientX,
                               y: e.clientY,
@@ -244,7 +252,7 @@ export function PreviouslyList({ label, items, proofKind = "proof" }: Previously
                           }
                         }}
                         data-repel
-                        className="wl-unit inline-block text-(--ink)/75 hover:text-(--ink)"
+                        className="wl-unit inline-block text-(--ink)/70 hover:text-(--ink)"
                         style={{
                           textDecoration: "none",
                           borderBottom: DOTTED,

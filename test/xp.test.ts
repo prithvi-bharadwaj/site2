@@ -43,10 +43,10 @@ describe("xp store", () => {
 
   it("persists to localStorage and resets", () => {
     act(() => award("writing:x", 1));
-    expect(JSON.parse(localStorage.getItem("prithvi-xp-v1")!).total).toBe(1);
+    expect(JSON.parse(localStorage.getItem("prithvi-xp-v2")!).total).toBe(1);
     act(() => resetXp());
     expect(currentState().total).toBe(0);
-    expect(localStorage.getItem("prithvi-xp-v1")).toBeNull();
+    expect(localStorage.getItem("prithvi-xp-v2")).toBeNull();
   });
 
   it("emits an fx event on award", () => {

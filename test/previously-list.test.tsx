@@ -25,6 +25,15 @@ describe("PreviouslyList", () => {
     expect(container.textContent).toContain("skills - my collection of AI skills i use daily");
   });
 
+  it("renders without a section label, keeping the analytics name", () => {
+    const { container } = render(
+      <PreviouslyList items={[{ title: "Solo item" }]} analyticsLabel="previously" />
+    );
+    expect(container.textContent).toContain("Solo item");
+    const root = container.querySelector("[data-analytics-section]");
+    expect(root?.getAttribute("data-analytics-section")).toBe("previously");
+  });
+
   it("pins the proof preview on click instead of navigating", () => {
     const pins: string[] = [];
     const off = onPin((d) => pins.push(d.href));

@@ -12,7 +12,10 @@ import { useSyncExternalStore } from "react";
 import type { HoverCardMedia } from "./hover-card-bus";
 import { captureAnalyticsEvent, trackInteraction } from "./analytics";
 
-const STORAGE_KEY = "prithvi-xp-v1";
+// v2: the content rework removed proofs/lore that v1 ledgers still hold as
+// earned keys - stale ids would overfill progress counts ("proof 8/5") and
+// unlock achievements for receipts that no longer exist. Fresh slate.
+const STORAGE_KEY = "prithvi-xp-v2";
 const FX_EVENT = "xp:fx";
 const TOAST_EVENT = "xp:toast";
 
@@ -27,8 +30,9 @@ export const SOCIAL_UNLOCK_XP = 150;
 /**
  * Rough total xp available on the site (hovers + clicks + one-offs).
  * Used for the "you've explored N%" completion stat.
+ * 13 hovers (130) + 23 distinct clicks/expands (1150) + 5 one-offs (250).
  */
-export const MAX_XP = 1520;
+export const MAX_XP = 1530;
 
 export function completionPct(total: number) {
   return Math.min(100, Math.round((total / MAX_XP) * 100));
@@ -61,8 +65,13 @@ export function levelFor(total: number): Level & { index: number; next: Level | 
   return { index, ...LEVELS[index], next: LEVELS[index + 1] ?? null };
 }
 
-/** How many discoverables exist per kind - used for progress + achievements. */
-export const TOTALS = { proof: 8, lore: 4, writing: 8 };
+/**
+ * How many discoverables exist per kind - used for progress + achievements.
+ * Must track home-content.ts: proof = distinct hover media in PREVIOUSLY,
+ * lore = LORE items that can award (expandable or linked), writing = WRITING
+ * items. Guarded by test/xp-totals.test.ts.
+ */
+export const TOTALS = { proof: 5, lore: 3, writing: 8 };
 
 export interface XpState {
   total: number;

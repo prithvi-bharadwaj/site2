@@ -52,6 +52,32 @@ describe("HoverCard", () => {
     expect(container.querySelector("iframe.hover-card-youtube")).not.toBeNull();
   });
 
+  it("renders destination buttons when the pin carries actions", () => {
+    const { container } = render(<HoverCard />);
+
+    act(() => {
+      emitPin({
+        media: { type: "image", src: "/screenshots/roam-gg.png", caption: "roam" },
+        href: "https://roam.lol",
+        actions: [
+          { label: "Generate Games", href: "https://roam.gg" },
+          { label: "Landing Page", href: "https://roam.lol" },
+        ],
+        x: 100,
+        y: 100,
+      });
+    });
+
+    const buttons = [...container.querySelectorAll("a.hover-card-action")];
+    expect(buttons.map((b) => b.textContent)).toEqual(["Generate Games", "Landing Page"]);
+    expect(buttons.map((b) => b.getAttribute("href"))).toEqual([
+      "https://roam.gg",
+      "https://roam.lol",
+    ]);
+    // With explicit buttons the card must not also be one big link.
+    expect(container.querySelector("a.hover-card-linkwrap")).toBeNull();
+  });
+
   it("pins into a clickable new-tab link and ignores hide while pinned", () => {
     const { container } = render(<HoverCard />);
     const media = { type: "image" as const, src: "/x.png", caption: "x.com" };
@@ -86,7 +112,7 @@ describe("HoverCard", () => {
     render(<HoverCard />);
     const media = { type: "image" as const, src: "/x.png", caption: "x.com" };
     const earned = () =>
-      JSON.parse(localStorage.getItem("prithvi-xp-v1") ?? '{"earned":{}}').earned;
+      JSON.parse(localStorage.getItem("prithvi-xp-v2") ?? '{"earned":{}}').earned;
 
     act(() => {
       emitPin({ media, href: "https://x.com", inspectId: "proof:/x.png", x: 100, y: 100 });
