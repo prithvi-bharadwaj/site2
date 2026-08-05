@@ -56,7 +56,8 @@ function tokenize(title: string, brands?: BrandLink[], inline?: InlineLink[]): S
 }
 
 interface PreviouslyListProps {
-  label: string;
+  /** Section heading; omit to run the list straight into the page. */
+  label?: string;
   items: LinkListItem[];
   /**
    * Namespace for hover-inspect awards. The Previously section uses "proof"
@@ -64,6 +65,8 @@ interface PreviouslyListProps {
    * component must use their own prefix so they don't pollute that count.
    */
   proofKind?: string;
+  /** Analytics section name; required when there's no visible label. */
+  analyticsLabel?: string;
 }
 
 /**
@@ -72,13 +75,13 @@ interface PreviouslyListProps {
  * Words repel from cursor via the shared spring-physics wiggle manager;
  * underlined links move gently as single units so they stay clickable.
  */
-export function PreviouslyList({ label, items, proofKind = "proof" }: PreviouslyListProps) {
+export function PreviouslyList({ label, items, proofKind = "proof", analyticsLabel }: PreviouslyListProps) {
   const ref = useRef<HTMLDivElement>(null);
   const [open, setOpen] = useState<number | null>(null);
   const xp = useXp();
 
   useWiggleDescendants(ref);
-  const analyticsSection = label
+  const analyticsSection = (label ?? analyticsLabel ?? "list")
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "_")
     .replace(/^_|_$/g, "");
@@ -89,9 +92,11 @@ export function PreviouslyList({ label, items, proofKind = "proof" }: Previously
       data-analytics-section={analyticsSection}
       className="text-sm text-(--ink)/70 leading-relaxed"
     >
-      <span className="text-(--ink)/80 text-sm uppercase tracking-widest block mb-6">
-        <WiggleWords text={label} />
-      </span>
+      {label && (
+        <span className="text-(--ink)/80 text-sm uppercase tracking-widest block mb-6">
+          <WiggleWords text={label} />
+        </span>
+      )}
       <ul className="list-none p-0 m-0">
         {items.map((item, i) => {
           const expandable =

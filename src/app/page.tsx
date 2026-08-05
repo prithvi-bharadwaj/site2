@@ -255,7 +255,7 @@ export default function Home() {
 
         {/* Previously */}
         <div id="previously" className={`${COLUMN} mt-10 md:mt-14`}>
-          <PreviouslyList label="Previously." items={PREVIOUSLY} />
+          <PreviouslyList items={PREVIOUSLY} analyticsLabel="previously" />
         </div>
 
         {/* Projects */}

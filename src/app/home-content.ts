@@ -7,7 +7,7 @@ import { type HoverCardMedia } from "@/lib/hover-card-bus";
 export const DEFAULTS = {
   greeting: "Hey, I'm Prithvi.",
   bio: "I've been building things on the internet since I was 13. Games first. Then AI. Then companies around both. I moved from Bangalore to SF to keep doing it.",
-  genz: `cto @ roam, building world models for 3d games + robotics. shipped 100+ games solo for voodoo and supersonic - they thought i was a studio. won buildspace out of 30k people. moved bangalore → sf. google check at 13. hacked farmville. sold hoodies to my whole school. play csgo and dota 2 (1v1 me bro).`,
+  genz: `cto @ applied reality, building world models for 3d games + robotics. built roam (text → 3d multiplayer games). shipped 100+ games solo for voodoo and supersonic - they thought i was a studio. won buildspace out of 30k people. moved bangalore → sf. google check at 13. hacked farmville. sold hoodies to my whole school. play csgo and dota 2 (1v1 me bro).`,
 };
 
 export type Content = typeof DEFAULTS;
@@ -19,32 +19,48 @@ const SHOT = (name: string) => `/screenshots/${name}.png`;
 
 export const PREVIOUSLY: LinkListItem[] = [
   {
-    title: "CTO at roam, an applied ai lab building generative world models for games + robotics. $4.5m raised",
+    title: "Previously, I was the CTO of Applied Reality, an applied AI lab in SF building generative world models for games + robotics ($4.5m raised)",
     brandLinks: [
       {
-        name: "roam",
-        href: "https://roam.lol",
-        favicon: LOGO("roam"),
+        name: "Applied Reality",
+        href: "https://areality.co",
+        favicon: LOGO("areality"),
         media: {
           type: "image",
-          src: SHOT("roam"),
-          caption: "roam.lol - generative world models for games",
+          src: SHOT("areality"),
+          caption: "areality.co - human-AI world creation",
         },
       },
     ],
   },
   {
-    title: "Won the 2026 Google DeepMind × Stanford AI Game Contest with a generative AI playcast",
+    title: "Built Roam, an AI consumer app that lets you go from a text prompt to a 3D multiplayer game in minutes → roam.gg",
+    brandLinks: [
+      {
+        name: "Roam",
+        href: "https://roam.lol",
+        favicon: LOGO("roam"),
+        media: {
+          type: "image",
+          src: SHOT("roam"),
+          caption: "roam.lol",
+        },
+      },
+    ],
     inlineLinks: [
       {
-        phrase: "generative AI playcast",
-        href: "https://youtube.com/shorts/E4fyqr_semE",
-        media: { type: "youtube", id: "E4fyqr_semE", caption: "voxel demolish" },
+        phrase: "roam.gg",
+        href: "https://roam.gg",
+        media: {
+          type: "image",
+          src: SHOT("roam-gg"),
+          caption: "roam.gg - turn anything into a game",
+        },
       },
     ],
   },
   {
-    title: "At 19, I bootstrapped a game studio and shipped 100+ titles with Voodoo and Supersonic—200K+ downloads and six figures in revenue",
+    title: "Solo-bootstrapped a game studio and shipped 100+ titles with Voodoo and Supersonic - 200K+ downloads and six figures in revenue",
     inlineLinks: [
       {
         phrase: "game studio",
@@ -79,46 +95,22 @@ export const PREVIOUSLY: LinkListItem[] = [
       },
     ],
   },
-  {
-    title: "Built roam's prompt → 3D multiplayer game system",
-    brandLinks: [
-      {
-        name: "roam",
-        href: "https://roam.lol",
-        favicon: LOGO("roam"),
-        media: {
-          type: "image",
-          src: SHOT("roam-info"),
-          caption: "roam.lol/info",
-        },
-      },
-    ],
-    links: [{ label: "roam.lol/info", href: "https://roam.lol/info", favicon: LOGO("roam") }],
-  },
-  {
-    title: "Built a MrBeast game in six weeks",
-  },
-  {
-    title: "Won Buildspace's live game show",
-    inlineLinks: [
-      {
-        phrase: "live game show",
-        href: "https://x.com/FarzaTV/status/1719091708775059754",
-        media: { type: "image", src: SHOT("gameshow"), caption: "x.com/FarzaTV - it's time for the next chapter" },
-      },
-      {
-        phrase: "Buildspace",
-        href: "https://buildspace.so/",
-        media: { type: "image", src: SHOT("buildspace"), caption: "buildspace.so - hi. this was buildspace." },
-      },
-    ],
-  },
 ];
 
 // Project titles are always links; unreleased ones point here for now.
 const DEFAULT_PROJECT_URL = "https://github.com/prithvi-bharadwaj";
 
 export const PROJECTS: LinkListItem[] = [
+  {
+    title: "voxel demolish - generative AI playcast that won the Google DeepMind × Stanford AI Game Contest",
+    inlineLinks: [
+      {
+        phrase: "voxel demolish",
+        href: "https://youtube.com/shorts/E4fyqr_semE",
+        media: { type: "youtube", id: "E4fyqr_semE", caption: "voxel demolish" },
+      },
+    ],
+  },
   {
     title: "Focused - an open-source AI extension that organizes and searches your browser tabs",
     inlineLinks: [{ phrase: "Focused", href: DEFAULT_PROJECT_URL }],
@@ -177,12 +169,11 @@ export const LORE: LinkListItem[] = [
     expand: "Almost got kicked out for it.",
   },
   {
-    title: "Built my own PC at 17; it paid for itself in under four months",
-    expand: "I started a design agency making edits, launch videos, marketing content, and social ads for businesses on Instagram.",
+    title: "Borrowed money as a teenager to build a monster PC; paid it back in weeks with a design agency I ran on it",
+    expand: "Edits, launch videos, marketing content, and social ads for businesses on Instagram.",
   },
   {
-    title: "At 19, convinced Voodoo I was a five-person studio",
-    expand: "I was doing the code, art, animation, and game design myself.",
+    title: "Convinced Voodoo I was a five-person studio by teaching myself code, art, animation, game design, and music",
     brandLinks: [
       {
         name: "Voodoo",
@@ -197,10 +188,28 @@ export const LORE: LinkListItem[] = [
     ],
   },
   {
-    title: "Won local CSGO and Dota 2 tournaments",
+    title: "Built a MrBeast game in six weeks",
+  },
+  {
+    title: "Won Buildspace's live game show",
+    inlineLinks: [
+      {
+        phrase: "live game show",
+        href: "https://x.com/FarzaTV/status/1719091708775059754",
+        media: { type: "image", src: SHOT("gameshow"), caption: "x.com/FarzaTV - it's time for the next chapter" },
+      },
+      {
+        phrase: "Buildspace",
+        href: "https://buildspace.so/",
+        media: { type: "image", src: SHOT("buildspace"), caption: "buildspace.so - hi. this was buildspace." },
+      },
+    ],
+  },
+  {
+    title: "Competitive gamer, multiple-time local and regional tournament winner in Counter-Strike and Dota 2",
     brandLinks: [
       {
-        name: "CSGO",
+        name: "Counter-Strike",
         href: "https://store.steampowered.com/app/730/CounterStrike_2/",
         favicon: "/logos/csgo.svg",
         media: { type: "image", src: SHOT("csgo"), caption: "counter-strike 2" },
