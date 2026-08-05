@@ -1881,7 +1881,7 @@ html.weighted-cursor * {
 
 .weighted-cursor-dart svg {
   position: absolute;
-  left: -20px;
+  left: -21px;
   top: -10px;
   display: block;
 }

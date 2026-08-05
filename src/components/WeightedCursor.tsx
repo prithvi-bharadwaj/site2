@@ -1,7 +1,14 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { stepAngleSpring, type AngleSpring } from "@/lib/cursor-physics";
+import {
+  applyFlick,
+  FLICK_MEMORY_MS,
+  isFlick,
+  shortestAngleDelta,
+  stepAngleSpring,
+  type AngleSpring,
+} from "@/lib/cursor-physics";
 
 /**
  * Weighted cursor — replaces the native cursor with a small ink dart.
@@ -9,8 +16,10 @@ import { stepAngleSpring, type AngleSpring } from "@/lib/cursor-physics";
  * The dart's tip sits exactly on the hotspot (no positional lag), but its
  * heading is driven by an underdamped angular spring toward the smoothed
  * direction of travel, so it swings past on sharp turns and settles back.
- * Speed also stretches the dart slightly along its axis. Skipped on touch
- * devices and when reduced motion is preferred — the native cursor stays.
+ * Wiggling chains reversals into full spins (see cursor-physics), the mouse
+ * going still swings it home to the classic cursor tilt, and speed stretches
+ * it slightly along its axis. Skipped on touch devices and when reduced
+ * motion is preferred — the native cursor stays.
  */
 
 /** Ignore direction changes below this speed (px/s) — near-still jitter. */
@@ -22,6 +31,10 @@ const STRETCH_MAX = 0.22;
 const STRETCH_SPEED = 2500;
 /** Press feedback: shrink toward this scale while a button is down. */
 const PRESS_SCALE = 0.8;
+/** At rest, swing back to the classic cursor tilt (up, leaning left). */
+const IDLE_ANGLE = -Math.PI * 0.625; // -112.5°
+/** How long the mouse must be still before the dart returns to idle. */
+const IDLE_DELAY_MS = 350;
 
 export function WeightedCursor() {
   const dartRef = useRef<HTMLDivElement>(null);
@@ -36,8 +49,16 @@ export function WeightedCursor() {
     const mouse = { x: 0, y: 0 };
     const prev = { x: 0, y: 0 };
     const vel = { x: 0, y: 0 };
-    const spring: AngleSpring = { angle: 0, velocity: 0 };
-    let targetAngle = 0;
+    // Event-to-event velocity for flick detection. Frames are the wrong
+    // sampling grid for this: when the display outpaces the mouse's event
+    // rate, zero-motion frames land between every two real samples and no
+    // frame pair ever reverses.
+    const ev = { x: 0, y: 0, t: 0, vx: 0, vy: 0 };
+    const spring: AngleSpring = { angle: IDLE_ANGLE, velocity: 0 };
+    let targetAngle = IDLE_ANGLE;
+    let lastActive = -Infinity;
+    let flickDir = 0;
+    let flickUntil = -Infinity;
     let press = 1; // eased scale multiplier for mousedown feedback
     let pressed = false;
     let initialized = false;
@@ -65,16 +86,24 @@ export function WeightedCursor() {
       vel.x += (ix - vel.x) * VEL_SMOOTHING;
       vel.y += (iy - vel.y) * VEL_SMOOTHING;
       const speed = Math.hypot(vel.x, vel.y);
-      if (speed > MIN_SPEED) targetAngle = Math.atan2(vel.y, vel.x);
+      if (speed > MIN_SPEED) {
+        targetAngle = Math.atan2(vel.y, vel.x);
+        lastActive = now;
+      } else if (now - lastActive > IDLE_DELAY_MS) {
+        targetAngle = IDLE_ANGLE;
+      }
 
       stepAngleSpring(spring, targetAngle, dt);
       press += ((pressed ? PRESS_SCALE : 1) - press) * 0.35;
 
       render(speed);
 
+      // Only sleep once the dart has made it home to the idle tilt — the loop
+      // stays alive through the idle delay and the return swing.
       const settled =
         speed < 1 &&
         Math.abs(spring.velocity) < 0.01 &&
+        Math.abs(shortestAngleDelta(spring.angle, IDLE_ANGLE)) < 0.002 &&
         Math.abs(press - (pressed ? PRESS_SCALE : 1)) < 0.001;
       if (settled) {
         running = false;
@@ -93,6 +122,21 @@ export function WeightedCursor() {
     function onMove(e: MouseEvent) {
       mouse.x = e.clientX;
       mouse.y = e.clientY;
+      const dt = (e.timeStamp - ev.t) / 1000;
+      if (dt > 0) {
+        const vx = (e.clientX - ev.x) / dt;
+        const vy = (e.clientY - ev.y) / dt;
+        // A pause self-guards: its first event has a huge dt → tiny velocity.
+        if (isFlick(ev.vx, ev.vy, vx, vy)) {
+          flickDir = applyFlick(spring, ev.vx, ev.vy, vx, vy, e.timeStamp < flickUntil ? flickDir : 0);
+          flickUntil = e.timeStamp + FLICK_MEMORY_MS;
+        }
+        ev.vx = vx;
+        ev.vy = vy;
+      }
+      ev.x = e.clientX;
+      ev.y = e.clientY;
+      ev.t = e.timeStamp;
       if (!initialized) {
         initialized = true;
         prev.x = e.clientX;
@@ -138,15 +182,14 @@ export function WeightedCursor() {
 
   return (
     <div ref={dartRef} className="weighted-cursor-dart" aria-hidden="true">
-      {/* Dart points +x (angle 0); tip at (20,10) is offset to the hotspot below. */}
-      <svg width="21" height="20" viewBox="0 0 21 20">
-        <path
-          d="M20 10 L2.5 16.8 L7 10 L2.5 3.2 Z"
-          fill="currentColor"
-          stroke="var(--bg)"
-          strokeWidth="1"
-          strokeLinejoin="round"
-        />
+      {/* Paper plane pointing +x (angle 0); its nose at (21,10) is offset to the
+          hotspot in CSS. Two wing panels: the bg-colored strokes double as the
+          center fold, and the dimmer lower wing makes spins readable. */}
+      <svg width="22" height="20" viewBox="0 0 22 20">
+        <g stroke="var(--bg)" strokeWidth="1" strokeLinejoin="round">
+          <path d="M21 10 L2 2.6 L7.8 10 Z" fill="currentColor" />
+          <path d="M21 10 L7.8 10 L2 17.4 Z" fill="currentColor" fillOpacity="0.55" />
+        </g>
       </svg>
     </div>
   );
