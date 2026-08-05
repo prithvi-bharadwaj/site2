@@ -72,13 +72,38 @@ export function WeightedCursor() {
     // rate, zero-motion frames land between every two real samples and no
     // frame pair ever reverses.
     const ev = { x: 0, y: 0, t: 0, vx: 0, vy: 0 };
-    // Sprite zones: refreshed when the DOM changes, measured every frame.
-    let zones: { el: Element; key: string }[] = [];
+    // Sprite zones, with cached viewport rects: re-queried when the DOM
+    // changes, re-measured only on scroll/resize/mutation. Measuring every
+    // frame would force a layout read per zone per frame for nothing — the
+    // rects only move when the page does.
+    interface Zone {
+      el: Element;
+      key: string;
+      left: number;
+      top: number;
+      right: number;
+      bottom: number;
+      area: number;
+    }
+    let zones: Zone[] = [];
     let zonesDirty = true;
+    let rectsDirty = true;
+    const lastDetect = { x: NaN, y: NaN };
     const zoneObserver = new MutationObserver(() => {
       zonesDirty = true;
     });
     zoneObserver.observe(document.body, { childList: true, subtree: true });
+
+    function measureZones() {
+      for (const z of zones) {
+        const r = z.el.getBoundingClientRect();
+        z.left = r.left;
+        z.top = r.top;
+        z.right = r.right;
+        z.bottom = r.bottom;
+        z.area = r.width * r.height;
+      }
+    }
     const spring: AngleSpring = { angle: IDLE_ANGLE, velocity: 0 };
     let targetAngle = IDLE_ANGLE;
     let lastActive = -Infinity;
@@ -99,24 +124,40 @@ export function WeightedCursor() {
     function detectSprite(): string {
       if (zonesDirty) {
         zonesDirty = false;
+        rectsDirty = true;
         zones = [...document.querySelectorAll("[data-cursor]")]
-          .map((el) => ({ el, key: el.getAttribute("data-cursor") ?? "" }))
+          .map((el) => ({
+            el,
+            key: el.getAttribute("data-cursor") ?? "",
+            left: 0,
+            top: 0,
+            right: 0,
+            bottom: 0,
+            area: 0,
+          }))
           .filter((z) => z.key in SPRITE_SVGS);
       }
+      if (rectsDirty) {
+        rectsDirty = false;
+        measureZones();
+      } else if (mouse.x === lastDetect.x && mouse.y === lastDetect.y) {
+        // Nothing moved since the last check (e.g. pendulum-return frames).
+        return spriteRef.current;
+      }
+      lastDetect.x = mouse.x;
+      lastDetect.y = mouse.y;
       let bestKey = "";
       let bestDist = Infinity;
       let bestArea = Infinity;
       for (const z of zones) {
-        const r = z.el.getBoundingClientRect();
-        if (r.width === 0 || r.height === 0) continue;
-        const dx = Math.max(r.left - mouse.x, 0, mouse.x - r.right);
-        const dy = Math.max(r.top - mouse.y, 0, mouse.y - r.bottom);
+        if (z.area === 0) continue;
+        const dx = Math.max(z.left - mouse.x, 0, mouse.x - z.right);
+        const dy = Math.max(z.top - mouse.y, 0, mouse.y - z.bottom);
         const d = Math.hypot(dx, dy);
-        const area = r.width * r.height;
-        if (d < bestDist - 0.5 || (d < bestDist + 0.5 && area < bestArea)) {
+        if (d < bestDist - 0.5 || (d < bestDist + 0.5 && z.area < bestArea)) {
           bestDist = d;
           bestKey = z.key;
-          bestArea = area;
+          bestArea = z.area;
         }
       }
       const reach = bestKey === spriteRef.current ? RELEASE_RADIUS : ACQUIRE_RADIUS;
@@ -239,17 +280,28 @@ export function WeightedCursor() {
     function onEnter() {
       if (initialized) dart!.style.opacity = "1";
     }
+    // Zone rects move when the page does; wake so detection re-runs even if
+    // the mouse itself is still (content scrolling under a resting cursor).
+    function onViewChange() {
+      rectsDirty = true;
+      if (initialized) wake();
+    }
 
     document.addEventListener("mousemove", onMove, { passive: true });
     document.addEventListener("mousedown", onDown, { passive: true });
     document.addEventListener("mouseup", onUp, { passive: true });
     document.documentElement.addEventListener("mouseleave", onLeave);
     document.documentElement.addEventListener("mouseenter", onEnter);
+    // Capture phase so inner scroll containers invalidate too.
+    document.addEventListener("scroll", onViewChange, { passive: true, capture: true });
+    window.addEventListener("resize", onViewChange);
 
     return () => {
       document.removeEventListener("mousemove", onMove);
       document.removeEventListener("mousedown", onDown);
       document.removeEventListener("mouseup", onUp);
+      document.removeEventListener("scroll", onViewChange, { capture: true });
+      window.removeEventListener("resize", onViewChange);
       document.documentElement.removeEventListener("mouseleave", onLeave);
       document.documentElement.removeEventListener("mouseenter", onEnter);
       document.documentElement.classList.remove("weighted-cursor");
