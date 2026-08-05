@@ -178,10 +178,7 @@ export const LORE: LinkListItem[] = [
     ],
   },
   {
-    title: "Built a MrBeast game in six weeks",
-  },
-  {
-    title: "Won Buildspace's live game show",
+    title: "Won Buildspace Nights & Weekends S4's live game show out of 30,000+ builders and teams, with a MrBeast game I built in under six weeks",
     inlineLinks: [
       {
         phrase: "live game show",
@@ -196,7 +193,7 @@ export const LORE: LinkListItem[] = [
     ],
   },
   {
-    title: "Competitive gamer, multiple-time local and regional tournament winner in Counter-Strike and Dota 2",
+    title: "Played Counter-Strike and Dota 2 competitively; won local and regional tournaments",
     brandLinks: [
       {
         name: "Counter-Strike",
