@@ -108,7 +108,10 @@ export function PreviouslyList({ label, items, proofKind = "proof" }: Previously
 
           return (
             <li key={i} className="m-0 p-0 bullet-hang">
+              {/* Cursor zone on the inline span (hugs the sentence), not the
+                  full-width li, so empty space past short lines stays inert. */}
               <span
+                data-cursor={item.cursor}
                 onClick={expandable ? () => {
                   setOpen(isOpen ? null : i);
                   trackInteraction(
@@ -150,6 +153,7 @@ export function PreviouslyList({ label, items, proofKind = "proof" }: Previously
                         key={si}
                         href={seg.brand.href}
                         data-repel
+                        data-cursor={seg.brand.cursor}
                         onClick={(e) => {
                           e.stopPropagation();
                           award(`click:${media ? mediaKey(media) : seg.brand.href}`, CLICK_XP);
@@ -210,6 +214,7 @@ export function PreviouslyList({ label, items, proofKind = "proof" }: Previously
                       <a
                         key={si}
                         href={seg.link.href}
+                        data-cursor={seg.link.cursor}
                         onClick={(e) => {
                           e.stopPropagation();
                           award(`click:${media ? mediaKey(media) : seg.link.href}`, CLICK_XP);

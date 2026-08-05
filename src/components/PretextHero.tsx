@@ -256,6 +256,9 @@ export function PretextHero({ greeting, bio, className }: PretextHeroProps) {
         <span
           key={word.key}
           data-pretext-idx={i}
+          // The name is an earth-cursor zone; detection is geometric (see
+          // WeightedCursor), so pointer events can stay off.
+          data-cursor={/prithvi/i.test(word.text) ? "earth" : undefined}
           className="pretext-word"
           style={{
             position: "absolute",
