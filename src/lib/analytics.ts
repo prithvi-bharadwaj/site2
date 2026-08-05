@@ -22,6 +22,7 @@ export type InteractionName =
   | "exit_gate_shown"
   | "genz_mode_changed"
   | "genz_video_dismissed"
+  | "intro_replayed"
   | "intro_reveal_finished"
   | "link_activated"
   | "list_item_collapsed"

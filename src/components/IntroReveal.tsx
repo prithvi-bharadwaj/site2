@@ -5,63 +5,78 @@ import { harvestGlyphs } from "@/lib/glyph-harvest";
 import type { GlyphSource } from "@/lib/letter-physics";
 import {
   buildTypingSchedule,
-  pickFallingGlyph,
-  spawnBurst,
-  stepBurst,
-  settleBurst,
-  type BurstParticle,
+  groupLines,
+  buildSweepSchedule,
+  sweepProgress,
+  developGhostAlpha,
+  developFrontProgress,
+  SWEEP,
+  DEVELOP,
+  type SweepLine,
 } from "@/lib/intro-reveal";
 import { trackInteraction } from "@/lib/analytics";
 
 /**
  * First-visit reveal. The page mounts normally underneath; this canvas covers
- * the viewport with the plain page background and re-enacts the site coming
- * into being: the greeting types itself out, the "i" in "Prithvi" duplicates
- * and drops, crashes near the bottom, and the wreckage flies up as the bio's
- * own letters, each homing to the exact spot the real text already occupies.
- * The canvas then fades, handing off pixel-for-pixel to the live DOM while
- * the rest of the page staggers in (see main[data-reveal="in"] in globals.css).
+ * the viewport with the plain page background and the greeting types itself
+ * out. What happens next depends on the variant:
+ *
+ * - "a" (carriage return): the caret that typed the greeting drops to the bio
+ *   and keeps writing - each wrapped line wipes in left-to-right behind the
+ *   moving caret, every line a touch faster than the last, then the caret
+ *   blinks once and fades while the canvas hands off pixel-for-pixel to the
+ *   live DOM and the sections stagger in (main[data-reveal="in"]).
+ *
+ * - "b" (ink develop): the canvas goes transparent the moment typing settles,
+ *   and the live page underneath - masked down to a barely-there ghost below
+ *   the greeting's baseline - develops to full ink behind a soft front that
+ *   sweeps down the viewport and decelerates. Nothing moves; only ink density
+ *   changes, so the handoff is the reveal itself.
  *
  * Every glyph is harvested from the rendered hero via Range rects, so the
- * copy starts exactly where the browser drew the original - same trick as
- * the letter-physics layer. Any input skips straight to the finished page.
+ * copy sits exactly where the browser drew the original - same trick as the
+ * letter-physics layer. Any input skips straight to the finished page.
  */
 
 /** Blank beat with just the caret before typing starts. */
 const PRE_TYPE_MS = 550;
-/** Hold on the finished greeting before the "i" moves. */
-const POST_TYPE_MS = 480;
+/** Held beat on the finished greeting - the pause after typing your name. */
+const SETTLE_MS = 420;
 const CARET_BLINK_MS = 530;
-/** The clone's little jump before it drops. */
-const POP_MS = 150;
-const POP_LIFT = 7;
-const POP_SCALE = 1.18;
-const FALL_GRAVITY = 2600;
-/** Impact dressing: squash frame, shockwave rings, sparks, screen shake. */
-const SQUASH_MS = 80;
-const IMPACT_FX_MS = 500;
-const SHAKE_MS = 380;
-const SHAKE_AMPLITUDE = 9;
-/** Failsafe for stragglers - matches letter-physics' "freeze the pile" idea. */
-const BURST_CAP_MS = 3000;
 const FADE_MS = 480;
 /** If the hero hasn't laid out by now, something is off - show the site. */
 const BOOT_TIMEOUT_MS = 4000;
 /** Ignore resizes smaller than this - scrollbar and mobile-toolbar noise. */
 const RESIZE_TOLERANCE = 48;
-/** Echo of the cosmic wind palette in the impact flash. */
-const IMPACT_ACCENT = "139 124 255";
 
-type Phase = "boot" | "type" | "fall" | "burst" | "fade";
+export type IntroVariant = "a" | "b";
+
+type Phase = "boot" | "type" | "settle" | "travel" | "sweep" | "develop" | "fade";
+
+interface CaretBox {
+  x: number;
+  baseline: number;
+  ascent: number;
+  color: string;
+}
+
+interface BioLine {
+  glyphs: GlyphSource[];
+  left: number;
+  right: number;
+  top: number;
+  bottom: number;
+}
 
 interface IntroRevealProps {
-  /** Fade begins: the page underneath starts its staggered reveal. */
+  variant: IntroVariant;
+  /** The page underneath starts its own reveal (variant A's stagger). */
   onHandoff: () => void;
-  /** Fade finished (or skipped): unmount the overlay. */
+  /** All done (or skipped): unmount the overlay. */
   onDone: () => void;
 }
 
-export function IntroReveal({ onHandoff, onDone }: IntroRevealProps) {
+export function IntroReveal({ variant, onHandoff, onDone }: IntroRevealProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const handoffRef = useRef(onHandoff);
   const doneRef = useRef(onDone);
@@ -76,12 +91,22 @@ export function IntroReveal({ onHandoff, onDone }: IntroRevealProps) {
     let raf = 0;
     let finished = false;
     let handedOff = false;
+    /** Variant B masks the live page; always undo it on the way out. */
+    let maskEl: HTMLElement | null = null;
+
+    function clearMask() {
+      if (!maskEl) return;
+      maskEl.style.maskImage = "";
+      maskEl.style.webkitMaskImage = "";
+      maskEl = null;
+    }
 
     function finish(skipped: boolean) {
       if (finished) return;
       finished = true;
       cancelAnimationFrame(raf);
-      trackInteraction("intro_reveal_finished", { skipped });
+      clearMask();
+      trackInteraction("intro_reveal_finished", { skipped, variant });
       if (!handedOff) handoffRef.current();
       doneRef.current();
     }
@@ -93,7 +118,6 @@ export function IntroReveal({ onHandoff, onDone }: IntroRevealProps) {
 
     let phase: Phase = "boot";
     let phaseStart = bootAt;
-    let last = bootAt;
     let dpr = 1;
     let baseW = window.innerWidth;
     let baseH = window.innerHeight;
@@ -103,13 +127,15 @@ export function IntroReveal({ onHandoff, onDone }: IntroRevealProps) {
     let bio: GlyphSource[] = [];
     let schedule: number[] = [];
     let typingDone = 0;
-    let fallIdx = 0;
-    let fallY = 0;
-    let fallVy = 0;
-    let impactX = 0;
-    let floorY = 0;
-    let particles: BurstParticle[] = [];
-    let sparks: { angle: number; speed: number; len: number }[] = [];
+    let lines: BioLine[] = [];
+    let sweeps: SweepLine[] = [];
+    let sweepTotal = 0;
+    /** Where the caret rests after the greeting, and after each hop. */
+    let greetingCaret: CaretBox = { x: 0, baseline: 0, ascent: 0, color: "#000" };
+    let bioCaret: CaretBox = { x: 0, baseline: 0, ascent: 0, color: "#000" };
+    /** Variant B's mask geometry, in the masked element's local coords. */
+    let frontStartY = 0;
+    let frontEndY = 0;
 
     function sizeCanvas() {
       dpr = Math.min(window.devicePixelRatio || 1, 2);
@@ -157,15 +183,39 @@ export function IntroReveal({ onHandoff, onDone }: IntroRevealProps) {
       bio.sort(byPos);
       schedule = buildTypingSchedule(greeting.map((g) => g.char));
       typingDone = schedule[schedule.length - 1];
-      fallIdx = pickFallingGlyph(greeting.map((g) => g.char));
-      const bioBottom = bio.length
-        ? Math.max(...bio.map((g) => g.y + g.h))
-        : greeting[greeting.length - 1].y + greeting[greeting.length - 1].h;
-      // Crash well below the text but on screen, so the fountain has to climb.
-      floorY = Math.max(
-        bioBottom + 60,
-        Math.min(window.innerHeight - 80, bioBottom + Math.max(220, window.innerHeight * 0.3))
-      );
+
+      const last = greeting[greeting.length - 1];
+      greetingCaret = {
+        x: last.x + last.w + 2,
+        baseline: last.y + last.ascent,
+        ascent: last.ascent,
+        color: last.color,
+      };
+
+      lines = groupLines(bio).map((idxs) => {
+        const gs = idxs.map((i) => bio[i]);
+        return {
+          glyphs: gs,
+          left: Math.min(...gs.map((g) => g.x)),
+          right: Math.max(...gs.map((g) => g.x + g.w)),
+          top: Math.min(...gs.map((g) => g.y)),
+          bottom: Math.max(...gs.map((g) => g.y + g.h)),
+        };
+      });
+      sweeps = buildSweepSchedule(lines.map((l) => l.right - l.left));
+      sweepTotal = sweeps.length
+        ? sweeps[sweeps.length - 1].startMs + sweeps[sweeps.length - 1].durationMs
+        : 0;
+      if (lines.length > 0) {
+        const first = lines[0].glyphs[0];
+        bioCaret = {
+          x: first.x - 2,
+          baseline: first.y + first.ascent,
+          ascent: first.ascent,
+          color: first.color,
+        };
+      }
+
       bg = getComputedStyle(document.documentElement).backgroundColor;
       return true;
     }
@@ -175,16 +225,35 @@ export function IntroReveal({ onHandoff, onDone }: IntroRevealProps) {
       phaseStart = now;
     }
 
-    function beginBurst(now: number) {
-      const g = greeting[fallIdx];
-      impactX = g.x + g.w / 2;
-      sparks = Array.from({ length: 12 }, (_, i) => ({
-        angle: (i / 12) * Math.PI * 2 + Math.random() * 0.4,
-        speed: 220 + Math.random() * 160,
-        len: 8 + Math.random() * 7,
-      }));
-      particles = spawnBurst(bio, impactX, floorY - g.h / 2);
-      enter("burst", now);
+    /* ── variant B: the mask over the live page ── */
+
+    function beginDevelop(now: number) {
+      maskEl = document.querySelector<HTMLElement>("[data-physics-content]");
+      if (!maskEl) {
+        // Nothing to mask - just show the page.
+        finish(true);
+        return;
+      }
+      const rect = maskEl.getBoundingClientRect();
+      const greetingBottom = Math.max(...greeting.map((g) => g.y + g.h));
+      frontStartY = greetingBottom + 6 - rect.top;
+      frontEndY = window.innerHeight - rect.top;
+      applyMask(0);
+      // The page underneath is now the show; the canvas keeps only the caret.
+      canvas!.style.background = "transparent";
+      handedOff = true;
+      handoffRef.current();
+      enter("develop", now);
+    }
+
+    function applyMask(elapsed: number) {
+      if (!maskEl) return;
+      const ghost = developGhostAlpha(elapsed);
+      const p = developFrontProgress(elapsed);
+      const frontY = frontStartY + p * (frontEndY + DEVELOP.featherPx - frontStartY);
+      const gradient = `linear-gradient(to bottom, rgb(0 0 0) ${frontY}px, rgb(0 0 0 / ${ghost}) ${frontY + DEVELOP.featherPx}px)`;
+      maskEl.style.maskImage = gradient;
+      maskEl.style.webkitMaskImage = gradient;
     }
 
     function beginFade(now: number) {
@@ -204,7 +273,16 @@ export function IntroReveal({ onHandoff, onDone }: IntroRevealProps) {
       ctx!.fillText(g.char, g.x, g.y + g.ascent);
     }
 
-    function drawCaret(now: number, typeElapsed: number, fade: number) {
+    function drawCaretAt(now: number, c: CaretBox, alpha: number, blink: boolean) {
+      if (alpha <= 0) return;
+      if (blink && Math.floor(now / CARET_BLINK_MS) % 2 !== 0) return;
+      ctx!.fillStyle = c.color;
+      ctx!.globalAlpha = 0.85 * alpha;
+      ctx!.fillRect(c.x, c.baseline - c.ascent, 1.5, c.ascent * 1.15);
+    }
+
+    /** The typing caret: rides the last typed glyph, solid while writing. */
+    function drawTypingCaret(now: number, typeElapsed: number) {
       let g = greeting[0];
       let x = g.x - 2;
       let lastCharAt = -Infinity;
@@ -217,146 +295,113 @@ export function IntroReveal({ onHandoff, onDone }: IntroRevealProps) {
         }
       }
       const active = typeElapsed - lastCharAt < 350;
-      const blinkOn = Math.floor(now / CARET_BLINK_MS) % 2 === 0;
-      if (!active && !blinkOn) return;
-      const baseline = g.y + g.ascent;
-      ctx!.fillStyle = g.color;
-      ctx!.globalAlpha = 0.85 * fade;
-      ctx!.fillRect(x, baseline - g.ascent, 1.5, g.ascent * 1.15);
+      drawCaretAt(
+        now,
+        { x, baseline: g.y + g.ascent, ascent: g.ascent, color: g.color },
+        1,
+        !active
+      );
     }
 
-    function drawFalling(now: number) {
-      const g = greeting[fallIdx];
-      const t = now - phaseStart;
-      let y = fallY;
-      let scaleX = 1;
-      let scaleY = 1;
-      let angle = 0;
-      if (t < POP_MS) {
-        const k = t / POP_MS;
-        y = g.y - POP_LIFT * Math.sin(k * Math.PI);
-        scaleX = scaleY = 1 + (POP_SCALE - 1) * Math.sin(k * Math.PI);
-      } else {
-        angle = Math.sin(t / 90) * 0.12;
-      }
-      ctx!.save();
-      ctx!.translate(g.x + g.w / 2, y + g.h / 2);
-      ctx!.rotate(angle);
-      ctx!.scale(scaleX, scaleY);
-      ctx!.font = g.font;
-      ctx!.fillStyle = g.color;
-      ctx!.globalAlpha = g.alpha;
-      ctx!.fillText(g.char, -g.w / 2, -g.h / 2 + g.ascent);
-      ctx!.restore();
-    }
-
-    function drawImpact(now: number) {
-      const t = (now - phaseStart) / 1000;
-      const g = greeting[fallIdx];
-      // The clone, squashed flat for a couple of frames before it bursts.
-      if (now - phaseStart < SQUASH_MS) {
-        const k = (now - phaseStart) / SQUASH_MS;
-        ctx!.save();
-        ctx!.translate(impactX, floorY - g.h * 0.15);
-        ctx!.scale(1.5, 0.3);
-        ctx!.font = g.font;
-        ctx!.fillStyle = g.color;
-        ctx!.globalAlpha = (1 - k) * g.alpha;
-        ctx!.fillText(g.char, -g.w / 2, -g.h / 2 + g.ascent);
-        ctx!.restore();
-      }
-      if (now - phaseStart > IMPACT_FX_MS) return;
-      const k = (now - phaseStart) / IMPACT_FX_MS;
-      const fade = (1 - k) * (1 - k);
-      // Two shockwave rings - ink, with a violet echo of the site's lighting.
-      ctx!.lineWidth = 1.5;
-      ctx!.globalAlpha = fade * 0.3;
-      ctx!.strokeStyle = g.color;
-      ctx!.beginPath();
-      ctx!.arc(impactX, floorY, 10 + k * 420, 0, Math.PI * 2);
-      ctx!.stroke();
-      ctx!.globalAlpha = fade * 0.24;
-      ctx!.strokeStyle = `rgb(${IMPACT_ACCENT})`;
-      ctx!.beginPath();
-      ctx!.arc(impactX, floorY, 6 + k * 320, 0, Math.PI * 2);
-      ctx!.stroke();
-      // Sparks skidding out of the crash.
-      ctx!.lineWidth = 2;
-      ctx!.strokeStyle = g.color;
-      ctx!.globalAlpha = fade * 0.5;
-      for (const s of sparks) {
-        const r = 12 + k * s.speed;
-        const len = s.len * (1 - k);
-        ctx!.beginPath();
-        ctx!.moveTo(impactX + Math.cos(s.angle) * r, floorY + Math.sin(s.angle) * r * 0.6);
-        ctx!.lineTo(
-          impactX + Math.cos(s.angle) * (r + len),
-          floorY + Math.sin(s.angle) * (r + len) * 0.6
-        );
-        ctx!.stroke();
-      }
-    }
-
-    function drawParticles(fadeMul = 1) {
-      for (let i = 0; i < particles.length; i++) {
-        const p = particles[i];
-        const g = bio[i];
-        if (p.settled) {
-          // Faded with the canvas: the real text underneath is identical, and
-          // full-alpha copies stacked on it would read darker mid-crossfade.
-          drawGlyph(g, g.alpha * fadeMul);
+    /** Lines fully behind the sweep, plus the wipe on the current line. */
+    function drawSweptBio(elapsed: number, fadeMul: number) {
+      for (let i = 0; i < lines.length; i++) {
+        const line = lines[i];
+        const s = sweeps[i];
+        if (elapsed >= s.startMs + s.durationMs) {
+          for (const g of line.glyphs) drawGlyph(g, g.alpha * fadeMul);
           continue;
         }
+        if (elapsed < s.startMs) break;
+        const p = sweepProgress(elapsed, s);
+        const edgeX = line.left + p * (line.right - line.left);
         ctx!.save();
-        ctx!.translate(p.x + g.w / 2, p.y + g.h / 2);
-        ctx!.rotate(p.angle);
-        ctx!.font = g.font;
-        ctx!.fillStyle = g.color;
-        ctx!.globalAlpha = g.alpha;
-        ctx!.fillText(g.char, -g.w / 2, -g.h / 2 + g.ascent);
+        ctx!.beginPath();
+        ctx!.rect(line.left - 2, line.top - 2, edgeX - (line.left - 2), line.bottom - line.top + 4);
+        ctx!.clip();
+        for (const g of line.glyphs) {
+          if (g.x > edgeX) break;
+          drawGlyph(g, g.alpha * fadeMul);
+        }
         ctx!.restore();
+        // Soft ink edge: background bleeds back over the last ~1ch.
+        const feather = ctx!.createLinearGradient(edgeX - SWEEP.featherPx, 0, edgeX, 0);
+        feather.addColorStop(0, "transparent");
+        feather.addColorStop(1, bg);
+        ctx!.globalAlpha = fadeMul;
+        ctx!.fillStyle = feather;
+        ctx!.fillRect(edgeX - SWEEP.featherPx, line.top - 2, SWEEP.featherPx, line.bottom - line.top + 4);
+        break;
       }
+    }
+
+    /** Where the sweep's writing edge is, for the caret to ride. */
+    function sweepCaret(elapsed: number): CaretBox {
+      for (let i = 0; i < lines.length; i++) {
+        const s = sweeps[i];
+        const line = lines[i];
+        const g = line.glyphs[0];
+        if (elapsed < s.startMs + s.durationMs || i === lines.length - 1) {
+          const p = sweepProgress(elapsed, s);
+          return {
+            x: Math.min(line.left + p * (line.right - line.left), line.right) + 2,
+            baseline: g.y + g.ascent,
+            ascent: g.ascent,
+            color: g.color,
+          };
+        }
+      }
+      return bioCaret;
     }
 
     function draw(now: number) {
       ctx!.setTransform(dpr, 0, 0, dpr, 0, 0);
       ctx!.clearRect(0, 0, window.innerWidth, window.innerHeight);
-      const fade =
-        phase === "fade"
-          ? Math.max(0, 1 - (now - phaseStart) / FADE_MS)
-          : 1;
+      const t = now - phaseStart;
+
+      if (phase === "develop") {
+        // The live page is the picture; only the caret remains, fading out.
+        const alpha = Math.max(0, 1 - t / DEVELOP.caretFadeMs);
+        drawCaretAt(now, greetingCaret, alpha, true);
+        ctx!.globalAlpha = 1;
+        return;
+      }
+
+      const fade = phase === "fade" ? Math.max(0, 1 - t / FADE_MS) : 1;
       ctx!.globalAlpha = fade;
       ctx!.fillStyle = bg;
       ctx!.fillRect(0, 0, window.innerWidth, window.innerHeight);
       if (phase === "boot") return;
 
-      // Crash shake - the whole scene takes the hit.
-      if (phase === "burst") {
-        const t = (now - phaseStart) / 1000;
-        if (t < SHAKE_MS / 1000) {
-          const amp = SHAKE_AMPLITUDE * Math.exp(-t * 9);
-          ctx!.translate(Math.sin(t * 87) * amp, Math.cos(t * 61) * amp * 0.7);
-        }
-      }
-
-      const typeElapsed =
-        phase === "type" ? now - phaseStart - PRE_TYPE_MS : Infinity;
+      const typeElapsed = phase === "type" ? t - PRE_TYPE_MS : Infinity;
       for (let i = 0; i < greeting.length; i++) {
         if (schedule[i] > typeElapsed) break;
         drawGlyph(greeting[i], greeting[i].alpha * fade);
       }
+
       if (phase === "type") {
-        drawCaret(now, typeElapsed, 1);
-      } else if (phase === "fall") {
-        // Caret bows out while the clone gets moving.
-        const caretFade = Math.max(0, 1 - (now - phaseStart) / 300);
-        if (caretFade > 0) drawCaret(now, Infinity, caretFade);
-        drawFalling(now);
-      } else if (phase === "burst") {
-        drawImpact(now);
-        drawParticles();
+        drawTypingCaret(now, typeElapsed);
+      } else if (phase === "settle") {
+        drawCaretAt(now, greetingCaret, 1, true);
+      } else if (phase === "travel") {
+        // Near-straight hop; the caret keeps its size and snaps on landing.
+        const k = Math.min(1, t / SWEEP.travelMs);
+        const e = 0.5 - Math.cos(k * Math.PI) / 2;
+        drawCaretAt(now, {
+          x: greetingCaret.x + (bioCaret.x - greetingCaret.x) * e,
+          baseline: greetingCaret.baseline + (bioCaret.baseline - greetingCaret.baseline) * e,
+          ascent: greetingCaret.ascent,
+          color: greetingCaret.color,
+        }, 1, false);
+      } else if (phase === "sweep") {
+        drawSweptBio(t, 1);
+        drawCaretAt(now, sweepCaret(t), 1, false);
       } else if (phase === "fade") {
-        drawParticles(fade);
+        // Faded with the canvas: the real text underneath is identical, and
+        // full-alpha copies stacked on it would read darker mid-crossfade.
+        drawSweptBio(Infinity, fade);
+        const caretAlpha = Math.max(0, 1 - t / SWEEP.caretExitMs);
+        drawCaretAt(now, sweepCaret(Infinity), caretAlpha * fade, true);
       }
       ctx!.globalAlpha = 1;
     }
@@ -365,8 +410,7 @@ export function IntroReveal({ onHandoff, onDone }: IntroRevealProps) {
 
     function frame(now: number) {
       if (finished) return;
-      const dt = Math.min((now - last) / 1000, 1 / 30);
-      last = now;
+      const t = now - phaseStart;
 
       if (phase === "boot") {
         if (harvest()) {
@@ -376,29 +420,26 @@ export function IntroReveal({ onHandoff, onDone }: IntroRevealProps) {
           return;
         }
       } else if (phase === "type") {
-        if (now - phaseStart - PRE_TYPE_MS > typingDone + POST_TYPE_MS) {
-          enter("fall", now);
-          fallY = greeting[fallIdx].y;
-          fallVy = 0;
+        if (t - PRE_TYPE_MS > typingDone) enter("settle", now);
+      } else if (phase === "settle") {
+        if (t >= SETTLE_MS) {
+          if (variant === "b") beginDevelop(now);
+          else if (lines.length > 0) enter("travel", now);
+          else beginFade(now);
         }
-      } else if (phase === "fall") {
-        if (now - phaseStart >= POP_MS) {
-          fallVy += FALL_GRAVITY * dt;
-          fallY += fallVy * dt;
-          if (fallY + greeting[fallIdx].h >= floorY) {
-            if (bio.length > 0) beginBurst(now);
-            else beginFade(now);
-          }
-        }
-      } else if (phase === "burst") {
-        const elapsed = now - phaseStart;
-        const moving = stepBurst(particles, dt, elapsed);
-        if (!moving || elapsed > BURST_CAP_MS) {
-          settleBurst(particles);
-          if (elapsed > IMPACT_FX_MS) beginFade(now);
+      } else if (phase === "travel") {
+        if (t >= SWEEP.travelMs) enter("sweep", now);
+      } else if (phase === "sweep") {
+        if (t >= sweepTotal) beginFade(now);
+      } else if (phase === "develop") {
+        applyMask(t);
+        if (t >= DEVELOP.frontDelayMs + DEVELOP.frontMs) {
+          clearMask();
+          finish(false);
+          return;
         }
       } else if (phase === "fade") {
-        if (now - phaseStart >= FADE_MS) {
+        if (t >= FADE_MS) {
           finish(false);
           return;
         }
@@ -441,13 +482,14 @@ export function IntroReveal({ onHandoff, onDone }: IntroRevealProps) {
     return () => {
       finished = true;
       cancelAnimationFrame(raf);
+      clearMask();
       document.documentElement.style.overflow = "";
       canvas.removeEventListener("pointerdown", skip);
       window.removeEventListener("keydown", skip);
       window.removeEventListener("wheel", skip);
       window.removeEventListener("resize", onResize);
     };
-  }, []);
+  }, [variant]);
 
   return (
     <canvas

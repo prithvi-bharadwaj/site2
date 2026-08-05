@@ -1,8 +1,8 @@
 /**
  * Pure logic for the first-visit intro: the typing schedule for the greeting,
- * the choice of which glyph falls, and the burst particles that fly the bio's
- * letters into place after the crash. No DOM access - the component harvests
- * glyph boxes, feeds them in, and draws what comes back.
+ * plus the two second acts - variant A's carriage-return line sweeps and
+ * variant B's ink-develop front. No DOM access - the component harvests glyph
+ * boxes, feeds them in, and draws (or masks) what comes back.
  */
 
 export interface IntroGlyphBox {
@@ -42,120 +42,98 @@ export function buildTypingSchedule(
   return times;
 }
 
-/** The star of the crash: the last "i" in the greeting (the one in "Prithvi"). */
-export function pickFallingGlyph(chars: string[]): number {
-  for (let i = chars.length - 1; i >= 0; i--) {
-    if (chars[i].toLowerCase() === "i") return i;
+/* ── Variant A: carriage return ── */
+
+/**
+ * Group glyph boxes (already sorted by y, then x) into visual lines. Wrapped
+ * text is one DOM node, so line breaks only exist as jumps in glyph y.
+ */
+export function groupLines(boxes: IntroGlyphBox[]): number[][] {
+  const lines: number[][] = [];
+  let lineY = -Infinity;
+  for (let i = 0; i < boxes.length; i++) {
+    const b = boxes[i];
+    if (lines.length === 0 || b.y - lineY > b.h * 0.5) {
+      lines.push([i]);
+      lineY = b.y;
+    } else {
+      lines[lines.length - 1].push(i);
+    }
   }
-  return Math.max(0, chars.length - 1);
+  return lines;
 }
 
-export interface BurstParticle {
-  targetX: number;
-  targetY: number;
-  x: number;
-  y: number;
-  vx: number;
-  vy: number;
-  angle: number;
-  va: number;
-  /** ms after the burst when the homing spring takes over from gravity. */
-  homeDelay: number;
-  settled: boolean;
-}
-
-export const BURST_PHYSICS = {
-  gravity: 1700,
-  minSpeed: 380,
-  maxSpeed: 1040,
-  /** Radians either side of straight up - an upward fountain, not a sphere. */
-  spread: 1.25,
-  /** Spring toward the target; damping is ~critical for this stiffness. */
-  stiffness: 150,
-  damping: 24.5,
-  spinMax: 11,
-  settleDist: 0.75,
-  settleSpeed: 26,
-  baseDelayMs: 60,
-  /** Reading-order stagger, so text fills in left-to-right, top-to-bottom. */
-  perGlyphDelayMs: 5.5,
-  delayJitterMs: 130,
+export const SWEEP = {
+  /** Caret hop from the greeting's period to the bio's first line. */
+  travelMs: 150,
+  /** Rest beat between lines - an echo of the typing's comma cadence. */
+  restMs: 120,
+  /** First line's wipe speed; the writing turns fluent from there. */
+  baseSpeedPxMs: 1.7,
+  /** Each line sweeps this much faster than the one before. */
+  accelerando: 1.28,
+  minMs: 170,
+  maxMs: 380,
+  /** Soft ink edge riding ahead of the wipe, roughly 1ch. */
+  featherPx: 14,
+  /** The writer steps away: one blink, then the page takes over. */
+  caretExitMs: 350,
 };
 
-export function spawnBurst(
-  targets: IntroGlyphBox[],
-  originX: number,
-  originY: number,
-  rand: () => number = Math.random
-): BurstParticle[] {
-  const P = BURST_PHYSICS;
-  return targets.map((t, i) => {
-    const angle = -Math.PI / 2 + (rand() - 0.5) * 2 * P.spread;
-    const speed = P.minSpeed + rand() * (P.maxSpeed - P.minSpeed);
-    return {
-      targetX: t.x,
-      targetY: t.y,
-      x: originX + (rand() - 0.5) * 26,
-      y: originY + (rand() - 0.5) * 10,
-      vx: Math.cos(angle) * speed,
-      vy: Math.sin(angle) * speed,
-      angle: (rand() - 0.5) * 1.4,
-      va: (rand() - 0.5) * 2 * P.spinMax,
-      homeDelay: P.baseDelayMs + i * P.perGlyphDelayMs + rand() * P.delayJitterMs,
-      settled: false,
-    };
-  });
+export interface SweepLine {
+  startMs: number;
+  durationMs: number;
 }
 
-/** One integration step. Returns true while anything is still moving. */
-export function stepBurst(
-  particles: BurstParticle[],
-  dt: number,
-  elapsedMs: number
-): boolean {
-  const P = BURST_PHYSICS;
-  let moving = false;
-  for (const p of particles) {
-    if (p.settled) continue;
-    moving = true;
-    if (elapsedMs < p.homeDelay) {
-      p.vy += P.gravity * dt;
-      p.x += p.vx * dt;
-      p.y += p.vy * dt;
-      p.angle += p.va * dt;
-      continue;
-    }
-    p.vx += (P.stiffness * (p.targetX - p.x) - P.damping * p.vx) * dt;
-    p.vy += (P.stiffness * (p.targetY - p.y) - P.damping * p.vy) * dt;
-    p.x += p.vx * dt;
-    p.y += p.vy * dt;
-    const decay = Math.exp(-9 * dt);
-    p.angle *= decay;
-    p.va *= decay;
-    const dx = p.targetX - p.x;
-    const dy = p.targetY - p.y;
-    if (
-      dx * dx + dy * dy < P.settleDist * P.settleDist &&
-      p.vx * p.vx + p.vy * p.vy < P.settleSpeed * P.settleSpeed &&
-      Math.abs(p.angle) < 0.03
-    ) {
-      p.x = p.targetX;
-      p.y = p.targetY;
-      p.angle = 0;
-      p.settled = true;
-    }
+/** When each line's wipe starts and how long it runs, from sweep start. */
+export function buildSweepSchedule(
+  lineWidths: number[],
+  o: typeof SWEEP = SWEEP
+): SweepLine[] {
+  const out: SweepLine[] = [];
+  let t = 0;
+  for (let i = 0; i < lineWidths.length; i++) {
+    const speed = o.baseSpeedPxMs * Math.pow(o.accelerando, i);
+    const duration = Math.min(o.maxMs, Math.max(o.minMs, lineWidths[i] / speed));
+    out.push({ startMs: t, durationMs: duration });
+    t += duration + o.restMs;
   }
-  return moving;
+  return out;
 }
 
-/** Snap every particle onto its target - the failsafe and the skip path. */
-export function settleBurst(particles: BurstParticle[]) {
-  for (const p of particles) {
-    p.x = p.targetX;
-    p.y = p.targetY;
-    p.angle = 0;
-    p.vx = 0;
-    p.vy = 0;
-    p.settled = true;
-  }
+/** Eased 0..1 wipe progress for one line. */
+export function sweepProgress(elapsedMs: number, line: SweepLine): number {
+  const k = Math.min(1, Math.max(0, (elapsedMs - line.startMs) / line.durationMs));
+  return 0.5 - Math.cos(k * Math.PI) / 2;
+}
+
+/* ── Variant B: ink develop ── */
+
+export const DEVELOP = {
+  /** How faint the undeveloped page reads. */
+  ghostAlpha: 0.07,
+  /** The ghost breathes in during the caret's settling blink. */
+  ghostInMs: 220,
+  /** The front leaves the greeting's baseline once the ghost is in. */
+  frontDelayMs: 260,
+  /** Decelerating sweep from the baseline to the bottom of the viewport. */
+  frontMs: 1150,
+  /** Soft luminance edge between full ink and ghost. */
+  featherPx: 120,
+  /** The caret, with nothing left to write, fades on the front's tail. */
+  caretFadeMs: 450,
+};
+
+/** Ghost ink density at t ms after the develop phase starts. */
+export function developGhostAlpha(elapsedMs: number, o: typeof DEVELOP = DEVELOP): number {
+  return Math.min(1, Math.max(0, elapsedMs / o.ghostInMs)) * o.ghostAlpha;
+}
+
+/**
+ * 0..1 travel of the develop front: leaves at typing energy, decelerates on a
+ * long ease-out tail (cubic).
+ */
+export function developFrontProgress(elapsedMs: number, o: typeof DEVELOP = DEVELOP): number {
+  const k = Math.min(1, Math.max(0, (elapsedMs - o.frontDelayMs) / o.frontMs));
+  return 1 - Math.pow(1 - k, 3);
 }
