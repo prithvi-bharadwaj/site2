@@ -246,8 +246,14 @@ export function IntroReveal({ onHandoff, onDone }: IntroRevealProps) {
       ctx!.setTransform(dpr, 0, 0, dpr, 0, 0);
       ctx!.clearRect(0, 0, window.innerWidth, window.innerHeight);
       const t = now - phaseStart;
+      // The fade happens on the canvas ELEMENT, not per draw call: the frame
+      // stays fully rendered and the compositor crossfades it as one layer
+      // onto the identical page below. Fading bg and glyphs separately made
+      // the text contrast dip mid-fade (bg and ink blend with the page
+      // independently under source-over).
       const fade = phase === "fade" ? Math.max(0, 1 - t / FADE_MS) : 1;
-      ctx!.globalAlpha = fade;
+      canvas!.style.opacity = String(fade);
+      ctx!.globalAlpha = 1;
       ctx!.fillStyle = bg;
       ctx!.fillRect(0, 0, window.innerWidth, window.innerHeight);
       if (phase === "boot") return;
@@ -255,7 +261,7 @@ export function IntroReveal({ onHandoff, onDone }: IntroRevealProps) {
       const typeElapsed = phase === "type" ? t - PRE_TYPE_MS : Infinity;
       for (let i = 0; i < greeting.length; i++) {
         if (schedule[i] > typeElapsed) break;
-        drawGlyph(greeting[i], greeting[i].alpha * fade);
+        drawGlyph(greeting[i], greeting[i].alpha);
       }
 
       if (phase === "type") {
@@ -266,11 +272,8 @@ export function IntroReveal({ onHandoff, onDone }: IntroRevealProps) {
         drawScramble(t);
         drawCaretAt(now, greetingCaret, Math.max(0, 1 - t / SCRAMBLE.caretFadeMs), true);
       } else if (phase === "fade") {
-        // Faded with the canvas: the real page underneath is identical, and
-        // full-alpha copies stacked on it would read darker mid-crossfade.
-        for (const g of field) drawGlyph(g, g.alpha * fade);
+        for (const g of field) drawGlyph(g, g.alpha);
       }
-      ctx!.globalAlpha = 1;
     }
 
     /* ── the timeline ── */
