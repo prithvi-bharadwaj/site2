@@ -62,8 +62,8 @@ export default function RootLayout({
               "@type": "Person",
               name: "Prithvi",
               url: "https://prithvibharadwaj.com",
-              jobTitle: "CTO at roam",
-              description: "Developer, creator, explorer.",
+              description:
+                "Builder. Previously CTO of Applied Reality (Roam), an applied AI lab in SF.",
               sameAs: [],
             }),
           }}
