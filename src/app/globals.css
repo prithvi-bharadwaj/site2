@@ -1890,10 +1890,11 @@ html.weighted-cursor * {
    their dark outlines legible over same-color regions in dark mode. */
 .weighted-cursor-dart .weighted-cursor-icon {
   position: absolute;
-  left: -20px;
-  top: -20px;
-  width: 40px;
-  height: 40px;
+  left: -10px;
+  top: -10px;
+  width: 20px;
+  height: 20px;
+  opacity: 0.9;
   filter: drop-shadow(0 0 2px var(--bg));
 }
 
