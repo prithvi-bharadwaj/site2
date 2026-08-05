@@ -208,7 +208,7 @@ export function LinkList({ label, items, columns = 1, variant = "compact", point
               className={`${variant === "prose" ? "" : "hover-underline "}text-(--ink)/70 group-hover:text-(--ink) transition-colors duration-200 inline leading-snug`}
             >
               {pointer && (
-                <span className="text-(--ink)/30 mr-1.5">·</span>
+                <span className="inline-block w-[1em] text-(--ink)/30">·</span>
               )}
               {item.favicon && (
                 <img

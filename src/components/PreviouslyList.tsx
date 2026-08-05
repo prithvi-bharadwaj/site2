@@ -128,11 +128,13 @@ export function PreviouslyList({ label, items, proofKind = "proof", analyticsLab
                 className={expandable ? "group cursor-pointer" : ""}
                 style={{ display: "inline" }}
               >
+                {/* Fixed 1em bullet fills the bullet-hang exactly, so first
+                    lines align with wrapped lines and with every other list. */}
                 <span
                   data-repel
                   title={verified ? "proof inspected" : undefined}
-                  className={`inline-block mr-2 ${verified ? "text-(--ink)/75" : "text-(--ink)/30"}`}
-                  style={{ transition: `transform 180ms ${EASE}, color 400ms` }}
+                  className="inline-block w-[1em] text-(--ink)/30"
+                  style={{ transition: `transform 180ms ${EASE}` }}
                 >
                   {verified ? "•" : "·"}
                 </span>
