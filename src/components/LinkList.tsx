@@ -201,15 +201,13 @@ export function LinkList({ label, items, columns = 1, variant = "compact", point
             (item.expandFavicons && item.expandFavicons.length > 0);
           const isOpen = open === i;
 
-          const titleNode = (
-            <span
-              // No hover-underline in prose (lore): the sweep stays put while
-              // wiggling words displace, which reads as a broken underline.
-              className={`${variant === "prose" ? "" : "hover-underline "}text-(--ink)/70 group-hover:text-(--ink) transition-colors duration-200 inline leading-snug`}
-            >
-              {pointer && (
-                <span className="inline-block w-[1em] text-(--ink)/30">·</span>
-              )}
+          // Underlined (compact) titles wiggle as ONE unit with the underline
+          // riding on the moving element - per-word wiggle under a static
+          // underline reads as the text breaking away from it. Prose keeps
+          // per-word wiggle and no underline.
+          const unitTitle = variant !== "prose";
+          const titleInner = (
+            <>
               {item.favicon && (
                 <img
                   src={item.favicon}
@@ -219,7 +217,9 @@ export function LinkList({ label, items, columns = 1, variant = "compact", point
                   height={11}
                 />
               )}
-              {renderTitleWithBrands(item.title, item.brandLinks, item.inlineLinks, xpKind)}
+              {unitTitle && !item.brandLinks?.length && !item.inlineLinks?.length
+                ? item.title
+                : renderTitleWithBrands(item.title, item.brandLinks, item.inlineLinks, xpKind)}
               {item.trailingFavicons && item.trailingFavicons.length > 0 && (
                 <span className="inline-flex items-center gap-1 ml-1.5 align-[-0.15em]">
                   {item.trailingFavicons.map((src) => (
@@ -233,6 +233,20 @@ export function LinkList({ label, items, columns = 1, variant = "compact", point
                     />
                   ))}
                 </span>
+              )}
+            </>
+          );
+          const titleNode = (
+            <span className="text-(--ink)/70 group-hover:text-(--ink) transition-colors duration-200 inline leading-snug">
+              {pointer && (
+                <span className="inline-block w-[1em] text-(--ink)/30">·</span>
+              )}
+              {unitTitle ? (
+                <span data-repel className="wl-unit hover-underline inline-block">
+                  {titleInner}
+                </span>
+              ) : (
+                titleInner
               )}
             </span>
           );

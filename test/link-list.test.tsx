@@ -16,7 +16,7 @@ describe("LinkList", () => {
     const detail = screen.getByText("The backstory.").closest(".work-detail");
     expect(detail).toHaveStyle({ maxHeight: "0" });
 
-    fireEvent.click(screen.getByLabelText("First cheque from Google at 13"));
+    fireEvent.click(screen.getByText("First cheque from Google at 13"));
     expect(detail).toHaveStyle({ maxHeight: "240px" });
   });
 
@@ -37,7 +37,7 @@ describe("LinkList", () => {
       />
     );
 
-    const item = screen.getByLabelText("First cheque from Google at 13").closest("div");
+    const item = screen.getByText("First cheque from Google at 13").closest("div");
     fireEvent.pointerEnter(item!, { pointerType: "mouse", clientX: 40, clientY: 50 });
 
     expect(shownSrc).toBe("/proof/youtube-password-video.png");
@@ -62,7 +62,7 @@ describe("LinkList", () => {
       />
     );
 
-    const title = screen.getByLabelText("First cheque from Google at 13");
+    const title = screen.getByText("First cheque from Google at 13");
     const item = title.closest("div");
 
     fireEvent.pointerEnter(item!, { pointerType: "mouse", clientX: 40, clientY: 50 });
