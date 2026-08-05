@@ -12,7 +12,10 @@ import { useSyncExternalStore } from "react";
 import type { HoverCardMedia } from "./hover-card-bus";
 import { captureAnalyticsEvent, trackInteraction } from "./analytics";
 
-const STORAGE_KEY = "prithvi-xp-v1";
+// v2: the content rework removed proofs/lore that v1 ledgers still hold as
+// earned keys - stale ids would overfill progress counts ("proof 8/5") and
+// unlock achievements for receipts that no longer exist. Fresh slate.
+const STORAGE_KEY = "prithvi-xp-v2";
 const FX_EVENT = "xp:fx";
 const TOAST_EVENT = "xp:toast";
 

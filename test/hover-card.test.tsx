@@ -86,7 +86,7 @@ describe("HoverCard", () => {
     render(<HoverCard />);
     const media = { type: "image" as const, src: "/x.png", caption: "x.com" };
     const earned = () =>
-      JSON.parse(localStorage.getItem("prithvi-xp-v1") ?? '{"earned":{}}').earned;
+      JSON.parse(localStorage.getItem("prithvi-xp-v2") ?? '{"earned":{}}').earned;
 
     act(() => {
       emitPin({ media, href: "https://x.com", inspectId: "proof:/x.png", x: 100, y: 100 });
