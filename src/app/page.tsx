@@ -19,7 +19,7 @@ import { ExitGate } from "@/components/ExitGate";
 import { PhysicsLayer } from "@/components/PhysicsLayer";
 import { CosmicWind } from "@/components/CosmicWind";
 import { ControlPanel } from "@/components/ControlPanel";
-import { IntroReveal, type IntroVariant } from "@/components/IntroReveal";
+import { IntroReveal } from "@/components/IntroReveal";
 import { ReplayIntro } from "@/components/ReplayIntro";
 import { CLICK_XP, SOCIAL_UNLOCK_XP, award, emitXpToast, useXp } from "@/lib/xp";
 import { emitShow, emitMove, emitHide } from "@/lib/hover-card-bus";
@@ -48,28 +48,15 @@ const INTRO_KEY = "prithvi-intro-v1";
  */
 type RevealState = "intro" | "handoff" | "done" | "off";
 
-interface IntroConfig {
-  state: RevealState;
-  variant: IntroVariant;
-}
-
-function initialIntro(): IntroConfig {
-  if (typeof window === "undefined") return { state: "off", variant: "a" };
+function initialReveal(): RevealState {
+  if (typeof window === "undefined") return "off";
   try {
-    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
-      return { state: "off", variant: "a" };
-    }
-    // ?intro replays the show on demand; ?intro=b picks the develop variant.
-    const param = new URLSearchParams(window.location.search).get("intro");
-    if (param !== null) {
-      return { state: "intro", variant: param === "b" ? "b" : "a" };
-    }
-    return {
-      state: sessionStorage.getItem(INTRO_KEY) ? "off" : "intro",
-      variant: "a",
-    };
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return "off";
+    // ?intro replays the show on demand.
+    if (new URLSearchParams(window.location.search).has("intro")) return "intro";
+    return sessionStorage.getItem(INTRO_KEY) ? "off" : "intro";
   } catch {
-    return { state: "off", variant: "a" };
+    return "off";
   }
 }
 
@@ -126,8 +113,7 @@ export default function Home() {
   const [editMode, setEditMode] = useState(false);
   const [content, setContent] = useState<Content>(DEFAULTS);
   const [hydrated, setHydrated] = useState(false);
-  const [intro] = useState<IntroConfig>(initialIntro);
-  const [reveal, setReveal] = useState<RevealState>(intro.state);
+  const [reveal, setReveal] = useState<RevealState>(initialReveal);
   const xp = useXp();
 
   const revealHandoff = useCallback(() => setReveal("handoff"), []);
@@ -223,17 +209,12 @@ export default function Home() {
     <main
       className="relative min-h-screen"
       data-analytics-section="home"
-      // Variant B has no stagger - its develop front is the whole reveal.
-      data-reveal={
-        intro.variant === "a" && (reveal === "handoff" || reveal === "done")
-          ? "in"
-          : undefined
-      }
+      data-reveal={reveal === "handoff" || reveal === "done" ? "in" : undefined}
     >
       {(reveal === "intro" || reveal === "handoff") && (
-        <IntroReveal variant={intro.variant} onHandoff={revealHandoff} onDone={revealDone} />
+        <IntroReveal onHandoff={revealHandoff} onDone={revealDone} />
       )}
-      <ReplayIntro played={intro.variant} />
+      <ReplayIntro />
       <CosmicWind />
       <CursorTrail />
       <XpFx />

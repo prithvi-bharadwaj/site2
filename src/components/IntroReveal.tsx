@@ -5,33 +5,22 @@ import { harvestGlyphs } from "@/lib/glyph-harvest";
 import type { GlyphSource } from "@/lib/letter-physics";
 import {
   buildTypingSchedule,
-  groupLines,
-  buildSweepSchedule,
-  sweepProgress,
-  developGhostAlpha,
-  developFrontProgress,
-  SWEEP,
-  DEVELOP,
-  type SweepLine,
+  groupWords,
+  buildScrambleSchedule,
+  scrambleChar,
+  SCRAMBLE,
 } from "@/lib/intro-reveal";
 import { trackInteraction } from "@/lib/analytics";
 
 /**
  * First-visit reveal. The page mounts normally underneath; this canvas covers
- * the viewport with the plain page background and the greeting types itself
- * out. What happens next depends on the variant:
- *
- * - "a" (carriage return): the caret that typed the greeting drops to the bio
- *   and keeps writing - each wrapped line wipes in left-to-right behind the
- *   moving caret, every line a touch faster than the last, then the caret
- *   blinks once and fades while the canvas hands off pixel-for-pixel to the
- *   live DOM and the sections stagger in (main[data-reveal="in"]).
- *
- * - "b" (ink develop): the canvas goes transparent the moment typing settles,
- *   and the live page underneath - masked down to a barely-there ghost below
- *   the greeting's baseline - develops to full ink behind a soft front that
- *   sweeps down the viewport and decelerates. Nothing moves; only ink density
- *   changes, so the handoff is the reveal itself.
+ * the viewport with the plain page background and re-enacts the site coming
+ * into being: the greeting types itself out, then the bio rises from nothing
+ * as a churning field of ASCII static - every character slot cycling random
+ * letters, digits and symbols in place - and resolves word by word, in
+ * reading order, into the real text. The canvas then fades, handing off
+ * pixel-for-pixel to the live DOM while the rest of the page staggers in
+ * (see main[data-reveal="in"] in globals.css).
  *
  * Every glyph is harvested from the rendered hero via Range rects, so the
  * copy sits exactly where the browser drew the original - same trick as the
@@ -49,9 +38,7 @@ const BOOT_TIMEOUT_MS = 4000;
 /** Ignore resizes smaller than this - scrollbar and mobile-toolbar noise. */
 const RESIZE_TOLERANCE = 48;
 
-export type IntroVariant = "a" | "b";
-
-type Phase = "boot" | "type" | "settle" | "travel" | "sweep" | "develop" | "fade";
+type Phase = "boot" | "type" | "settle" | "scramble" | "fade";
 
 interface CaretBox {
   x: number;
@@ -60,23 +47,14 @@ interface CaretBox {
   color: string;
 }
 
-interface BioLine {
-  glyphs: GlyphSource[];
-  left: number;
-  right: number;
-  top: number;
-  bottom: number;
-}
-
 interface IntroRevealProps {
-  variant: IntroVariant;
-  /** The page underneath starts its own reveal (variant A's stagger). */
+  /** Fade begins: the page underneath starts its staggered reveal. */
   onHandoff: () => void;
-  /** All done (or skipped): unmount the overlay. */
+  /** Fade finished (or skipped): unmount the overlay. */
   onDone: () => void;
 }
 
-export function IntroReveal({ variant, onHandoff, onDone }: IntroRevealProps) {
+export function IntroReveal({ onHandoff, onDone }: IntroRevealProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const handoffRef = useRef(onHandoff);
   const doneRef = useRef(onDone);
@@ -91,22 +69,12 @@ export function IntroReveal({ variant, onHandoff, onDone }: IntroRevealProps) {
     let raf = 0;
     let finished = false;
     let handedOff = false;
-    /** Variant B masks the live page; always undo it on the way out. */
-    let maskEl: HTMLElement | null = null;
-
-    function clearMask() {
-      if (!maskEl) return;
-      maskEl.style.maskImage = "";
-      maskEl.style.webkitMaskImage = "";
-      maskEl = null;
-    }
 
     function finish(skipped: boolean) {
       if (finished) return;
       finished = true;
       cancelAnimationFrame(raf);
-      clearMask();
-      trackInteraction("intro_reveal_finished", { skipped, variant });
+      trackInteraction("intro_reveal_finished", { skipped });
       if (!handedOff) handoffRef.current();
       doneRef.current();
     }
@@ -127,15 +95,11 @@ export function IntroReveal({ variant, onHandoff, onDone }: IntroRevealProps) {
     let bio: GlyphSource[] = [];
     let schedule: number[] = [];
     let typingDone = 0;
-    let lines: BioLine[] = [];
-    let sweeps: SweepLine[] = [];
-    let sweepTotal = 0;
-    /** Where the caret rests after the greeting, and after each hop. */
+    let words: number[][] = [];
+    let lockAt: number[] = [];
+    let scrambleTotal = 0;
     let greetingCaret: CaretBox = { x: 0, baseline: 0, ascent: 0, color: "#000" };
-    let bioCaret: CaretBox = { x: 0, baseline: 0, ascent: 0, color: "#000" };
-    /** Variant B's mask geometry, in the masked element's local coords. */
-    let frontStartY = 0;
-    let frontEndY = 0;
+    const widthCache = new Map<string, number>();
 
     function sizeCanvas() {
       dpr = Math.min(window.devicePixelRatio || 1, 2);
@@ -192,29 +156,11 @@ export function IntroReveal({ variant, onHandoff, onDone }: IntroRevealProps) {
         color: last.color,
       };
 
-      lines = groupLines(bio).map((idxs) => {
-        const gs = idxs.map((i) => bio[i]);
-        return {
-          glyphs: gs,
-          left: Math.min(...gs.map((g) => g.x)),
-          right: Math.max(...gs.map((g) => g.x + g.w)),
-          top: Math.min(...gs.map((g) => g.y)),
-          bottom: Math.max(...gs.map((g) => g.y + g.h)),
-        };
-      });
-      sweeps = buildSweepSchedule(lines.map((l) => l.right - l.left));
-      sweepTotal = sweeps.length
-        ? sweeps[sweeps.length - 1].startMs + sweeps[sweeps.length - 1].durationMs
+      words = groupWords(bio);
+      lockAt = buildScrambleSchedule(words.length);
+      scrambleTotal = lockAt.length
+        ? lockAt[lockAt.length - 1] + SCRAMBLE.tailMs
         : 0;
-      if (lines.length > 0) {
-        const first = lines[0].glyphs[0];
-        bioCaret = {
-          x: first.x - 2,
-          baseline: first.y + first.ascent,
-          ascent: first.ascent,
-          color: first.color,
-        };
-      }
 
       bg = getComputedStyle(document.documentElement).backgroundColor;
       return true;
@@ -223,37 +169,6 @@ export function IntroReveal({ variant, onHandoff, onDone }: IntroRevealProps) {
     function enter(next: Phase, now: number) {
       phase = next;
       phaseStart = now;
-    }
-
-    /* ── variant B: the mask over the live page ── */
-
-    function beginDevelop(now: number) {
-      maskEl = document.querySelector<HTMLElement>("[data-physics-content]");
-      if (!maskEl) {
-        // Nothing to mask - just show the page.
-        finish(true);
-        return;
-      }
-      const rect = maskEl.getBoundingClientRect();
-      const greetingBottom = Math.max(...greeting.map((g) => g.y + g.h));
-      frontStartY = greetingBottom + 6 - rect.top;
-      frontEndY = window.innerHeight - rect.top;
-      applyMask(0);
-      // The page underneath is now the show; the canvas keeps only the caret.
-      canvas!.style.background = "transparent";
-      handedOff = true;
-      handoffRef.current();
-      enter("develop", now);
-    }
-
-    function applyMask(elapsed: number) {
-      if (!maskEl) return;
-      const ghost = developGhostAlpha(elapsed);
-      const p = developFrontProgress(elapsed);
-      const frontY = frontStartY + p * (frontEndY + DEVELOP.featherPx - frontStartY);
-      const gradient = `linear-gradient(to bottom, rgb(0 0 0) ${frontY}px, rgb(0 0 0 / ${ghost}) ${frontY + DEVELOP.featherPx}px)`;
-      maskEl.style.maskImage = gradient;
-      maskEl.style.webkitMaskImage = gradient;
     }
 
     function beginFade(now: number) {
@@ -271,6 +186,20 @@ export function IntroReveal({ variant, onHandoff, onDone }: IntroRevealProps) {
       ctx!.fillStyle = g.color;
       ctx!.globalAlpha = alpha;
       ctx!.fillText(g.char, g.x, g.y + g.ascent);
+    }
+
+    /** Static: a rolled character centered in the real glyph's slot. */
+    function drawStatic(g: GlyphSource, ch: string, alpha: number) {
+      ctx!.font = g.font;
+      ctx!.fillStyle = g.color;
+      ctx!.globalAlpha = alpha;
+      const key = `${g.font}|${ch}`;
+      let w = widthCache.get(key);
+      if (w === undefined) {
+        w = ctx!.measureText(ch).width;
+        widthCache.set(key, w);
+      }
+      ctx!.fillText(ch, g.x + (g.w - w) / 2, g.y + g.ascent);
     }
 
     function drawCaretAt(now: number, c: CaretBox, alpha: number, blink: boolean) {
@@ -303,70 +232,27 @@ export function IntroReveal({ variant, onHandoff, onDone }: IntroRevealProps) {
       );
     }
 
-    /** Lines fully behind the sweep, plus the wipe on the current line. */
-    function drawSweptBio(elapsed: number, fadeMul: number) {
-      for (let i = 0; i < lines.length; i++) {
-        const line = lines[i];
-        const s = sweeps[i];
-        if (elapsed >= s.startMs + s.durationMs) {
-          for (const g of line.glyphs) drawGlyph(g, g.alpha * fadeMul);
+    function drawScramble(elapsed: number) {
+      const fieldFade = Math.min(1, elapsed / SCRAMBLE.fadeInMs);
+      for (let w = 0; w < words.length; w++) {
+        if (elapsed >= lockAt[w]) {
+          for (const i of words[w]) drawGlyph(bio[i], bio[i].alpha);
           continue;
         }
-        if (elapsed < s.startMs) break;
-        const p = sweepProgress(elapsed, s);
-        const edgeX = line.left + p * (line.right - line.left);
-        ctx!.save();
-        ctx!.beginPath();
-        ctx!.rect(line.left - 2, line.top - 2, edgeX - (line.left - 2), line.bottom - line.top + 4);
-        ctx!.clip();
-        for (const g of line.glyphs) {
-          if (g.x > edgeX) break;
-          drawGlyph(g, g.alpha * fadeMul);
-        }
-        ctx!.restore();
-        // Soft ink edge: background bleeds back over the last ~1ch.
-        const feather = ctx!.createLinearGradient(edgeX - SWEEP.featherPx, 0, edgeX, 0);
-        feather.addColorStop(0, "transparent");
-        feather.addColorStop(1, bg);
-        ctx!.globalAlpha = fadeMul;
-        ctx!.fillStyle = feather;
-        ctx!.fillRect(edgeX - SWEEP.featherPx, line.top - 2, SWEEP.featherPx, line.bottom - line.top + 4);
-        break;
-      }
-    }
-
-    /** Where the sweep's writing edge is, for the caret to ride. */
-    function sweepCaret(elapsed: number): CaretBox {
-      for (let i = 0; i < lines.length; i++) {
-        const s = sweeps[i];
-        const line = lines[i];
-        const g = line.glyphs[0];
-        if (elapsed < s.startMs + s.durationMs || i === lines.length - 1) {
-          const p = sweepProgress(elapsed, s);
-          return {
-            x: Math.min(line.left + p * (line.right - line.left), line.right) + 2,
-            baseline: g.y + g.ascent,
-            ascent: g.ascent,
-            color: g.color,
-          };
+        for (const i of words[w]) {
+          const g = bio[i];
+          // Slots roll out of phase with each other, so the field shimmers
+          // instead of strobing in unison.
+          const tick = Math.floor((elapsed + i * 37) / SCRAMBLE.churnMs);
+          drawStatic(g, scrambleChar(i, tick), g.alpha * SCRAMBLE.fieldAlpha * fieldFade);
         }
       }
-      return bioCaret;
     }
 
     function draw(now: number) {
       ctx!.setTransform(dpr, 0, 0, dpr, 0, 0);
       ctx!.clearRect(0, 0, window.innerWidth, window.innerHeight);
       const t = now - phaseStart;
-
-      if (phase === "develop") {
-        // The live page is the picture; only the caret remains, fading out.
-        const alpha = Math.max(0, 1 - t / DEVELOP.caretFadeMs);
-        drawCaretAt(now, greetingCaret, alpha, true);
-        ctx!.globalAlpha = 1;
-        return;
-      }
-
       const fade = phase === "fade" ? Math.max(0, 1 - t / FADE_MS) : 1;
       ctx!.globalAlpha = fade;
       ctx!.fillStyle = bg;
@@ -383,25 +269,13 @@ export function IntroReveal({ variant, onHandoff, onDone }: IntroRevealProps) {
         drawTypingCaret(now, typeElapsed);
       } else if (phase === "settle") {
         drawCaretAt(now, greetingCaret, 1, true);
-      } else if (phase === "travel") {
-        // Near-straight hop; the caret keeps its size and snaps on landing.
-        const k = Math.min(1, t / SWEEP.travelMs);
-        const e = 0.5 - Math.cos(k * Math.PI) / 2;
-        drawCaretAt(now, {
-          x: greetingCaret.x + (bioCaret.x - greetingCaret.x) * e,
-          baseline: greetingCaret.baseline + (bioCaret.baseline - greetingCaret.baseline) * e,
-          ascent: greetingCaret.ascent,
-          color: greetingCaret.color,
-        }, 1, false);
-      } else if (phase === "sweep") {
-        drawSweptBio(t, 1);
-        drawCaretAt(now, sweepCaret(t), 1, false);
+      } else if (phase === "scramble") {
+        drawScramble(t);
+        drawCaretAt(now, greetingCaret, Math.max(0, 1 - t / SCRAMBLE.caretFadeMs), true);
       } else if (phase === "fade") {
         // Faded with the canvas: the real text underneath is identical, and
         // full-alpha copies stacked on it would read darker mid-crossfade.
-        drawSweptBio(Infinity, fade);
-        const caretAlpha = Math.max(0, 1 - t / SWEEP.caretExitMs);
-        drawCaretAt(now, sweepCaret(Infinity), caretAlpha * fade, true);
+        for (const g of bio) drawGlyph(g, g.alpha * fade);
       }
       ctx!.globalAlpha = 1;
     }
@@ -423,21 +297,11 @@ export function IntroReveal({ variant, onHandoff, onDone }: IntroRevealProps) {
         if (t - PRE_TYPE_MS > typingDone) enter("settle", now);
       } else if (phase === "settle") {
         if (t >= SETTLE_MS) {
-          if (variant === "b") beginDevelop(now);
-          else if (lines.length > 0) enter("travel", now);
+          if (words.length > 0) enter("scramble", now);
           else beginFade(now);
         }
-      } else if (phase === "travel") {
-        if (t >= SWEEP.travelMs) enter("sweep", now);
-      } else if (phase === "sweep") {
-        if (t >= sweepTotal) beginFade(now);
-      } else if (phase === "develop") {
-        applyMask(t);
-        if (t >= DEVELOP.frontDelayMs + DEVELOP.frontMs) {
-          clearMask();
-          finish(false);
-          return;
-        }
+      } else if (phase === "scramble") {
+        if (t >= scrambleTotal) beginFade(now);
       } else if (phase === "fade") {
         if (t >= FADE_MS) {
           finish(false);
@@ -482,14 +346,13 @@ export function IntroReveal({ variant, onHandoff, onDone }: IntroRevealProps) {
     return () => {
       finished = true;
       cancelAnimationFrame(raf);
-      clearMask();
       document.documentElement.style.overflow = "";
       canvas.removeEventListener("pointerdown", skip);
       window.removeEventListener("keydown", skip);
       window.removeEventListener("wheel", skip);
       window.removeEventListener("resize", onResize);
     };
-  }, [variant]);
+  }, []);
 
   return (
     <canvas

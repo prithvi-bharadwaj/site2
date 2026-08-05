@@ -1,8 +1,8 @@
 /**
  * Pure logic for the first-visit intro: the typing schedule for the greeting,
- * plus the two second acts - variant A's carriage-return line sweeps and
- * variant B's ink-develop front. No DOM access - the component harvests glyph
- * boxes, feeds them in, and draws (or masks) what comes back.
+ * plus the second act - the bio fades in as a churning scramble of ASCII and
+ * resolves word by word into the real text. No DOM access - the component
+ * harvests glyph boxes, feeds them in, and draws what comes back.
  */
 
 export interface IntroGlyphBox {
@@ -42,98 +42,71 @@ export function buildTypingSchedule(
   return times;
 }
 
-/* ── Variant A: carriage return ── */
+/* ── The scramble ── */
+
+/** Printable ASCII, no space - the static the words resolve out of. */
+export const SCRAMBLE_CHARS =
+  "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789" +
+  "!\"#$%&'()*+,-./:;<=>?@[\\]^_`{|}~";
+
+export const SCRAMBLE = {
+  /** The field rises from nothing while already churning. */
+  fadeInMs: 380,
+  /** Pure static before the first word commits. */
+  holdMs: 220,
+  /** First word locks to last word locks. */
+  resolveSpanMs: 1400,
+  /** How often each slot re-rolls its character. */
+  churnMs: 70,
+  /** Unresolved static sits below the real text's ink weight. */
+  fieldAlpha: 0.55,
+  /** The caret bows out as the static rises. */
+  caretFadeMs: 320,
+  /** Beat after the last word locks before the canvas hands off. */
+  tailMs: 160,
+};
 
 /**
- * Group glyph boxes (already sorted by y, then x) into visual lines. Wrapped
- * text is one DOM node, so line breaks only exist as jumps in glyph y.
+ * Group glyph boxes (already sorted by y, then x) into words. Spaces are
+ * never harvested, so words are runs of boxes on one line separated by gaps
+ * wider than kerning.
  */
-export function groupLines(boxes: IntroGlyphBox[]): number[][] {
-  const lines: number[][] = [];
-  let lineY = -Infinity;
+export function groupWords(boxes: IntroGlyphBox[]): number[][] {
+  const words: number[][] = [];
   for (let i = 0; i < boxes.length; i++) {
     const b = boxes[i];
-    if (lines.length === 0 || b.y - lineY > b.h * 0.5) {
-      lines.push([i]);
-      lineY = b.y;
+    const prev = boxes[i - 1];
+    const sameLine = prev !== undefined && b.y - prev.y <= b.h * 0.5;
+    const gap = prev === undefined ? Infinity : b.x - (prev.x + prev.w);
+    if (sameLine && gap <= b.h * 0.15) {
+      words[words.length - 1].push(i);
     } else {
-      lines[lines.length - 1].push(i);
+      words.push([i]);
     }
   }
-  return lines;
+  return words;
 }
 
-export const SWEEP = {
-  /** Caret hop from the greeting's period to the bio's first line. */
-  travelMs: 150,
-  /** Rest beat between lines - an echo of the typing's comma cadence. */
-  restMs: 120,
-  /** First line's wipe speed; the writing turns fluent from there. */
-  baseSpeedPxMs: 1.7,
-  /** Each line sweeps this much faster than the one before. */
-  accelerando: 1.28,
-  minMs: 170,
-  maxMs: 380,
-  /** Soft ink edge riding ahead of the wipe, roughly 1ch. */
-  featherPx: 14,
-  /** The writer steps away: one blink, then the page takes over. */
-  caretExitMs: 350,
-};
-
-export interface SweepLine {
-  startMs: number;
-  durationMs: number;
-}
-
-/** When each line's wipe starts and how long it runs, from sweep start. */
-export function buildSweepSchedule(
-  lineWidths: number[],
-  o: typeof SWEEP = SWEEP
-): SweepLine[] {
-  const out: SweepLine[] = [];
-  let t = 0;
-  for (let i = 0; i < lineWidths.length; i++) {
-    const speed = o.baseSpeedPxMs * Math.pow(o.accelerando, i);
-    const duration = Math.min(o.maxMs, Math.max(o.minMs, lineWidths[i] / speed));
-    out.push({ startMs: t, durationMs: duration });
-    t += duration + o.restMs;
-  }
-  return out;
-}
-
-/** Eased 0..1 wipe progress for one line. */
-export function sweepProgress(elapsedMs: number, line: SweepLine): number {
-  const k = Math.min(1, Math.max(0, (elapsedMs - line.startMs) / line.durationMs));
-  return 0.5 - Math.cos(k * Math.PI) / 2;
-}
-
-/* ── Variant B: ink develop ── */
-
-export const DEVELOP = {
-  /** How faint the undeveloped page reads. */
-  ghostAlpha: 0.07,
-  /** The ghost breathes in during the caret's settling blink. */
-  ghostInMs: 220,
-  /** The front leaves the greeting's baseline once the ghost is in. */
-  frontDelayMs: 260,
-  /** Decelerating sweep from the baseline to the bottom of the viewport. */
-  frontMs: 1150,
-  /** Soft luminance edge between full ink and ghost. */
-  featherPx: 120,
-  /** The caret, with nothing left to write, fades on the front's tail. */
-  caretFadeMs: 450,
-};
-
-/** Ghost ink density at t ms after the develop phase starts. */
-export function developGhostAlpha(elapsedMs: number, o: typeof DEVELOP = DEVELOP): number {
-  return Math.min(1, Math.max(0, elapsedMs / o.ghostInMs)) * o.ghostAlpha;
+/** When each word locks to its real text, in ms from scramble start. */
+export function buildScrambleSchedule(
+  wordCount: number,
+  o: typeof SCRAMBLE = SCRAMBLE
+): number[] {
+  const begin = o.fadeInMs + o.holdMs;
+  const step = wordCount > 0 ? o.resolveSpanMs / wordCount : 0;
+  return Array.from({ length: wordCount }, (_, i) => begin + step * (i + 1));
 }
 
 /**
- * 0..1 travel of the develop front: leaves at typing energy, decelerates on a
- * long ease-out tail (cubic).
+ * The character a slot shows on a given churn tick. Deterministic so frames
+ * are reproducible: same slot + tick always rolls the same character.
  */
-export function developFrontProgress(elapsedMs: number, o: typeof DEVELOP = DEVELOP): number {
-  const k = Math.min(1, Math.max(0, (elapsedMs - o.frontDelayMs) / o.frontMs));
-  return 1 - Math.pow(1 - k, 3);
+export function scrambleChar(
+  slot: number,
+  tick: number,
+  chars: string = SCRAMBLE_CHARS
+): string {
+  let h = Math.imul(slot + 1, 2654435761) ^ Math.imul(tick + 1, 40503);
+  h = (h ^ (h >>> 13)) >>> 0;
+  return chars[h % chars.length];
 }
