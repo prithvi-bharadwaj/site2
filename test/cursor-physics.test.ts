@@ -4,6 +4,8 @@ import {
   FLICK_KICK,
   isFlick,
   MAX_DT,
+  PENDULUM_DAMPING,
+  PENDULUM_STIFFNESS,
   shortestAngleDelta,
   stepAngleSpring,
   type AngleSpring,
@@ -104,6 +106,25 @@ describe("stepAngleSpring", () => {
       total += spring.angle - before;
     }
     expect(Math.abs(total)).toBeGreaterThan(2 * Math.PI);
+  });
+
+  it("pendulum constants give a slow return with diminishing swings", () => {
+    const spring: AngleSpring = { angle: 2, velocity: 0 };
+    let crossings = 0;
+    let prevSign = Math.sign(spring.angle);
+    for (let i = 0; i < 600; i++) {
+      stepAngleSpring(spring, 0, DT, PENDULUM_STIFFNESS, PENDULUM_DAMPING);
+      const sign = Math.sign(spring.angle);
+      if (sign !== 0 && sign !== prevSign) {
+        crossings++;
+        prevSign = sign;
+      }
+      // Deliberate, not snappy: barely under way 1/6s in (taut constants
+      // would already be past the target by now).
+      if (i === 10) expect(Math.abs(spring.angle)).toBeGreaterThan(1.3);
+    }
+    expect(crossings).toBeGreaterThanOrEqual(2); // swings through like a pendulum
+    expect(spring.angle).toBeCloseTo(0, 1); // and still comes to rest in 10s
   });
 
   it("clamps huge dt so the integration stays stable", () => {

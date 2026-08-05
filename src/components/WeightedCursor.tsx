@@ -5,21 +5,24 @@ import {
   applyFlick,
   FLICK_MEMORY_MS,
   isFlick,
+  PENDULUM_DAMPING,
+  PENDULUM_STIFFNESS,
   shortestAngleDelta,
   stepAngleSpring,
   type AngleSpring,
 } from "@/lib/cursor-physics";
 
 /**
- * Weighted cursor — replaces the native cursor with a small ink dart.
+ * Weighted cursor — replaces the native cursor with a rounded classic arrow.
  *
- * The dart's tip sits exactly on the hotspot (no positional lag), but its
+ * The arrow's tip sits exactly on the hotspot (no positional lag), but its
  * heading is driven by an underdamped angular spring toward the smoothed
  * direction of travel, so it swings past on sharp turns and settles back.
- * Wiggling chains reversals into full spins (see cursor-physics), the mouse
- * going still swings it home to the classic cursor tilt, and speed stretches
- * it slightly along its axis. Skipped on touch devices and when reduced
- * motion is preferred — the native cursor stays.
+ * Wiggling chains reversals into full spins (see cursor-physics), going
+ * still for a beat lets it pendulum home to the classic cursor tilt as if
+ * the tip were a hinge, and speed stretches it slightly along its axis.
+ * Skipped on touch devices and when reduced motion is preferred — the
+ * native cursor stays.
  */
 
 /** Ignore direction changes below this speed (px/s) — near-still jitter. */
@@ -33,8 +36,12 @@ const STRETCH_SPEED = 2500;
 const PRESS_SCALE = 0.8;
 /** At rest, swing back to the classic cursor tilt (up, leaning left). */
 const IDLE_ANGLE = -Math.PI * 0.625; // -112.5°
-/** How long the mouse must be still before the dart returns to idle. */
-const IDLE_DELAY_MS = 350;
+/**
+ * How long the mouse must be still before the arrow swings home. A real
+ * beat: long enough that it never fires during normal reading pauses, short
+ * enough that you catch the pendulum swing when you let go of the mouse.
+ */
+const IDLE_DELAY_MS = 1800;
 
 export function WeightedCursor() {
   const dartRef = useRef<HTMLDivElement>(null);
@@ -86,14 +93,21 @@ export function WeightedCursor() {
       vel.x += (ix - vel.x) * VEL_SMOOTHING;
       vel.y += (iy - vel.y) * VEL_SMOOTHING;
       const speed = Math.hypot(vel.x, vel.y);
+      let idling = false;
       if (speed > MIN_SPEED) {
         targetAngle = Math.atan2(vel.y, vel.x);
         lastActive = now;
       } else if (now - lastActive > IDLE_DELAY_MS) {
         targetAngle = IDLE_ANGLE;
+        idling = true;
       }
 
-      stepAngleSpring(spring, targetAngle, dt);
+      // Steering is taut; the idle return swings on soft pendulum constants.
+      if (idling) {
+        stepAngleSpring(spring, targetAngle, dt, PENDULUM_STIFFNESS, PENDULUM_DAMPING);
+      } else {
+        stepAngleSpring(spring, targetAngle, dt);
+      }
       press += ((pressed ? PRESS_SCALE : 1) - press) * 0.35;
 
       render(speed);
@@ -102,8 +116,8 @@ export function WeightedCursor() {
       // stays alive through the idle delay and the return swing.
       const settled =
         speed < 1 &&
-        Math.abs(spring.velocity) < 0.01 &&
-        Math.abs(shortestAngleDelta(spring.angle, IDLE_ANGLE)) < 0.002 &&
+        Math.abs(spring.velocity) < 0.02 &&
+        Math.abs(shortestAngleDelta(spring.angle, IDLE_ANGLE)) < 0.01 &&
         Math.abs(press - (pressed ? PRESS_SCALE : 1)) < 0.001;
       if (settled) {
         running = false;
@@ -182,13 +196,24 @@ export function WeightedCursor() {
 
   return (
     <div ref={dartRef} className="weighted-cursor-dart" aria-hidden="true">
-      {/* Paper plane pointing +x (angle 0); its nose at (21,10) is offset to the
-          hotspot in CSS. Two wing panels: the bg-colored strokes double as the
-          center fold, and the dimmer lower wing makes spins readable. */}
+      {/* Classic arrow silhouette rotated so it points +x (angle 0); the tip
+          at (21,10) is offset to the hotspot in CSS. Drawn twice on the same
+          path: a fat bg stroke for the outline halo, then a self-colored
+          stroke over the fill — round joins on both soften every corner. */}
       <svg width="22" height="20" viewBox="0 0 22 20">
-        <g stroke="var(--bg)" strokeWidth="1" strokeLinejoin="round">
-          <path d="M21 10 L2 2.6 L7.8 10 Z" fill="currentColor" />
-          <path d="M21 10 L7.8 10 L2 17.4 Z" fill="currentColor" fillOpacity="0.55" />
+        <g strokeLinejoin="round">
+          <path
+            d="M21 10 L5.9 4.2 L8 9.1 L1 9.4 L1.1 12.4 L8.1 12.1 L6.2 17.1 Z"
+            fill="none"
+            stroke="var(--bg)"
+            strokeWidth="3.2"
+          />
+          <path
+            d="M21 10 L5.9 4.2 L8 9.1 L1 9.4 L1.1 12.4 L8.1 12.1 L6.2 17.1 Z"
+            fill="currentColor"
+            stroke="currentColor"
+            strokeWidth="1.5"
+          />
         </g>
       </svg>
     </div>

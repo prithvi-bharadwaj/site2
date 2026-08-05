@@ -17,6 +17,15 @@ export const DAMPING = 18; // rad/s² per rad/s
 export const MAX_DT = 1 / 30;
 
 /**
+ * Idle return runs on much softer constants: the tip becomes a hinge and the
+ * tail falls back to the hanging pose under gravity — slow first swing
+ * (~1s across a wide angle), then a few diminishing pendulum swings.
+ * Damping ratio ≈ 0.29 → each swing carries ~40% of the last.
+ */
+export const PENDULUM_STIFFNESS = 12;
+export const PENDULUM_DAMPING = 2;
+
+/**
  * Momentum steering: a near-reversal (error beyond this) that arrives while
  * the dart is already spinning resolves the long way round, with the spin.
  * Rapid wiggling therefore chains half-turns into continuous full spins
@@ -55,7 +64,13 @@ export function shortestAngleDelta(from: number, to: number): number {
 }
 
 /** Advance the spring toward `target` by `dt` seconds (semi-implicit Euler). */
-export function stepAngleSpring(spring: AngleSpring, target: number, dt: number): void {
+export function stepAngleSpring(
+  spring: AngleSpring,
+  target: number,
+  dt: number,
+  stiffness = STIFFNESS,
+  damping = DAMPING,
+): void {
   const clamped = Math.min(dt, MAX_DT);
   let delta = shortestAngleDelta(spring.angle, target);
   if (
@@ -65,7 +80,7 @@ export function stepAngleSpring(spring: AngleSpring, target: number, dt: number)
   ) {
     delta -= Math.sign(delta) * TAU;
   }
-  spring.velocity += (STIFFNESS * delta - DAMPING * spring.velocity) * clamped;
+  spring.velocity += (stiffness * delta - damping * spring.velocity) * clamped;
   spring.angle += spring.velocity * clamped;
 }
 
