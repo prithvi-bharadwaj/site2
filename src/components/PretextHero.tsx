@@ -252,29 +252,35 @@ export function PretextHero({ greeting, bio, className }: PretextHeroProps) {
         <p>{bio}</p>
       </div>
 
-      {layout?.words.map((word, i) => (
-        <span
-          key={word.key}
-          data-pretext-idx={i}
-          className="pretext-word"
-          style={{
-            position: "absolute",
-            left: word.x,
-            top: word.y,
-            color: word.block.color,
-            opacity: word.block.baseOpacity,
-            fontSize: word.block.type === "heading" ? headingPxRef.current : fontPxRef.current,
-            fontWeight: BODY_FONT_WEIGHT,
-            fontFamily: FONT_FAMILY,
-            whiteSpace: "pre",
-            willChange: coarsePointer ? undefined : "transform, opacity",
-            pointerEvents: "none",
-          }}
-          aria-hidden="true"
-        >
-          {word.text}
-        </span>
-      ))}
+      {layout?.words.map((word, i) => {
+        // The name gets a cursor easter egg; it needs pointer events so the
+        // custom cursor's hover detection can see it (nothing sits beneath).
+        const isName = /prithvi/i.test(word.text);
+        return (
+          <span
+            key={word.key}
+            data-pretext-idx={i}
+            data-cursor={isName ? "earth" : undefined}
+            className="pretext-word"
+            style={{
+              position: "absolute",
+              left: word.x,
+              top: word.y,
+              color: word.block.color,
+              opacity: word.block.baseOpacity,
+              fontSize: word.block.type === "heading" ? headingPxRef.current : fontPxRef.current,
+              fontWeight: BODY_FONT_WEIGHT,
+              fontFamily: FONT_FAMILY,
+              whiteSpace: "pre",
+              willChange: coarsePointer ? undefined : "transform, opacity",
+              pointerEvents: isName ? "auto" : "none",
+            }}
+            aria-hidden="true"
+          >
+            {word.text}
+          </span>
+        );
+      })}
     </div>
   );
 }

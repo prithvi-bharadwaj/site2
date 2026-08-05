@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   applyFlick,
   FLICK_MEMORY_MS,
@@ -10,17 +10,23 @@ import {
   stepCursor,
   type AngleSpring,
 } from "@/lib/cursor-physics";
+import { SPRITES, spriteRects } from "@/lib/pixel-sprites";
 
 /**
- * Weighted cursor — replaces the native cursor with a rounded classic arrow.
+ * Weighted cursor — replaces the native cursor with a hollow classic arrow
+ * that morphs into pixel-art sprites over tagged content.
  *
  * The arrow's tip sits exactly on the hotspot (no positional lag); its
  * heading is a rigid body hinged at the tip, integrated every frame from
  * continuous torques (see cursor-physics): speed-scaled steering toward the
  * direction of travel (overshoots on sharp turns), gravity that fades in
  * when the mouse rests and pendulums the arrow home to the classic cursor
- * tilt, and hinge friction. Wiggling chains flick impulses into full spins,
- * and speed stretches the arrow slightly along its axis. Skipped on touch
+ * tilt, and hinge friction. Wiggling chains flick impulses into full spins.
+ *
+ * Hovering an element inside `[data-cursor="<sprite>"]` swaps the glyph for
+ * that pixel sprite (see pixel-sprites) with a scale pop. Sprites don't
+ * steer — they hang upright under full gravity and keep their momentum, so
+ * they sway with the motion and still spin when wiggled. Skipped on touch
  * devices and when reduced motion is preferred — the native cursor stays.
  */
 
@@ -35,9 +41,33 @@ const STRETCH_SPEED = 2500;
 const PRESS_SCALE = 0.8;
 /** The hanging pose gravity pulls toward: the classic cursor tilt. */
 const IDLE_ANGLE = -Math.PI * 0.625; // -112.5°
+/** Scale dip when the glyph swaps — a small pop sells the morph. */
+const MORPH_DIP = 0.55;
+
+/** Pixel sprite rendered as merged rects; upright is rotation 0. */
+function PixelGlyph({ name }: { name: string }) {
+  const sprite = SPRITES[name];
+  if (!sprite) return null;
+  return (
+    <svg
+      width="30"
+      height="30"
+      viewBox="0 0 16 16"
+      shapeRendering="crispEdges"
+      className="weighted-cursor-pixel"
+    >
+      {spriteRects(sprite).map((r, i) => (
+        <rect key={i} x={r.x} y={r.y} width={r.w} height={1} fill={r.fill} />
+      ))}
+    </svg>
+  );
+}
 
 export function WeightedCursor() {
   const dartRef = useRef<HTMLDivElement>(null);
+  const [sprite, setSprite] = useState("");
+  const spriteRef = useRef("");
+  const morphRef = useRef(1);
 
   useEffect(() => {
     if (typeof window.matchMedia !== "function") return; // jsdom
@@ -67,9 +97,12 @@ export function WeightedCursor() {
     let lastTime = 0;
 
     function render(speed: number) {
-      const stretch = Math.min(speed / STRETCH_SPEED, 1) * STRETCH_MAX;
-      const sx = (1 + stretch) * press;
-      const sy = (1 - stretch * 0.5) * press;
+      // Sprites don't stretch: the stretch axis is the arrow's own +x, which
+      // means nothing for an upright robot head.
+      const stretch = spriteRef.current ? 0 : Math.min(speed / STRETCH_SPEED, 1) * STRETCH_MAX;
+      const pop = press * morphRef.current;
+      const sx = (1 + stretch) * pop;
+      const sy = (1 - stretch * 0.5) * pop;
       dart!.style.transform =
         `translate3d(${mouse.x}px, ${mouse.y}px, 0) rotate(${spring.angle}rad) scale(${sx}, ${sy})`;
     }
@@ -91,24 +124,30 @@ export function WeightedCursor() {
         lastActive = now;
       }
 
+      // Sprites hang upright and don't steer — full gravity to rotation 0,
+      // momentum intact, so flick spins still work on them.
+      const inSprite = !!spriteRef.current;
+      const hang = inSprite ? 0 : IDLE_ANGLE;
       stepCursor(spring, {
-        target: targetAngle,
-        speed,
-        gravity: gravityRamp(now - lastActive),
-        hang: IDLE_ANGLE,
+        target: inSprite ? 0 : targetAngle,
+        speed: inSprite ? 0 : speed,
+        gravity: inSprite ? 1 : gravityRamp(now - lastActive),
+        hang,
         dt,
       });
       press += ((pressed ? PRESS_SCALE : 1) - press) * 0.35;
+      morphRef.current += (1 - morphRef.current) * 0.3;
 
       render(speed);
 
-      // Only sleep once the dart has made it home to the idle tilt — the loop
-      // stays alive through the idle delay and the return swing.
+      // Only sleep once the glyph has made it home to its hanging pose — the
+      // loop stays alive through the idle delay and the return swing.
       const settled =
         speed < 1 &&
         Math.abs(spring.velocity) < 0.02 &&
-        Math.abs(shortestAngleDelta(spring.angle, IDLE_ANGLE)) < 0.01 &&
-        Math.abs(press - (pressed ? PRESS_SCALE : 1)) < 0.001;
+        Math.abs(shortestAngleDelta(spring.angle, hang)) < 0.01 &&
+        Math.abs(press - (pressed ? PRESS_SCALE : 1)) < 0.001 &&
+        1 - morphRef.current < 0.005;
       if (settled) {
         running = false;
       } else {
@@ -126,6 +165,16 @@ export function WeightedCursor() {
     function onMove(e: MouseEvent) {
       mouse.x = e.clientX;
       mouse.y = e.clientY;
+      // Hover context: nearest [data-cursor] ancestor picks the glyph.
+      const tagged =
+        e.target instanceof Element ? e.target.closest("[data-cursor]") : null;
+      const key = tagged?.getAttribute("data-cursor") ?? "";
+      const next = key && SPRITES[key] ? key : "";
+      if (next !== spriteRef.current) {
+        spriteRef.current = next;
+        morphRef.current = MORPH_DIP;
+        setSprite(next);
+      }
       const dt = (e.timeStamp - ev.t) / 1000;
       if (dt > 0) {
         const vx = (e.clientX - ev.x) / dt;
@@ -186,26 +235,28 @@ export function WeightedCursor() {
 
   return (
     <div ref={dartRef} className="weighted-cursor-dart" aria-hidden="true">
-      {/* Classic arrow silhouette rotated so it points +x (angle 0); the tip
-          at (21,10) is offset to the hotspot in CSS. Drawn twice on the same
-          path: a fat bg stroke for the outline halo, then a self-colored
-          stroke over the fill — round joins on both soften every corner. */}
-      <svg width="22" height="20" viewBox="0 0 22 20">
-        <g strokeLinejoin="round">
-          <path
-            d="M21 10 L5.9 4.2 L8 9.1 L1 9.4 L1.1 12.4 L8.1 12.1 L6.2 17.1 Z"
-            fill="none"
-            stroke="var(--bg)"
-            strokeWidth="3.2"
-          />
-          <path
-            d="M21 10 L5.9 4.2 L8 9.1 L1 9.4 L1.1 12.4 L8.1 12.1 L6.2 17.1 Z"
-            fill="currentColor"
-            stroke="currentColor"
-            strokeWidth="1.5"
-          />
-        </g>
-      </svg>
+      {sprite ? (
+        <PixelGlyph name={sprite} />
+      ) : (
+        /* Hollow classic arrow rotated so it points +x (angle 0); the tip at
+           (21,10) is offset to the hotspot in CSS. Outline only — a bg halo
+           stroke under an ink stroke, round joins softening every corner,
+           interior transparent. */
+        <svg width="22" height="20" viewBox="0 0 22 20">
+          <g strokeLinejoin="round" fill="none">
+            <path
+              d="M21 10 L5.9 4.2 L8 9.1 L1 9.4 L1.1 12.4 L8.1 12.1 L6.2 17.1 Z"
+              stroke="var(--bg)"
+              strokeWidth="3.6"
+            />
+            <path
+              d="M21 10 L5.9 4.2 L8 9.1 L1 9.4 L1.1 12.4 L8.1 12.1 L6.2 17.1 Z"
+              stroke="currentColor"
+              strokeWidth="1.6"
+            />
+          </g>
+        </svg>
+      )}
     </div>
   );
 }

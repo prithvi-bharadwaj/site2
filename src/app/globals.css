@@ -1886,6 +1886,14 @@ html.weighted-cursor * {
   display: block;
 }
 
+/* Pixel hover-sprites hang centered on the hotspot; the soft bg shadow keeps
+   their dark outlines legible over same-color regions in dark mode. */
+.weighted-cursor-dart svg.weighted-cursor-pixel {
+  left: -15px;
+  top: -15px;
+  filter: drop-shadow(0 0 1.5px var(--bg));
+}
+
 /* Word wiggle — each word repels from the cursor with spring physics (no transition; transforms are written per frame) */
 .wl-word {
   display: inline-block;

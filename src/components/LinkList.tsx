@@ -12,6 +12,8 @@ export interface BrandLink {
   favicon: string;
   /** Optional hover-preview media shown next to the cursor. */
   media?: HoverCardMedia;
+  /** Pixel-sprite the custom cursor morphs into while hovering (see WeightedCursor). */
+  cursor?: string;
 }
 
 export interface InlineLink {
@@ -20,6 +22,8 @@ export interface InlineLink {
   href: string;
   /** Optional hover-preview media shown next to the cursor. */
   media?: HoverCardMedia;
+  /** Pixel-sprite the custom cursor morphs into while hovering (see WeightedCursor). */
+  cursor?: string;
 }
 
 export interface TrailingIcon {
@@ -47,6 +51,8 @@ export interface LinkListItem {
   inlineLinks?: InlineLink[];
   meta?: string;
   expand?: string;
+  /** Pixel-sprite the custom cursor morphs into while hovering this item. */
+  cursor?: string;
   /** Extra favicons shown only when the item is expanded. */
   expandFavicons?: string[];
   links?: { label: string; href: string; favicon?: string }[];
@@ -96,6 +102,7 @@ function renderTitleWithBrands(
           key={i}
           href={brand.href}
           data-repel
+          data-cursor={brand.cursor}
           onClick={(e) => {
             e.stopPropagation();
             if (xpKind) award(`click:${media ? mediaKey(media) : brand.href}`, CLICK_XP);
@@ -230,6 +237,7 @@ export function LinkList({ label, items, columns = 1, variant = "compact", point
           return (
             <div
               key={item.title}
+              data-cursor={item.cursor}
               onPointerEnter={(e) => {
                 if (item.media && !isOpen && e.pointerType === "mouse") {
                   emitShow({ media: item.media, x: e.clientX, y: e.clientY });
