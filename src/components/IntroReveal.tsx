@@ -317,6 +317,13 @@ export function IntroReveal({ onHandoff, onDone }: IntroRevealProps) {
     document.documentElement.style.overflow = "hidden";
 
     const skip = () => finish(true);
+    // Capture + consume: the same keypress must not also reach the page's
+    // shortcuts (f = slam, g = gravity, cmd+e = edit) and hand off a
+    // physics-mutated page instead of the finished one.
+    const keySkip = (e: KeyboardEvent) => {
+      e.stopPropagation();
+      finish(true);
+    };
     const onResize = () => {
       if (
         Math.abs(window.innerWidth - baseW) > RESIZE_TOLERANCE ||
@@ -327,10 +334,16 @@ export function IntroReveal({ onHandoff, onDone }: IntroRevealProps) {
         sizeCanvas();
       }
     };
+    // The show is motion; honor the preference the moment it flips on.
+    const motionMql = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const onMotionChange = () => {
+      if (motionMql.matches) finish(true);
+    };
     canvas.addEventListener("pointerdown", skip);
-    window.addEventListener("keydown", skip);
+    window.addEventListener("keydown", keySkip, { capture: true });
     window.addEventListener("wheel", skip, { passive: true });
     window.addEventListener("resize", onResize);
+    motionMql.addEventListener("change", onMotionChange);
 
     raf = requestAnimationFrame(frame);
 
@@ -339,9 +352,10 @@ export function IntroReveal({ onHandoff, onDone }: IntroRevealProps) {
       cancelAnimationFrame(raf);
       document.documentElement.style.overflow = "";
       canvas.removeEventListener("pointerdown", skip);
-      window.removeEventListener("keydown", skip);
+      window.removeEventListener("keydown", keySkip, { capture: true });
       window.removeEventListener("wheel", skip);
       window.removeEventListener("resize", onResize);
+      motionMql.removeEventListener("change", onMotionChange);
     };
   }, []);
 
