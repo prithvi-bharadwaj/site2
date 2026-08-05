@@ -275,7 +275,7 @@ export default function Home() {
 
         {/* Socials */}
         <div id="socials" className={`${COLUMN} mt-10 md:mt-14 pb-24`}>
-          <span className="text-(--ink)/50 text-sm uppercase tracking-widest block mb-6">
+          <span className="text-(--ink)/80 text-sm uppercase tracking-widest block mb-6">
             <WiggleWords text="Elsewhere." />
           </span>
           <div
@@ -357,7 +357,7 @@ export default function Home() {
           </div>
           {genzMode && (
             <div className="mt-4 text-sm text-(--ink)/70 leading-relaxed">
-              <p className="text-(--ink)/50 text-xs uppercase tracking-wider mb-2">tldr</p>
+              <p className="text-(--ink)/80 text-xs uppercase tracking-wider mb-2">tldr</p>
               {editMode && (
                 <EditPanel label="genz tldr" value={content.genz} onChange={(v) => update("genz", v)} />
               )}

@@ -42,7 +42,7 @@ function buildSections(greeting: string, bio: string, fontPx: number, linePx: nu
   return [
     {
       // 0.95 matches displacement maxOpacity — at 1.0 the cursor-repel would dim the greeting
-      blocks: [{ text: greeting, type: "heading", baseOpacity: 0.95 }],
+      blocks: [{ text: greeting, type: "heading", baseOpacity: 0.8 }],
       font: headingShorthand,
       fontSize: headingPx,
       lineHeight: headingPx * BODY_LINE_HEIGHT_RATIO,
@@ -50,7 +50,7 @@ function buildSections(greeting: string, bio: string, fontPx: number, linePx: nu
     },
     {
       // Matches the sections' ink/70 so body copy reads as one voice.
-      blocks: [{ text: bio, type: "body", baseOpacity: 0.7 }],
+      blocks: [{ text: bio, type: "body", baseOpacity: 0.75 }],
       font: fontShorthand,
       fontSize: fontPx,
       lineHeight: linePx,
@@ -234,9 +234,9 @@ export function PretextHero({ greeting, bio, className }: PretextHeroProps) {
 
   if (reducedMotion) {
     return (
-      <div className={`text-sm text-(--ink)/70 leading-relaxed max-w-2xl ${className ?? ""}`}>
+      <div className={`text-sm text-(--ink)/75 leading-relaxed max-w-2xl ${className ?? ""}`}>
         {/* mb-[16px] matches the canvas path's marginBottom: 16 (rem units inflate at the 125% root) */}
-        <p className="mb-[16px] font-medium text-(--ink)">{greeting}</p>
+        <p className="mb-[16px] font-medium text-(--ink)/80">{greeting}</p>
         <p>{bio}</p>
       </div>
     );

@@ -89,7 +89,7 @@ export function PreviouslyList({ label, items, proofKind = "proof" }: Previously
       data-analytics-section={analyticsSection}
       className="text-sm text-(--ink)/70 leading-relaxed"
     >
-      <span className="text-(--ink)/50 text-sm uppercase tracking-widest block mb-6">
+      <span className="text-(--ink)/80 text-sm uppercase tracking-widest block mb-6">
         <WiggleWords text={label} />
       </span>
       <ul className="list-none p-0 m-0">
@@ -244,7 +244,7 @@ export function PreviouslyList({ label, items, proofKind = "proof" }: Previously
                           }
                         }}
                         data-repel
-                        className="wl-unit inline-block text-(--ink)/75 hover:text-(--ink)"
+                        className="wl-unit inline-block text-(--ink)/70 hover:text-(--ink)"
                         style={{
                           textDecoration: "none",
                           borderBottom: DOTTED,

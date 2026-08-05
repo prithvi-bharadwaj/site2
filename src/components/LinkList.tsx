@@ -159,7 +159,7 @@ export function LinkList({ label, items, columns = 1, variant = "compact", point
   return (
     <section ref={rootRef} data-analytics-section={analyticsSection}>
       {label && (
-        <span className="text-(--ink)/50 text-sm uppercase tracking-widest block mb-6">
+        <span className="text-(--ink)/80 text-sm uppercase tracking-widest block mb-6">
           <WiggleWords text={label} />
         </span>
       )}
