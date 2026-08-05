@@ -199,8 +199,11 @@ export function ScrollScramble({ onDone }: ScrollScrambleProps) {
       for (let i = 0; i < sections.length; i++) {
         const s = sections[i];
         if (s.kind !== "pending") continue;
+        // No lower bound: a sitemap jump can move a section above the
+        // viewport in one hop, and a section the visitor has passed must
+        // decode too or it stays a blank hole on the way back up.
         const rect = s.el.getBoundingClientRect();
-        if (rect.top < window.innerHeight * TRIGGER_VH && rect.bottom > 0) {
+        if (rect.top < window.innerHeight * TRIGGER_VH) {
           // A future startedAt just delays the draw; drawSection paints
           // nothing while elapsed is negative. Grace decays to zero, so
           // scroll-triggered sections later start immediately.
@@ -222,14 +225,20 @@ export function ScrollScramble({ onDone }: ScrollScrambleProps) {
       for (let i = 0; i < sections.length; i++) {
         const s = sections[i];
         if (s.kind === "done") continue;
-        allDone = false;
-        if (s.kind === "pending") continue;
+        if (s.kind === "pending") {
+          allDone = false;
+          continue;
+        }
         const elapsed = now - s.startedAt;
         if (elapsed >= s.total) {
+          // Completed this frame - must not hold allDone open, or the final
+          // section's restore would never reach finish() and the canvas,
+          // listeners, and backing buffer would linger until a scroll.
           restore(s.el);
           sections[i] = { kind: "done" };
           continue;
         }
+        allDone = false;
         anyRunning = true;
         drawSection(s, elapsed, s.el.getBoundingClientRect().top - s.harvestTop);
       }
