@@ -79,7 +79,9 @@ export function IntroReveal({ onHandoff, onDone }: IntroRevealProps) {
       finished = true;
       cancelAnimationFrame(raf);
       trackInteraction("intro_reveal_finished", { skipped });
-      if (!handedOff) handoffRef.current(skipped);
+      // A skip during the fade arrives after the natural handoff already
+      // fired - re-notify so the parent cancels the scroll reveal too.
+      if (!handedOff || skipped) handoffRef.current(skipped);
       doneRef.current();
     }
 

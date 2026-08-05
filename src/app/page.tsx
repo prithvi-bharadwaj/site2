@@ -117,11 +117,12 @@ export default function Home() {
   const xp = useXp();
 
   // The sections decode as they meet the viewport, only when the intro ran
-  // its full course - a skip means the visitor asked for the page.
+  // its full course - a skip means the visitor asked for the page. A skip
+  // arriving during the fade re-fires this with skipped=true to cancel it.
   const [scrollReveal, setScrollReveal] = useState(false);
   const revealHandoff = useCallback((skipped: boolean) => {
     setReveal("handoff");
-    if (!skipped) setScrollReveal(true);
+    setScrollReveal(!skipped);
   }, []);
   const revealDone = useCallback(() => {
     setReveal("off");
