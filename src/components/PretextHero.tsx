@@ -27,7 +27,7 @@ const BODY_FONT_REM = 0.8125;
 // One size throughout - the greeting is the page's focal point by weight, not size.
 const HEADING_FONT_REM = BODY_FONT_REM;
 const BODY_FONT_WEIGHT = 300;
-const HEADING_FONT_WEIGHT = 500;
+const HEADING_FONT_WEIGHT = 400;
 const BODY_LINE_HEIGHT_RATIO = 1.62;
 
 function rootFontPx(): number {
@@ -236,7 +236,7 @@ export function PretextHero({ greeting, bio, className }: PretextHeroProps) {
     return (
       <div className={`text-sm text-(--ink)/75 leading-relaxed max-w-2xl ${className ?? ""}`}>
         {/* mb-[16px] matches the canvas path's marginBottom: 16 (rem units inflate at the 125% root) */}
-        <p className="mb-[16px] font-medium text-(--ink)/80">{greeting}</p>
+        <p className="mb-[16px] font-normal text-(--ink)/80">{greeting}</p>
         <p>{bio}</p>
       </div>
     );
