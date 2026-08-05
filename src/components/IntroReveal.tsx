@@ -15,16 +15,19 @@ import { trackInteraction } from "@/lib/analytics";
 /**
  * First-visit reveal. The page mounts normally underneath; this canvas covers
  * the viewport with the plain page background and re-enacts the site coming
- * into being: the greeting types itself out, then the bio rises from nothing
- * as a churning field of ASCII static - every character slot cycling random
- * letters, digits and symbols in place - and resolves word by word, in
- * reading order, into the real text. The canvas then fades, handing off
- * pixel-for-pixel to the live DOM while the rest of the page staggers in
- * (see main[data-reveal="in"] in globals.css).
+ * into being: the greeting types itself out, then everything else on screen -
+ * bio and sections alike - rises from nothing as a churning field of ASCII
+ * static, every character slot cycling random letters, digits and symbols in
+ * place, and resolves word by word in reading order into the real page. The
+ * bio resolves at reading pace; the wave then accelerates through the
+ * sections. The canvas then fades, handing off pixel-for-pixel to the live
+ * DOM underneath.
  *
- * Every glyph is harvested from the rendered hero via Range rects, so the
+ * Every glyph is harvested from the rendered DOM via Range rects, so the
  * copy sits exactly where the browser drew the original - same trick as the
- * letter-physics layer. Any input skips straight to the finished page.
+ * letter-physics layer. Blur-hidden text (the locked contacts) is never
+ * harvested: drawing it crisp on the canvas would leak it. Any input skips
+ * straight to the finished page.
  */
 
 /** Blank beat with just the caret before typing starts. */
@@ -92,7 +95,10 @@ export function IntroReveal({ onHandoff, onDone }: IntroRevealProps) {
     let bg = "#ffffff";
 
     let greeting: GlyphSource[] = [];
-    let bio: GlyphSource[] = [];
+    /** Everything that scrambles: bio first, then the sections below. */
+    let field: GlyphSource[] = [];
+    /** Static rise delay per glyph - the curtain comes down the page. */
+    let curtain: number[] = [];
     let schedule: number[] = [];
     let typingDone = 0;
     let words: number[][] = [];
@@ -121,17 +127,24 @@ export function IntroReveal({ onHandoff, onDone }: IntroRevealProps) {
       return parseFloat(font.match(/(\d+(?:\.\d+)?)px/)?.[1] ?? "0");
     }
 
+    /** The sections that scramble after the bio, in reading order. */
+    const SECTION_IDS = ["previously", "built", "lore", "writing", "socials"];
+
+    /** Blur-hidden text must never reach the canvas crisp. */
+    function isBlurHidden(g: GlyphSource): boolean {
+      return Boolean(g.el && getComputedStyle(g.el).filter.includes("blur"));
+    }
+
     /**
-     * Read the hero's glyphs off the live DOM and split greeting from bio by
-     * font size - the greeting is the only thing set a step larger.
+     * Read the page's glyphs off the live DOM. The hero splits into greeting
+     * and bio by font size - the greeting is the only thing set a step
+     * larger; the sections below join the bio as the scramble field.
      */
     function harvest(): boolean {
       const root = document.querySelector<HTMLElement>('[role="banner"]');
       if (!root || !root.querySelector("[data-pretext-idx]")) return false;
-      const glyphs = harvestGlyphs(root, {
-        height: window.innerHeight,
-        measureAscent,
-      });
+      const opts = { height: window.innerHeight, measureAscent };
+      const glyphs = harvestGlyphs(root, opts);
       if (glyphs.length < 2) return false;
       const sizes = glyphs.map((g) => fontPx(g.font));
       const max = Math.max(...sizes);
@@ -139,7 +152,7 @@ export function IntroReveal({ onHandoff, onDone }: IntroRevealProps) {
       if (max - min < 1) return false;
       const mid = (max + min) / 2;
       greeting = [];
-      bio = [];
+      const bio: GlyphSource[] = [];
       glyphs.forEach((g, i) => (sizes[i] > mid ? greeting : bio).push(g));
       if (greeting.length === 0) return false;
       const byPos = (a: GlyphSource, b: GlyphSource) => a.y - b.y || a.x - b.x;
@@ -156,8 +169,20 @@ export function IntroReveal({ onHandoff, onDone }: IntroRevealProps) {
         color: last.color,
       };
 
-      words = groupWords(bio);
-      lockAt = buildScrambleSchedule(words.length);
+      field = bio;
+      for (const id of SECTION_IDS) {
+        const section = document.getElementById(id);
+        if (!section) continue;
+        const harvested = harvestGlyphs(section, opts).filter((g) => !isBlurHidden(g));
+        harvested.sort(byPos);
+        field = field.concat(harvested);
+      }
+
+      const fieldTop = field.length ? Math.min(...field.map((g) => g.y)) : 0;
+      curtain = field.map((g) => (g.y - fieldTop) * SCRAMBLE.curtainMsPerPx);
+      words = groupWords(field);
+      const bioWords = words.filter((w) => w[0] < bio.length).length;
+      lockAt = buildScrambleSchedule(bioWords, words.length - bioWords);
       scrambleTotal = lockAt.length
         ? lockAt[lockAt.length - 1] + SCRAMBLE.tailMs
         : 0;
@@ -182,9 +207,13 @@ export function IntroReveal({ onHandoff, onDone }: IntroRevealProps) {
     /* ── drawing ── */
 
     function drawGlyph(g: GlyphSource, alpha: number) {
+      ctx!.globalAlpha = alpha;
+      if (g.img) {
+        ctx!.drawImage(g.img, g.x, g.y, g.w, g.h);
+        return;
+      }
       ctx!.font = g.font;
       ctx!.fillStyle = g.color;
-      ctx!.globalAlpha = alpha;
       ctx!.fillText(g.char, g.x, g.y + g.ascent);
     }
 
@@ -233,18 +262,25 @@ export function IntroReveal({ onHandoff, onDone }: IntroRevealProps) {
     }
 
     function drawScramble(elapsed: number) {
-      const fieldFade = Math.min(1, elapsed / SCRAMBLE.fadeInMs);
       for (let w = 0; w < words.length; w++) {
         if (elapsed >= lockAt[w]) {
-          for (const i of words[w]) drawGlyph(bio[i], bio[i].alpha);
+          for (const i of words[w]) drawGlyph(field[i], field[i].alpha);
           continue;
         }
         for (const i of words[w]) {
-          const g = bio[i];
+          const g = field[i];
+          // The static curtains down the page rather than arriving as a wall.
+          const rise = Math.min(1, Math.max(0, (elapsed - curtain[i]) / SCRAMBLE.fadeInMs));
+          if (rise <= 0) continue;
+          const alpha = g.alpha * SCRAMBLE.fieldAlpha * rise;
+          if (g.img) {
+            drawGlyph(g, alpha);
+            continue;
+          }
           // Slots roll out of phase with each other, so the field shimmers
           // instead of strobing in unison.
           const tick = Math.floor((elapsed + i * 37) / SCRAMBLE.churnMs);
-          drawStatic(g, scrambleChar(i, tick), g.alpha * SCRAMBLE.fieldAlpha * fieldFade);
+          drawStatic(g, scrambleChar(i, tick), alpha);
         }
       }
     }
@@ -273,9 +309,9 @@ export function IntroReveal({ onHandoff, onDone }: IntroRevealProps) {
         drawScramble(t);
         drawCaretAt(now, greetingCaret, Math.max(0, 1 - t / SCRAMBLE.caretFadeMs), true);
       } else if (phase === "fade") {
-        // Faded with the canvas: the real text underneath is identical, and
+        // Faded with the canvas: the real page underneath is identical, and
         // full-alpha copies stacked on it would read darker mid-crossfade.
-        for (const g of bio) drawGlyph(g, g.alpha * fade);
+        for (const g of field) drawGlyph(g, g.alpha * fade);
       }
       ctx!.globalAlpha = 1;
     }

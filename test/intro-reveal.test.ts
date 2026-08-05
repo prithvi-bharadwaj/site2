@@ -60,21 +60,20 @@ describe("groupWords", () => {
 });
 
 describe("buildScrambleSchedule", () => {
-  it("locks words in order, ending exactly at the resolve span", () => {
-    const lockAt = buildScrambleSchedule(28);
-    expect(lockAt).toHaveLength(28);
+  it("locks bio words at reading pace, then section words at the fast rate", () => {
+    const lockAt = buildScrambleSchedule(3, 4);
+    expect(lockAt).toHaveLength(7);
     for (let i = 1; i < lockAt.length; i++) {
       expect(lockAt[i]).toBeGreaterThan(lockAt[i - 1]);
     }
     expect(lockAt[0]).toBeGreaterThan(SCRAMBLE.fadeInMs + SCRAMBLE.holdMs);
-    expect(lockAt[27]).toBeCloseTo(
-      SCRAMBLE.fadeInMs + SCRAMBLE.holdMs + SCRAMBLE.resolveSpanMs,
-      5
-    );
+    expect(lockAt[1] - lockAt[0]).toBeCloseTo(SCRAMBLE.bioStepMs, 5);
+    expect(lockAt[3] - lockAt[2]).toBeCloseTo(SCRAMBLE.sectionStepMs, 5);
+    expect(lockAt[6] - lockAt[5]).toBeCloseTo(SCRAMBLE.sectionStepMs, 5);
   });
 
   it("handles zero words", () => {
-    expect(buildScrambleSchedule(0)).toEqual([]);
+    expect(buildScrambleSchedule(0, 0)).toEqual([]);
   });
 });
 

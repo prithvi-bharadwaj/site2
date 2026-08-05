@@ -52,10 +52,14 @@ export const SCRAMBLE_CHARS =
 export const SCRAMBLE = {
   /** The field rises from nothing while already churning. */
   fadeInMs: 380,
+  /** The static curtains down the page: rise delay per px below the top. */
+  curtainMsPerPx: 0.35,
   /** Pure static before the first word commits. */
   holdMs: 220,
-  /** First word locks to last word locks. */
-  resolveSpanMs: 1400,
+  /** The bio resolves at reading pace... */
+  bioStepMs: 42,
+  /** ...then the wave turns fluent through the sections below. */
+  sectionStepMs: 10,
   /** How often each slot re-rolls its character. */
   churnMs: 70,
   /** Unresolved static sits below the real text's ink weight. */
@@ -87,14 +91,21 @@ export function groupWords(boxes: IntroGlyphBox[]): number[][] {
   return words;
 }
 
-/** When each word locks to its real text, in ms from scramble start. */
+/**
+ * When each word locks to its real text, in ms from scramble start. The
+ * first `bioWords` lock at reading pace; everything after them locks at the
+ * faster section rate, one continuous wave down the page.
+ */
 export function buildScrambleSchedule(
-  wordCount: number,
+  bioWords: number,
+  sectionWords: number,
   o: typeof SCRAMBLE = SCRAMBLE
 ): number[] {
-  const begin = o.fadeInMs + o.holdMs;
-  const step = wordCount > 0 ? o.resolveSpanMs / wordCount : 0;
-  return Array.from({ length: wordCount }, (_, i) => begin + step * (i + 1));
+  const out: number[] = [];
+  let t = o.fadeInMs + o.holdMs;
+  for (let i = 0; i < bioWords; i++) out.push((t += o.bioStepMs));
+  for (let i = 0; i < sectionWords; i++) out.push((t += o.sectionStepMs));
+  return out;
 }
 
 /**

@@ -41,12 +41,11 @@ const INTRO_KEY = "prithvi-intro-v1";
 /* ── Intro reveal ── */
 
 /**
- * "intro": overlay running. "handoff": overlay fading out while the page
- * staggers in. "done"/"off" differ only in whether main carries the
- * data-reveal attr that plays the stagger - "off" (replay visit, reduced
- * motion) shows the page with no ceremony.
+ * "intro": overlay running. "handoff": overlay crossfading onto the page.
+ * "off": no overlay (finished, replay visit, or reduced motion) - the page
+ * needs no state of its own; the whole show happens on the canvas.
  */
-type RevealState = "intro" | "handoff" | "done" | "off";
+type RevealState = "intro" | "handoff" | "off";
 
 function initialReveal(): RevealState {
   if (typeof window === "undefined") return "off";
@@ -118,7 +117,7 @@ export default function Home() {
 
   const revealHandoff = useCallback(() => setReveal("handoff"), []);
   const revealDone = useCallback(() => {
-    setReveal("done");
+    setReveal("off");
     try {
       sessionStorage.setItem(INTRO_KEY, "1");
     } catch { /* ignore */ }
@@ -209,7 +208,6 @@ export default function Home() {
     <main
       className="relative min-h-screen"
       data-analytics-section="home"
-      data-reveal={reveal === "handoff" || reveal === "done" ? "in" : undefined}
     >
       {(reveal === "intro" || reveal === "handoff") && (
         <IntroReveal onHandoff={revealHandoff} onDone={revealDone} />
