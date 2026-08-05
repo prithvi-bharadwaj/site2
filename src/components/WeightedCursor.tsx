@@ -45,7 +45,7 @@ const PRESS_SCALE = 0.8;
 /** The hanging pose gravity pulls toward: the classic cursor tilt. */
 const IDLE_ANGLE = -Math.PI * 0.625; // -112.5°
 /** Scale dip when the glyph swaps — a small pop sells the morph. */
-const MORPH_DIP = 0.55;
+const MORPH_DIP = 0.64;
 /** Distance (px) from a tagged zone at which its sprite takes over… */
 const ACQUIRE_RADIUS = 32;
 /** …and how far the cursor must drift before it lets go (hysteresis). */
