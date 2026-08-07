@@ -56,22 +56,37 @@ export function ExitGate() {
       aria-modal="true"
       onClick={() => dismiss("backdrop")}
     >
-      <div className="max-w-md text-center" onClick={(e) => e.stopPropagation()}>
-        <span className="mb-4 block text-4xl">👀</span>
-        <h2 className="mb-3 text-2xl font-bold text-(--ink)/90">leaving already?</h2>
-        <p className="mb-2 text-sm leading-relaxed text-(--ink)/60">
-          You&apos;ve only explored <span className="font-semibold text-(--ink)/85">{pct}%</span> of
-          this site.
-        </p>
-        <p className="mb-6 text-sm leading-relaxed text-(--ink)/60">
-          There&apos;s a hidden game somewhere on this page. Have you found where it is?
-        </p>
-        <button
-          onClick={() => dismiss("keep_exploring")}
-          className="cursor-pointer rounded-md bg-(--ink)/90 px-4 py-2 text-sm text-(--bg) transition-colors hover:bg-(--ink)"
-        >
-          fine, I&apos;ll keep exploring
-        </button>
+      {/* Same card language as the xp toasts: hairline border, icon chip,
+          tiny uppercase kicker, one font size, ink-opacity hierarchy. */}
+      <div
+        className="w-full max-w-sm rounded-lg border border-(--ink)/12 bg-(--bg) p-5 shadow-lg"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-start gap-2.5">
+          <span className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-(--ink)/8 text-sm">
+            👀
+          </span>
+          <div className="min-w-0 flex-1">
+            <span className="block text-[9px] uppercase tracking-widest text-(--ink)/40">
+              before you go
+            </span>
+            <span className="block text-sm font-normal text-(--ink)/85">leaving already?</span>
+            <p className="mt-2 text-sm leading-relaxed text-(--ink)/60">
+              You&apos;ve only explored{" "}
+              <span className="text-(--ink)/85">{pct}%</span> of this site. There&apos;s a
+              hidden game somewhere on this page. Have you found where it is?
+            </p>
+            <div className="mt-3 h-px w-full bg-(--ink)/10" aria-hidden>
+              <div className="h-px bg-(--ink)/60" style={{ width: `${pct}%` }} />
+            </div>
+            <button
+              onClick={() => dismiss("keep_exploring")}
+              className="mt-4 cursor-pointer rounded-md bg-(--ink)/90 px-3 py-1 text-xs text-(--bg) transition-colors hover:bg-(--ink)"
+            >
+              fine, I&apos;ll keep exploring
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   );
